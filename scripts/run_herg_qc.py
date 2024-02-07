@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import regex as re
+import json
 import datetime
 import subprocess
 
@@ -54,8 +55,9 @@ def main():
 
     if args.output_dir is None:
         args.output_dir = os.path.join('output', 'hergqc')
-        if not os.path.exists(args.output_dir):
-            os.makedirs(args.output_dir)
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     with open(os.path.join(args.output_dir, 'info.txt'), 'w') as description_fout:
         git_hash = get_git_revision_hash()
@@ -120,7 +122,6 @@ def main():
 
     # Select QC protocols and times
     for protocol in res_dict:
-
         if protocol not in export_config.D2S_QC:
             continue
 
@@ -320,6 +321,9 @@ def main():
     for index, vals in qc_df.iterrows():
         append_dict = {}
 
+        well = vals['well']
+        protocol = vals['protocol']
+
         sub_df = extract_df[(extract_df.well == well) &
                             (extract_df.protocol == protocol)]
 
@@ -343,6 +347,11 @@ def main():
     for key in append_dict:
         qc_df[key] = [row[key] for row in update_cols]
 
+    qc_styled_df = create_qc_table(qc_df)
+    logging.info(qc_styled_df)
+    qc_styled_df.to_excel(os.path.join(args.output_dir, 'qc_table.xlsx'))
+    qc_styled_df.to_latex(os.path.join(args.output_dir, 'qc_table.tex'))
+
     # Save in csv format
     qc_df.to_csv(os.path.join(savedir, 'QC-%s.csv' % saveID))
 
@@ -351,9 +360,9 @@ def main():
                   orient='records')
 
     #  Load only QC vals. TODO use a new variabile name to avoid confusion
-    qc_df['drug'] = 'before'
-    qc_df = extract_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']]
-    qc_df.to_csv(os.path.join(args.output_dir, 'qc_vals_df.csv'))
+    qc_vals_df = extract_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']].copy()
+    qc_vals_df['drug'] = 'before'
+    qc_vals_df.to_csv(os.path.join(args.output_dir, 'qc_vals_df.csv'))
 
     extract_df.to_csv(os.path.join(args.output_dir, 'subtraction_qc.csv'))
 
@@ -362,6 +371,21 @@ def main():
             if passed:
                 fout.write(well)
                 fout.write('\n')
+
+
+def create_qc_table(qc_df):
+    qc_df = qc_df.groupby('well').min().reset_index()
+
+    qc_criteria = qc_df.drop(['protocol', 'well'], axis='columns').columns
+
+    fails_dict = {}
+    for crit in sorted(qc_criteria):
+        no_failed = np.sum(~qc_df[crit].values.astype(bool))
+        crit = re.sub('_', r'\_', crit)
+        fails_dict[crit] = no_failed
+
+    ret_df = pd.DataFrame.from_dict(fails_dict, orient='index', columns=['wells failing'])
+    return ret_df
 
 
 def extract_protocol(readname, savename, time_strs, selected_wells):
@@ -568,7 +592,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
                                              current=subtracted_trace)
 
             row_dict['R_leftover'] =\
-                np.sqrt(np.sum(after_corrected**2)/(np.sum(before_corrected**2)))
+                np.sqrt(np.sum((before_corrected - after_corrected**2))/(np.sum(before_corrected**2)))
 
             row_dict['E_rev'] = E_rev
             row_dict['E_rev_before'] = E_rev_before
@@ -726,9 +750,21 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
 
     plt.close(fig)
 
+    protocol_dir = os.path.join(traces_dir, 'protocols')
+    if not os.path.exists(protocol_dir):
+        try:
+            os.makedirs(protocol_dir)
+        except FileExistsError:
+            pass
+
     # extract protocol
-    before_trace.get_voltage_protocol().export_txt(os.path.join(savedir,
-                                                                f"{saveID}-{savename}.txt"))
+    protocol = before_trace.get_voltage_protocol()
+    protocol.export_txt(os.path.join(protocol_dir,
+                                     f"{saveID}-{savename}.txt"))
+
+    json_protocol = before_trace.get_voltage_protocol_json()
+    with open(os.path.join(protocol_dir, f"{saveID}-{savename}.json"), 'w') as fout:
+        json.dump(json_protocol, fout)
 
     return extract_df
 

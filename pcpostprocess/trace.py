@@ -63,6 +63,9 @@ class Trace:
         return VoltageProtocol.from_json(
             self.meta['ExperimentConditions']['VoltageProtocol'])
 
+    def get_voltage_protocol_json(self):
+        return self.meta['ExperimentConditions']['VoltageProtocol']
+
     def get_protocol_description(self, holding_potential=-80.0):
         """Get the protocol as a numpy array describing the voltages and
         durations for each section
