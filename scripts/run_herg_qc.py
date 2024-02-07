@@ -592,7 +592,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
                                              current=subtracted_trace)
 
             row_dict['R_leftover'] =\
-                np.sqrt(np.sum((before_corrected - after_corrected**2))/(np.sum(before_corrected**2)))
+                np.sqrt(np.sum((before_corrected - after_corrected)**2)/(np.sum(before_corrected**2)))
 
             row_dict['E_rev'] = E_rev
             row_dict['E_rev_before'] = E_rev_before
