@@ -80,7 +80,7 @@ def main():
     experiment_name = args.experiment_name
 
     global output_dir
-    output_dir = os.path.join(args.output, 'plot_subtractions_overlaid')
+    output_dir = os.path.join(args.output)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 

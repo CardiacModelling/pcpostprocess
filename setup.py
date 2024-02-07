@@ -43,7 +43,9 @@ setup(
         'numpy>=1.21',
         'matplotlib>=3.4',
         'pandas>=1.3',
-        'regex>=2023.12.25'
+        'regex>=2023.12.25',
+        'openpyxl>=3.1.2',
+        'jinja2>=3.1.0'
     ],
     extras_require={
         'test': [
