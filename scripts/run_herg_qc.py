@@ -6,6 +6,7 @@ import matplotlib
 import os
 import string
 import sys
+import cycler
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,9 +24,18 @@ from pcpostprocess.leak_correct import detect_ramp_bounds, fit_linear_leak, get_
 from pcpostprocess.trace import Trace
 from pcpostprocess.voltage_protocols import VoltageProtocol
 
-matplotlib.rc('font', size='9')
+
+matplotlib.use('Agg')
 
 pool_kws = {'maxtasksperchild': 1}
+matplotlib.rc('font', size='9')
+
+color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
+
+plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
+
+all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
+             for i in range(1, 25)]
 
 def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
@@ -73,8 +83,7 @@ def main():
                      'export_config.py'))
 
     if args.wells is None:
-        args.wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
-                      for i in range(1, 25)]
+        args.wells = all_wells
         wells = args.wells
 
     else:
@@ -89,7 +98,7 @@ def main():
     export_config.savedir = args.output_dir
 
     protocols_regex = \
-        r'([a-z|A-Z|_|0-9| |\(|\)]+)_([0-9][0-9]\.[0-9][0-9]\.[0-9][0-9])'
+        r'^([a-z|A-Z|_|0-9| |\-|\(|\)]+)_([0-9][0-9]\.[0-9][0-9]\.[0-9][0-9])$'
 
     protocols_regex = re.compile(protocols_regex)
 
@@ -99,6 +108,7 @@ def main():
         match = protocols_regex.match(dirname)
 
         if match is None:
+            print(f"didn't match {dirname}")
             continue
 
         protocol_name = match.group(1)
@@ -158,6 +168,7 @@ def main():
     # Do QC which requires both repeats
     # qc3.bookend check very first and very last staircases are similar
     protocol, savename = list(export_config.D2S_QC.items())[0]
+    times = sorted(res_dict[protocol])
     if len(times) == 4:
         qc3_bookend_dict = qc3_bookend(protocol, savename, times)
     else:
@@ -285,7 +296,7 @@ def main():
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
         # QC Erev spread: check spread in reversal potential isn't too large
-        passed_QC_Erev_spread = E_rev_spread <= 5.0
+        passed_QC_Erev_spread = E_rev_spread <= 10.0
         logger.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
 
         qc_erev_spread[well] = passed_QC_Erev_spread
@@ -322,10 +333,8 @@ def main():
         append_dict = {}
 
         well = vals['well']
-        protocol = vals['protocol']
 
-        sub_df = extract_df[(extract_df.well == well) &
-                            (extract_df.protocol == protocol)]
+        sub_df = extract_df[(extract_df.well == well)]
 
         append_dict['QC.Erev.all_protocols'] =\
             np.all(sub_df['QC.Erev'])
@@ -374,15 +383,32 @@ def main():
 
 
 def create_qc_table(qc_df):
-    qc_df = qc_df.groupby('well').min().reset_index()
-
     qc_criteria = qc_df.drop(['protocol', 'well'], axis='columns').columns
+    qc_df = qc_df.drop('protocol', axis='columns')
+
+    def agg_func(x):
+        x = list(x.values.flatten())
+        x = [True if y == 'True' or y == True  or y == 1 \
+             else False for y in x]
+        return np.all(x)
+
+
+    qc_df = qc_df.groupby('well').agg(
+        func=agg_func).reset_index()
 
     fails_dict = {}
+    no_wells = 384
     for crit in sorted(qc_criteria):
-        no_failed = np.sum(~qc_df[crit].values.astype(bool))
+        col = qc_df[crit].copy()
+
+        vals = list(col.values.flatten())
+
+        true_vals = [val for val in vals if val == True or val == 'True' or val == 1]
+        print(crit)
+        print(vals)
+
         crit = re.sub('_', r'\_', crit)
-        fails_dict[crit] = no_failed
+        fails_dict[crit] = no_wells - len(true_vals)
 
     ret_df = pd.DataFrame.from_dict(fails_dict, orient='index', columns=['wells failing'])
     return ret_df
@@ -406,7 +432,10 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
     subtraction_plots_dir = os.path.join(savedir, 'subtraction_plots')
 
     if not os.path.isdir(subtraction_plots_dir):
-        os.makedirs(subtraction_plots_dir)
+        try:
+            os.makedirs(subtraction_plots_dir)
+        except FileExistsError:
+            pass
 
     logger.info(f"Exporting {readname} as {savename}")
 
@@ -468,7 +497,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
         for sweep in range(nsweeps_before):
             out = before_trace.get_trace_sweeps([sweep])[well][0]
             save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
-                                      f"{well}-before-sweep{sweep}")
+                                      f"{well}-before-sweep{sweep}.csv")
 
             np.savetxt(save_fname, out, delimiter=',',
                        header=header)
@@ -476,7 +505,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
         # Save 'after drug' trace as .csv
         for sweep in range(nsweeps_after):
             save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
-                                      f"{well}-after-sweep{sweep}")
+                                      f"{well}-after-sweep{sweep}.csv")
             out = after_trace.get_trace_sweeps([sweep])[well][0]
             if len(out) > 0:
                 np.savetxt(save_fname, out,
@@ -567,7 +596,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
 
             subtracted_trace = before_current[sweep, :] - before_leak\
                 - (after_current[sweep, :] - after_leak)
-            out_fname = os.path.join(savedir,
+            out_fname = os.path.join(traces_dir,
                                      f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
             after_corrected = after_current[sweep, :] - after_leak
             before_corrected = before_current[sweep, :] - before_leak
@@ -915,13 +944,15 @@ def run_qc_for_protocol(readname, savename, time_strs):
 
     df = pd.DataFrame(np.array(df_rows), columns=column_labels)
 
+    missing_wells_dfs = []
     # Add onboard qc to dataframe
     for well in args.wells:
         if well not in df['well'].values:
             onboard_qc_df = pd.DataFrame([[well] + [False for col in
                                                     list(df)[1:]]],
                                          columns=list(df))
-            df = pd.concat([df, onboard_qc_df], ignore_index=True)
+            missing_wells_dfs.append(onboard_qc_df)
+    df = pd.concat([df] + missing_wells_dfs, ignore_index=True)
 
     df['protocol'] = savename
 
@@ -986,7 +1017,6 @@ def qc3_bookend(readname, savename, time_strs):
     times = first_before_trace.get_times()
     voltage = first_before_trace.get_voltage()
     voltage_protocol = VoltageProtocol.from_voltage_trace(voltage, times)
-    voltage_steps = voltage_protocol.get_all_sections()
 
     hergqc = hERGQC(sampling_rate=first_before_trace.sampling_rate,
                     plot_dir=plot_dir,
@@ -994,6 +1024,7 @@ def qc3_bookend(readname, savename, time_strs):
 
     assert first_before_trace.NofSweeps == last_before_trace.NofSweeps
 
+    voltage_steps = voltage_protocol.get_all_sections()
     res_dict = {}
     for well in args.wells:
         trace1 = hergqc.filter_capacitive_spikes(

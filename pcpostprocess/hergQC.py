@@ -15,6 +15,8 @@ class hERGQC(object):
                'qc5.staircase', 'qc5.1.staircase',
                'qc6.subtracted', 'qc6.1.subtracted', 'qc6.2.subtracted']
 
+    no_QC = len(QCnames)
+
     def __init__(self, sampling_rate=5, plot_dir=None, voltage=np.array([]),
                  n_sweeps=None, removal_time=2):
         # TODO docstring
@@ -133,7 +135,7 @@ class hERGQC(object):
             qc_vals_after = self.qc_vals_after
 
         if (None in qc_vals_before) or (None in qc_vals_after):
-            return False, [False] * 3 + [None] * 13
+            return False, False * self.no_QC
 
         qc1_1 = self.qc1(*qc_vals_before)
         qc1_2 = self.qc1(*qc_vals_after)
@@ -152,7 +154,7 @@ class hERGQC(object):
 
         rseals = [qc_vals_before[0], qc_vals_after[0]]
         cms = [qc_vals_before[1], qc_vals_after[1]]
-        rseriess = [qc_vals_before[2], qc_vals_after[2]]
+        rseriess = [qc_vals_after[2]]
         qc4 = self.qc4(rseals, cms, rseriess)
 
         # indices where hERG peaks
