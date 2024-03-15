@@ -11,7 +11,7 @@ with open('README.md') as f:
 # Go!
 setup(
     # Module name (lowercase)
-    name='syncropatch_export',
+    name='pcpostprocess',
     version='0.0.1',
     description='Export high-throughput patch-clamp data from the Nanion SyncroPatch',
     long_description=readme,
@@ -29,7 +29,7 @@ setup(
 
     # Packages to include
     packages=find_packages(
-        include=('syncropatch_export', 'syncropatch_export.*')),
+        include=('pcpostprocess', 'pcpostprocess.*')),
 
     # Include non-python files (via MANIFEST.in)
     include_package_data=True,
