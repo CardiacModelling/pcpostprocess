@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.polynomial.polynomial as poly
 
-from .trace import Trace
+from syncropatch_export.trace import Trace
 
 
-def infer_reversal_potential(trace: Trace, sweep: int, well: str, ax=None,
+def infer_reversal_potential(current, times, voltage_protocol, ax=None,
                              output_path=None, plot=None, known_Erev=None,
-                             current=None, figsize=(5, 3)):
+                             figsize=(5, 3)):
 
     if output_path:
         dirname = os.path.dirname(output_path)
