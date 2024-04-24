@@ -19,9 +19,10 @@ from matplotlib.gridspec import GridSpec
 
 from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
+from pcpostprocess.subtraction_plots import setup_subtraction_grid, do_subtraction_plot
 from pcpostprocess.leak_correct import detect_ramp_bounds, fit_linear_leak, get_leak_corrected
-from pcpostprocess.trace import Trace
-from pcpostprocess.voltage_protocols import VoltageProtocol
+from syncropatch_export.trace import Trace
+from syncropatch_export.voltage_protocols import VoltageProtocol
 
 matplotlib.rc('font', size='9')
 
@@ -45,13 +46,9 @@ def main():
     parser.add_argument('--log_level', default='INFO')
     parser.add_argument('--Erev', default=-90.71, type=float)
 
-    global args
     args = parser.parse_args()
 
     logging.basicConfig(level=args.log_level)
-    global logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(args.log_level)
 
     if args.output_dir is None:
         args.output_dir = os.path.join('output', 'hergqc')
@@ -83,10 +80,15 @@ def main():
     # Import and exec config file
     global export_config
     export_config = importlib.util.module_from_spec(spec)
+
     sys.modules['export_config'] = export_config
     spec.loader.exec_module(export_config)
 
     export_config.savedir = args.output_dir
+
+    args.saveID = export_config.saveID
+    args.D2S = export_config.D2S
+    args.D2SQC = export_config.D2S_QC
 
     protocols_regex = \
         r'([a-z|A-Z|_|0-9| |\(|\)]+)_([0-9][0-9]\.[0-9][0-9]\.[0-9][0-9])'
@@ -148,11 +150,13 @@ def main():
 
     with multiprocessing.Pool(min(args.no_cpus, len(readnames)),
                               **pool_kws) as pool:
-        well_selections, qc_dfs = \
-            list(zip(*pool.starmap(run_qc_for_protocol, zip(readnames,
-                                                            savenames,
-                                                            times_list))))
 
+        pool_argument_list = zip(readnames, savenames, times_list,
+                                 [args for i in readnames])
+        well_selections, qc_dfs = \
+            list(zip(*pool.starmap(run_qc_for_protocol, pool_argument_list)))
+
+    print(qc_dfs)
     qc_df = pd.concat(qc_dfs, ignore_index=True)
 
     # Do QC which requires both repeats
@@ -246,12 +250,13 @@ def main():
 
     wells_to_export = wells if args.export_failed else overall_selection
 
-    logger.info(f"exporting wells {wells}")
+    logging.info(f"exporting wells {wells}")
 
     no_protocols = len(res_dict)
 
     args_list = list(zip(readnames, savenames, times_list, [wells_to_export] *
-                         len(savenames)))
+                         len(savenames),
+                         [args for i in readnames]))
 
     with multiprocessing.Pool(min(args.no_cpus, no_protocols),
                               **pool_kws) as pool:
@@ -260,39 +265,39 @@ def main():
     extract_df = pd.concat(dfs, ignore_index=True)
     extract_df['selected'] = extract_df['well'].isin(overall_selection)
 
-    logger.info(f"extract_df: {extract_df}")
+    logging.info(f"extract_df: {extract_df}")
 
     qc_erev_spread = {}
     erev_spreads = {}
     passed_qc_dict = {}
     for well in extract_df.well.unique():
-        logger.info(f"Checking QC for well {well}")
+        logging.info(f"Checking QC for well {well}")
         # Select only this well
         sub_df = extract_df[extract_df.well == well]
         sub_qc_df = qc_df[qc_df.well == well]
 
         passed_qc3_bookend = np.all(sub_qc_df['qc3.bookend'].values)
-        logger.info(f"passed_QC3_bookend_all {passed_qc3_bookend}")
+        logging.info(f"passed_QC3_bookend_all {passed_qc3_bookend}")
         passed_QC_Erev_all = np.all(sub_df['QC.Erev'].values)
         passed_QC1_all = np.all(sub_df.QC1.values)
-        logger.info(f"passed_QC1_all {passed_QC1_all}")
+        logging.info(f"passed_QC1_all {passed_QC1_all}")
 
         passed_QC4_all = np.all(sub_df.QC4.values)
-        logger.info(f"passed_QC4_all {passed_QC4_all}")
+        logging.info(f"passed_QC4_all {passed_QC4_all}")
         passed_QC6_all = np.all(sub_df.QC6.values)
-        logger.info(f"passed_QC6_all {passed_QC1_all}")
+        logging.info(f"passed_QC6_all {passed_QC1_all}")
 
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
         # QC Erev spread: check spread in reversal potential isn't too large
         passed_QC_Erev_spread = E_rev_spread <= 5.0
-        logger.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
+        logging.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
 
         qc_erev_spread[well] = passed_QC_Erev_spread
         erev_spreads[well] = E_rev_spread
 
         passed_QC_Erev_all = np.all(sub_df['QC.Erev'].values)
-        logger.info(f"passed_QC_Erev_all {passed_QC_Erev_all}")
+        logging.info(f"passed_QC_Erev_all {passed_QC_Erev_all}")
 
         was_selected = np.all(sub_df['selected'].values)
 
@@ -388,8 +393,8 @@ def create_qc_table(qc_df):
     return ret_df
 
 
-def extract_protocol(readname, savename, time_strs, selected_wells):
-    logger.info(f"extracting {savename}")
+def extract_protocol(readname, savename, time_strs, selected_wells, args):
+    logging.info(f"extracting {savename}")
     savedir = args.output_dir
 
     saveID = export_config.saveID
@@ -408,7 +413,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
     if not os.path.isdir(subtraction_plots_dir):
         os.makedirs(subtraction_plots_dir)
 
-    logger.info(f"Exporting {readname} as {savename}")
+    logging.info(f"Exporting {readname} as {savename}")
 
     filepath_before = os.path.join(args.data_directory,
                                    f"{readname}_{time_strs[0]}")
@@ -444,7 +449,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
     try:
         assert all(np.abs(times_before - times_after) < 1e-8)
     except Exception as exc:
-        logger.warning(f"Exception thrown when handling {savename}: ", str(exc))
+        logging.warning(f"Exception thrown when handling {savename}: ", str(exc))
         return
 
     header = "\"current\""
@@ -455,7 +460,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
 
     for i_well, well in enumerate(selected_wells):  # Go through all wells
         if i_well % 24 == 0:
-            logger.info('row ' + well[0])
+            logging.info('row ' + well[0])
 
         if args.selection_file:
             if well not in selected_wells:
@@ -572,19 +577,19 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
             after_corrected = after_current[sweep, :] - after_leak
             before_corrected = before_current[sweep, :] - before_leak
 
-            E_rev_before = infer_reversal_potential(before_trace, sweep, well,
+            E_rev_before = infer_reversal_potential(before_corrected, times,
                                                     plot=True,
                                                     output_path=os.path.join(reversal_plot_dir,
                                                                              f"{well}_{savename}_sweep{sweep}_before"),
                                                     known_Erev=args.Erev)
 
-            E_rev_after = infer_reversal_potential(after_trace, sweep, well,
+            E_rev_after = infer_reversal_potential(after_corrected, sweep, well,
                                                    plot=True,
                                                    output_path=os.path.join(reversal_plot_dir,
                                                                             f"{well}_{savename}_sweep{sweep}_after"),
                                                    known_Erev=args.Erev)
 
-            E_rev = infer_reversal_potential(before_trace, sweep, well,
+            E_rev = infer_reversal_potential(subtracted_trace, sweep, well,
                                              plot=True,
                                              output_path=os.path.join(reversal_plot_dir,
                                                                       f"{well}_{savename}_sweep{sweep}_subtracted"),
@@ -639,7 +644,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
         after_leak_current_dict[well] = np.vstack(after_leak_currents)
 
     extract_df = pd.DataFrame.from_dict(rows)
-    logger.debug(extract_df)
+    logging.debug(extract_df)
 
     times = before_trace.get_times()
     voltages = before_trace.get_voltage()
@@ -655,6 +660,9 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
     after_leak_current_dict = {key: value * 1e-3 for key, value in after_leak_current_dict.items()}
 
     # TODO Put this code in a seperate function so we can easily plot individual subtractions
+
+    axs = protocol_axs + before_axs + after_axs + corrected_axs + \
+        [subtracted_ax, long_protocol_ax]
     for well in selected_wells:
         before_current = before_current_all[well]
         after_current = after_current_all[well]
@@ -672,77 +680,10 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
         sub_df = extract_df[extract_df.well == well]
         sweeps = sorted(list(sub_df.sweep.unique()))
         sub_df = sub_df.set_index('sweep')
-        logger.debug(sub_df)
+        logging.debug(sub_df)
 
-        axs = protocol_axs + before_axs + after_axs + corrected_axs + \
-            [subtracted_ax, long_protocol_ax]
-
-        times = before_trace.get_times() * 1e-3
-
-        for ax in protocol_axs:
-            ax.plot(times, voltages, color='black')
-            ax.set_xlabel('time (s)')
-            ax.set_ylabel(r'$V_\text{command}$ (mV)')
-
-        for i, (sweep, ax) in enumerate(zip(sweeps, before_axs)):
-            gleak, Eleak = sub_df.loc[sweep][['gleak_before', 'E_leak_before']]
-            ax.plot(times, before_current[i, :], label=f"pre-drug raw, sweep {sweep}")
-            ax.plot(times, before_leak_currents[i, :],
-                    label=r'$I_\text{leak}$.' f"g={gleak:1E}, E={Eleak:.1e}")
-            # ax.legend()
-
-            if ax.get_legend():
-                ax.get_legend().remove()
-            ax.set_xlabel('time (s)')
-            ax.set_ylabel(r'pre-drug trace')
-            # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-            # ax.tick_params(axis='y', rotation=90)
-
-        for i, (sweep, ax) in enumerate(zip(sweeps, after_axs)):
-            gleak, Eleak = sub_df.loc[sweep][['gleak_after', 'E_leak_after']]
-            ax.plot(times, after_current[i, :], label=f"post-drug raw, sweep {sweep}")
-            ax.plot(times, after_leak_currents[i, :],
-                    label=r"$I_\text{leak}$." f"g={gleak:1E}, E={Eleak:.1e}")
-            # ax.legend()
-            if ax.get_legend():
-                ax.get_legend().remove()
-            ax.set_xlabel('time (s)')
-            ax.set_ylabel(r'post-drug trace')
-            # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-            # ax.tick_params(axis='y', rotation=90)
-
-        for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
-            corrected_current = before_current[i, :] - before_leak_currents[i, :]
-            corrected_after_current = after_current[i, :] - after_leak_currents[i, :]
-            ax.plot(times, corrected_current,
-                    label=f"leak corrected before drug trace, sweep {sweep}")
-            ax.plot(times, corrected_after_current,
-                    label=f"leak corrected after drug trace, sweep {sweep}")
-            ax.set_xlabel('time (s)')
-            ax.set_ylabel(r'leak corrected traces')
-            # ax.tick_params(axis='y', rotation=90)
-            # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-
-        ax = subtracted_ax
-        for i, sweep in enumerate(sweeps):
-            before_params, before_leak = fit_linear_leak(before_trace,
-                                                         well, sweep,
-                                                         ramp_bounds)
-            after_params, after_leak = fit_linear_leak(after_trace,
-                                                       well, sweep,
-                                                       ramp_bounds)
-
-            subtracted_current = before_current[i, :] - before_leak_currents[i, :] - \
-                (after_current[i, :] - after_leak_currents[i, :])
-            ax.plot(times, subtracted_current, label=f"sweep {sweep}")
-            ax.set_ylabel(r'$I_\text{obs, subtracted}$ (mV)')
-            ax.set_xlabel('time (s)')
-            # ax.tick_params(axis='x', rotation=90)
-
-        long_protocol_ax.plot(times, voltages, color='black')
-        long_protocol_ax.set_xlabel('time (s)')
-        long_protocol_ax.set_ylabel(r'$V_\text{command}$ (mV)')
-        long_protocol_ax.tick_params(axis='y', rotation=90)
+        do_subtraction_plots(axs, times, sweeps, before_currents,
+                             after_currents, df, well=well, protocol=protocol)
 
         fig.savefig(os.path.join(subtraction_plots_dir,
                                  f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
@@ -769,7 +710,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
     return extract_df
 
 
-def run_qc_for_protocol(readname, savename, time_strs):
+def run_qc_for_protocol(readname, savename, time_strs, args):
     df_rows = []
 
     assert len(time_strs) == 2
@@ -877,17 +818,14 @@ def run_qc_for_protocol(readname, savename, time_strs):
             before_currents[sweep, :] = before_raw - before_leak
             after_currents[sweep, :] = after_raw - after_leak
 
-        # TODO Note: only run this for whole/staircaseramp for now...
-        logger.info(f"{well} {savename}\n----------")
-        logger.info(f"sampling_rate is {sampling_rate}")
+        logging.info(f"{well} {savename}\n----------")
+        logging.info(f"sampling_rate is {sampling_rate}")
 
         # Run QC with leak subtracted currents
-        selected, QC = hergqc.run_qc(voltage_protocol, t,
-                                     before_currents,
-                                     after_currents,
+        selected, QC = hergqc.run_qc(voltage_protocol.get_all_sections(), t,
+                                     before_currents, after_currents,
                                      np.array(qc_before[well])[0, :],
-                                     np.array(qc_after[well])[0, :],
-                                     nsweeps)
+                                     np.array(qc_after[well])[0, :], nsweeps)
 
         df_rows.append([well] + list(QC))
 
@@ -900,7 +838,7 @@ def run_qc_for_protocol(readname, savename, time_strs):
         for i in range(nsweeps):
 
             savepath = os.path.join(savedir,
-                                    f"{export_config.saveID}-{savename}-{well}-sweep{i}.csv")
+                                    f"{args.saveID}-{savename}-{well}-sweep{i}.csv")
             if not os.path.exists(savedir):
                 os.makedirs(savedir)
             subtracted_current = before_currents[0, :] - after_currents[0, :]
