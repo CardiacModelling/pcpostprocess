@@ -98,25 +98,17 @@ class hERGQC(object):
     def set_debug(self, debug):
         self._debug = debug
 
-    def run_qc(self, voltage_protocol, times,
-               before=None, after=None, qc_vals_before=None,
-               qc_vals_after=None, n_sweeps=None):
+    def run_qc(self, voltage_steps, times,
+               before, after, qc_vals_before,
+               qc_vals_after, n_sweeps=None):
         """Run each QC criteria on a single (before-trace, after-trace) pair.
 
-        This requires self._before, and self._after should only be called by
-        self.run_hergqc.
+        This requires self._before, and self._after
         """
-
-        if before is None:
-            before = self.before
 
         if not n_sweeps:
             n_sweeps = len(before)
 
-        if after is None:
-            after = self.after
-
-        voltage_steps = voltage_protocol.get_all_sections()
         before = np.array(before)
         after = np.array(after)
 
@@ -125,12 +117,6 @@ class hERGQC(object):
 
         if len(before) == 0 or len(after) == 0:
             return False, [False for lab in self.qc_labels]
-
-        if qc_vals_before is None:
-            qc_vals_before = self.qc_vals_before
-
-        if qc_vals_after is None:
-            qc_vals_after = self.qc_vals_after
 
         if (None in qc_vals_before) or (None in qc_vals_after):
             return False, [False] * 3 + [None] * 13
