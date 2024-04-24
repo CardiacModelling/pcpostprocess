@@ -15,12 +15,10 @@ import json
 import datetime
 import subprocess
 
-from matplotlib.gridspec import GridSpec
-
 from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.subtraction_plots import setup_subtraction_grid, do_subtraction_plot
-from pcpostprocess.leak_correct import detect_ramp_bounds, fit_linear_leak, get_leak_corrected
+from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
@@ -87,6 +85,7 @@ def main():
     export_config.savedir = args.output_dir
 
     args.saveID = export_config.saveID
+    args.savedir = export_config.savedir
     args.D2S = export_config.D2S
     args.D2SQC = export_config.D2S_QC
 
@@ -156,14 +155,14 @@ def main():
         well_selections, qc_dfs = \
             list(zip(*pool.starmap(run_qc_for_protocol, pool_argument_list)))
 
-    print(qc_dfs)
     qc_df = pd.concat(qc_dfs, ignore_index=True)
 
     # Do QC which requires both repeats
     # qc3.bookend check very first and very last staircases are similar
     protocol, savename = list(export_config.D2S_QC.items())[0]
     if len(times) == 4:
-        qc3_bookend_dict = qc3_bookend(protocol, savename, times)
+        qc3_bookend_dict = qc3_bookend(protocol, savename,
+                                       times, args)
     else:
         qc3_bookend_dict = {well: True for well in qc_df.well.unique()}
 
@@ -379,9 +378,15 @@ def main():
 
 
 def create_qc_table(qc_df):
-    qc_df = qc_df.groupby('well').min().reset_index()
+    if len(qc_df.index) == 0:
+        return None
 
     qc_criteria = qc_df.drop(['protocol', 'well'], axis='columns').columns
+
+    qc_df[qc_criteria] = qc_df[qc_criteria].astype(bool)
+
+    agg_dict = {crit: 'min' for crit in qc_criteria}
+    qc_df = qc_df.groupby('well').agg(agg_dict).reset_index()
 
     fails_dict = {}
     for crit in sorted(qc_criteria):
@@ -396,8 +401,8 @@ def create_qc_table(qc_df):
 def extract_protocol(readname, savename, time_strs, selected_wells, args):
     logging.info(f"extracting {savename}")
     savedir = args.output_dir
+    saveID = args.saveID
 
-    saveID = export_config.saveID
     traces_dir = os.path.join(savedir, 'traces')
 
     if not os.path.exists(traces_dir):
@@ -427,15 +432,13 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                         json_file_after)
 
     voltage_protocol = before_trace.get_voltage_protocol()
-    t = before_trace.get_times()
+    times = before_trace.get_times()
+    voltages = before_trace.get_voltage()
 
     # Find start of leak section
     desc = voltage_protocol.get_all_sections()
-    ramp_locs = np.argwhere(desc[:, 2] != desc[:, 3]).flatten()
-    tstart = desc[ramp_locs[0], 0]
-    tend = voltage_protocol.get_ramps()[0][1]
-
-    ramp_bounds = [np.argmax(t > tstart), np.argmax(t > tend)]
+    ramp_bounds = detect_ramp_bounds(times, desc)
+    tstart, tend = ramp_bounds
 
     nsweeps_before = before_trace.NofSweeps = 2
     nsweeps_after = after_trace.NofSweeps = 2
@@ -578,23 +581,23 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             before_corrected = before_current[sweep, :] - before_leak
 
             E_rev_before = infer_reversal_potential(before_corrected, times,
-                                                    plot=True,
+                                                    desc, voltages, plot=True,
                                                     output_path=os.path.join(reversal_plot_dir,
                                                                              f"{well}_{savename}_sweep{sweep}_before"),
                                                     known_Erev=args.Erev)
 
-            E_rev_after = infer_reversal_potential(after_corrected, sweep, well,
+            E_rev_after = infer_reversal_potential(after_corrected, times,
+                                                   desc, voltages,
                                                    plot=True,
                                                    output_path=os.path.join(reversal_plot_dir,
                                                                             f"{well}_{savename}_sweep{sweep}_after"),
                                                    known_Erev=args.Erev)
 
-            E_rev = infer_reversal_potential(subtracted_trace, sweep, well,
-                                             plot=True,
+            E_rev = infer_reversal_potential(subtracted_trace, times, desc,
+                                             voltages, plot=True,
                                              output_path=os.path.join(reversal_plot_dir,
                                                                       f"{well}_{savename}_sweep{sweep}_subtracted"),
-                                             known_Erev=args.Erev,
-                                             current=subtracted_trace)
+                                             known_Erev=args.Erev)
 
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((before_corrected - after_corrected**2))/(np.sum(before_corrected**2)))
@@ -661,8 +664,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
     # TODO Put this code in a seperate function so we can easily plot individual subtractions
 
-    axs = protocol_axs + before_axs + after_axs + corrected_axs + \
-        [subtracted_ax, long_protocol_ax]
+    nsweeps = before_trace.NofSweeps
     for well in selected_wells:
         before_current = before_current_all[well]
         after_current = after_current_all[well]
@@ -672,18 +674,17 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
         nsweeps = before_current_all[well].shape[0]
 
-        axs = setup_subtraction_grid(fig, nsweeps)
-        protocol_axs, before_axs, after_axs, \
-            corrected_axs, subtracted_ax, \
-            long_protocol_ax = axs
-
         sub_df = extract_df[extract_df.well == well]
+
+        if len(sub_df.index):
+            continue
+
         sweeps = sorted(list(sub_df.sweep.unique()))
         sub_df = sub_df.set_index('sweep')
         logging.debug(sub_df)
 
-        do_subtraction_plots(axs, times, sweeps, before_currents,
-                             after_currents, df, well=well, protocol=protocol)
+        do_subtraction_plot(fig, times, sweeps, before_current, after_current,
+                            extract_df, voltages, well=well)
 
         fig.savefig(os.path.join(subtraction_plots_dir,
                                  f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
@@ -704,6 +705,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                      f"{saveID}-{savename}.txt"))
 
     json_protocol = before_trace.get_voltage_protocol_json()
+
     with open(os.path.join(protocol_dir, f"{saveID}-{savename}.json"), 'w') as fout:
         json.dump(json_protocol, fout)
 
@@ -866,10 +868,10 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
     return selected_wells, df
 
 
-def qc3_bookend(readname, savename, time_strs):
+def qc3_bookend(readname, savename, time_strs, args):
     #  TODO Run this with subtracted traces
-    plot_dir = os.path.join(args.output_dir, export_config.savedir,
-                            f"{export_config.saveID}-{savename}-qc3-bookend")
+    plot_dir = os.path.join(args.output_dir, args.savedir,
+                            f"{args.saveID}-{savename}-qc3-bookend")
 
     filepath_first_before = os.path.join(args.data_directory,
                                          f"{readname}_{time_strs[0]}")
@@ -883,10 +885,11 @@ def qc3_bookend(readname, savename, time_strs):
     last_before_trace = Trace(filepath_last_before,
                               json_file_last_before)
 
-    voltage_protocol = first_before_trace.get_voltage_protocol()
-    ramp_bounds = detect_ramp_bounds(first_before_trace,
-                                     voltage_protocol)
+    times = first_before_trace.get_times()
 
+    voltage_protocol = first_before_trace.get_voltage_protocol()
+    ramp_bounds = detect_ramp_bounds(times,
+                                     voltage_protocol.get_all_sections())
     before_traces_first = get_leak_corrected(first_before_trace,
                                              ramp_bounds)
     before_traces_last = get_leak_corrected(last_before_trace,
@@ -949,29 +952,31 @@ def qc3_bookend(readname, savename, time_strs):
     return res_dict
 
 
-def setup_subtraction_grid(fig, nsweeps):
-    # Use 5 x 2 grid
-    gs = GridSpec(6, nsweeps, figure=fig)
+def detect_ramp_bounds(times, voltage_sections, ramp_no=0):
+    """
+    Extract the the times at the start and end of the nth ramp in the protocol.
 
-    # plot protocol at the top
-    protocol_axs = [fig.add_subplot(gs[0, i]) for i in range(nsweeps)]
+    @param times: np.array containing the time at which each sample was taken
+    @param voltage_sections 2d np.array where each row describes a segment of the protocol: (tstart, tend, vstart, end)
+    @param ramp_no: the index of the ramp to select. Defaults to 0 - the first ramp
 
-    # Plot before drug traces
-    before_axs = [fig.add_subplot(gs[1, i]) for i in range(nsweeps)]
+    @returns tstart, tend: the start and end times for the ramp_no+1^nth ramp
+    """
 
-    # Plot after traces
-    after_axs = [fig.add_subplot(gs[2, i]) for i in range(nsweeps)]
+    # Decouple this code from syncropatch_export
 
-    # Leak corrected traces
-    corrected_axs = [fig.add_subplot(gs[3, i]) for i in range(nsweeps)]
+    ramps = [(tstart, tend, vstart, vend) for tstart, tend, vstart, vend
+             in voltage_sections if vstart != vend]
+    try:
+        ramp = ramps[ramp_no]
+    except IndexError:
+        print(f"Requested {ramp_no+1}th ramp (ramp_no={ramp_no}),"
+              " but there are only {len(ramps)} ramps")
 
-    # Subtracted traces on one axis
-    subtracted_ax = fig.add_subplot(gs[4, :])
+    tstart, tend = ramp[:2]
 
-    # Long axis for protocol on the bottom (full width)
-    long_protocol_ax = fig.add_subplot(gs[5, :])
-
-    return protocol_axs, before_axs, after_axs, corrected_axs, subtracted_ax, long_protocol_ax
+    ramp_bounds = [np.argmax(times > tstart), np.argmax(times > tend)]
+    return ramp_bounds
 
 
 if __name__ == '__main__':
