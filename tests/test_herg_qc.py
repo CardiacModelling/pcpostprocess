@@ -9,7 +9,7 @@ from pcpostprocess.hergQC import hERGQC
 from syncropatch_export.trace import Trace
 
 
-class TestHergQC(unittest.TestCase):
+class TestHergQC(unittest.TestCase)
     def setUp(self):
         filepath = os.path.join('tests', 'test_data', '13112023_MW2_FF',
                                 'staircaseramp (2)_2kHz_15.01.07')
@@ -40,10 +40,10 @@ class TestHergQC(unittest.TestCase):
         times = tr_after.get_times()
 
         self.assertTrue(np.all(np.isfinite(v)))
-        self.assertTrue(np.all(np.isfinite(ts)))
+        self.assertTrue(np.all(np.isfinite(times)))
 
         # Calculate sampling rate in (use kHz)
-        sampling_rate = int(1.0 / (ts[1] - ts[0]))
+        sampling_rate = int(1.0 / (times[1] - times[0]))
 
         plot_dir = os.path.join(self.output_dir,
                                 'test_run_qc')
