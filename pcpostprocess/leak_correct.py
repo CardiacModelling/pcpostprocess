@@ -128,8 +128,6 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
         ax1.axvline(end_t, linestyle='--', color='k', alpha=0.5)
         ax1.set_xlim(left=start_t - 1,
                      right=end_t + 1)
-        ax1.set_ylim(*np.quantile(I_obs[ramp_start_index:ramp_end_index],
-                                  [0, 1]))
 
         ax2.set_title('voltage vs time')
         ax2.set_xlabel('time (ms)')

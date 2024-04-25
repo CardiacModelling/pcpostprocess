@@ -10,6 +10,7 @@ import pandas as pd
 import regex as re
 import scipy
 import seaborn as sns
+import cycler
 from matplotlib import rc
 from matplotlib.colors import ListedColormap
 
@@ -20,12 +21,11 @@ from pcpostprocess.voltage_protocols import VoltageProtocol
 matplotlib.use('Agg')
 matplotlib.rcParams['figure.dpi'] = 300
 
-orangey_red_rgb = (252/256.0, 141/256.0, 98/256.0)
-bluey_green_rgb = (102/256.0, 194/256.0, 165/256.0)
-
 pool_kws = {'maxtasksperchild': 1}
+matplotlib.rc('font', size='9')
 
-subtracted_trace_dirname = "traces"
+color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
+plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
 
 
 def get_wells_list(input_dir):
@@ -131,8 +131,9 @@ def main():
 
     do_scatter_matrices(leak_parameters_df, qc_vals_df)
     plot_histograms(leak_parameters_df, qc_vals_df)
+
     # Very resource intensive
-    # overlay_reversal_plots(leak_parameters_df)
+    overlay_reversal_plots(leak_parameters_df)
     do_combined_plots(leak_parameters_df)
 
 
@@ -486,12 +487,12 @@ def plot_spatial_Erev(df):
         fig = plt.figure(figsize=args.figsize)
         ax = fig.subplots()
         # add black color for NaNs
-        cmap = ListedColormap([orangey_red_rgb, bluey_green_rgb, (0, 0, 0)])
-        ax.pcolormesh(zs, cmap=cmap, edgecolors='white',
+        # cmap = ListedColormap([orangey_red_rgb, bluey_green_rgb, (0, 0, 0)])
+        ax.pcolormesh(zs, edgecolors='white',
                       linewidths=1, antialiased=True)
 
-        ax.plot([], [], color=orangey_red_rgb, ls='None', marker='s', label='high E_rev')
-        ax.plot([], [], color=bluey_green_rgb, ls='None', marker='s', label='low E_rev')
+        ax.plot([], [], ls='None', marker='s', label='high E_rev')
+        ax.plot([], [], ls='None', marker='s', label='low E_rev')
         ax.legend()
 
         ax.set_xticks([i + .5 for i in range(24)])
@@ -527,13 +528,13 @@ def plot_spatial_passed(df):
 
     zs = np.array(zs).reshape(16, 24)
 
-    cmap = ListedColormap([orangey_red_rgb, bluey_green_rgb])
-    _ = ax.pcolormesh(zs, cmap=cmap, edgecolors='white',
+    # cmap = ListedColormap([orangey_red_rgb, bluey_green_rgb])
+    _ = ax.pcolormesh(zs, edgecolors='white',
                       linewidths=1, antialiased=True,
                       )
 
-    ax.plot([], [], color=orangey_red_rgb, ls='None', marker='s', label='failed QC')
-    ax.plot([], [], color=bluey_green_rgb, ls='None', marker='s', label='passed QC')
+    ax.plot([], [], ls='None', marker='s', label='failed QC')
+    ax.plot([], [], ls='None', marker='s', label='passed QC')
     ax.set_aspect('equal')
     ax.legend()
 
@@ -613,26 +614,19 @@ def plot_histograms(df, qc_df):
     fig.savefig(os.path.join(output_dir, 'g_leak_after'))
     ax.cla()
 
-    if 'drug' in qc_df:
-        qc_df = qc_df[df_df.drug == 'before']
-
-    qc_df['passed QC'] = qc_df.well.isin(passed_wells)
-    if 'drug' in qc_df:
-        qc_df = qc_df[qc_df.drug == 'before']
-
-    sns.histplot(qc_df,
+    sns.histplot(df,
                  x='Rseries', hue='passed QC', ax=ax,
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'Rseries_before'))
     ax.cla()
 
-    sns.histplot(qc_df,
+    sns.histplot(df,
                  x='Rseal', hue='passed QC', ax=ax,
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'Rseal_before'))
     ax.cla()
 
-    sns.histplot(qc_df,
+    sns.histplot(df,
                  x='Cm', hue='passed QC', ax=ax,
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'Cm_before'))
@@ -668,11 +662,9 @@ def overlay_reversal_plots(leak_parameters_df):
             if protocol == np.nan:
                 continue
             for sweep in sweeps_to_plot:
-                voltage_fname = os.path.join(args.data_dir,
+                voltage_fname = os.path.join(args.data_dir, 'traces',
                                              f"{experiment_name}-{protocol}-voltages.csv")
-                voltages = np.loadtxt(voltage_fname).flatten()
-
-                protocol = VoltageProtocol.from_voltage_trace(voltages)
+                voltages = pd.read_csv(voltage_fname)['voltage'].values.flatten()
 
                 fname = f"{experiment_name}-{protocol}-{well}-sweep{sweep}.csv"
                 try:
@@ -685,8 +677,9 @@ def overlay_reversal_plots(leak_parameters_df):
                 times = times.flatten().astype(np.float64)
 
                 # First, find the reversal ramp
-
-                ramps = protocol.get_ramps()
+                json_protocol = json.load(os.path.join(args.data_dir, 'traces', 'protocols', f"{experiment_name}-{protocol}.json"))
+                v_protocol = VoltageProtocol.from_json(json_protocol)
+                ramps = v_protocol.get_ramps()
                 reversal_ramp = ramps[-1]
                 ramp_start, ramp_end = reversal_ramp[:2]
 

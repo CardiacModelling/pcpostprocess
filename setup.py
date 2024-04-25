@@ -12,8 +12,8 @@ with open('README.md') as f:
 setup(
     # Module name (lowercase)
     name='pcpostprocess',
-    # version=version,
-    description='Post-process high-throughput patch-clamp data',
+    version='0.0.1',
+    description='Export high-throughput patch-clamp data from the Nanion SyncroPatch',
     long_description=readme,
     long_description_content_type="text/markdown",
     author='Frankie Patten-Elliot, Joseph Shuttleworth, Chon Lok Lei',

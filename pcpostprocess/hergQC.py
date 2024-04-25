@@ -15,6 +15,8 @@ class hERGQC(object):
                'qc5.staircase', 'qc5.1.staircase',
                'qc6.subtracted', 'qc6.1.subtracted', 'qc6.2.subtracted']
 
+    no_QC = len(QCnames)
+
     def __init__(self, sampling_rate=5, plot_dir=None, voltage=np.array([]),
                  n_sweeps=None, removal_time=2):
         # TODO docstring
@@ -125,7 +127,7 @@ class hERGQC(object):
             return False, [False for lab in self.qc_labels]
 
         if (None in qc_vals_before) or (None in qc_vals_after):
-            return False, [False] * 3 + [None] * 13
+            return False, False * self.no_QC
 
         qc1_1 = self.qc1(*qc_vals_before)
         qc1_2 = self.qc1(*qc_vals_after)
@@ -393,6 +395,11 @@ class hERGQC(object):
 
             if i_end == 0:
                 break
-            current[:, i_start:i_end] = 0
+            if len(current.shape) == 2:
+                current[:, i_start:i_end] = 0
+            elif len(current.shape) == 1:
+                current[i_start:i_end] = 0
+            else:
+                raise ValueError("Current must have 1 or 2 dimensions")
 
         return current
