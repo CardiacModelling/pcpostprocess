@@ -9,7 +9,7 @@ from pcpostprocess.hergQC import hERGQC
 from syncropatch_export.trace import Trace
 
 
-class TestHergQC(unittest.TestCase)
+class TestHergQC(unittest.TestCase):
     def setUp(self):
         filepath = os.path.join('tests', 'test_data', '13112023_MW2_FF',
                                 'staircaseramp (2)_2kHz_15.01.07')
