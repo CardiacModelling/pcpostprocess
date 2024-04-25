@@ -78,7 +78,13 @@ class TestHergQC(unittest.TestCase):
             before_well = np.array(before[well])
             after_well = np.array(after[well])
 
-            passed, qcs = hergqc.run_qc(voltage_protocol.get_all_sections(),
+            # Assume that there are no discontinuities at the start or end of ramps
+            voltage_steps = [tstart \
+                             for tstart, tend, vstart, vend in
+                             voltage_protocol.get_all_sections() if vend == vstart]
+
+
+            passed, qcs = hergqc.run_qc(voltage_steps,
                                         times, before_well, after_well,
                                         qc_vals_before_well,
                                         qc_vals_after_well, n_sweeps=2)

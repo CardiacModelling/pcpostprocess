@@ -103,7 +103,13 @@ class hERGQC(object):
                qc_vals_after, n_sweeps=None):
         """Run each QC criteria on a single (before-trace, after-trace) pair.
 
-        This requires self._before, and self._after
+        @param voltage_steps is a list of times at which there are discontinuities in Vcmd
+        @param times is the array of observation times
+        @param before is the before-drug current trace
+        @param after is the post-drug current trace
+        @param qc_vals_before is an array of values for each pre-drug sweep where each row is (Rseal, Cm, Rseries)
+        @param qc_vals_before is an array of values for each post-drug sweep where each row is (Rseal, Cm, Rseries)
+        @n_sweeps is the number of sweeps to be considered
         """
 
         if not n_sweeps:
@@ -369,15 +375,24 @@ class hERGQC(object):
             return False
         return True
 
-    def filter_capacitive_spikes(self, current, times, voltage_steps):
-        for tstart, tend, vstart, vend in voltage_steps[1:-1]:
-            if vstart==vend:
-                win_end = tstart + self.removal_time
-                i_start = np.argmax(times >= tstart)
-                i_end   = np.argmax(times > win_end)
+    def filter_capacitive_spikes(self, current, times, voltage_step_times):
+        """
+        Set values to 0 where they lie less that self.removal time after a change in voltage
 
-                if i_end == 0:
-                    break
+        @param current: The observed current
+        @param times: the times at which the current was observed
+        @param voltage_step_times: the times at which there are discontinuities in Vcmd
+        """
 
-                current[i_start:i_end] = 0
+        for tstart, tend in zip(voltage_step_times,
+                                np.append(voltage_step_times[1:], np.inf)):
+            win_end = tstart + self.removal_time
+            win_end = min(tend, win_end)
+            i_start = np.argmax(times >= tstart)
+            i_end   = np.argmax(times > win_end)
+
+            if i_end == 0:
+                break
+            current[:, i_start:i_end] = 0
+
         return current
