@@ -2,6 +2,7 @@ import os
 import unittest
 
 from pcpostprocess import leak_correct
+from syncropatch_export.trace import Trace
 
 class TestLeakCorrect(unittest.TestCase):
     def setUp(self):
@@ -15,7 +16,7 @@ class TestLeakCorrect(unittest.TestCase):
             os.makedirs(self.output_dir)
 
         self.ramp_bounds = [1700, 2500]
-        self.test_trace = tr(test_data_dir, json_file)
+        self.test_trace = Trace(test_data_dir, json_file)
 
         # get currents and QC from trace object
         self.currents = self.test_trace.get_all_traces(leakcorrect=False)
@@ -31,20 +32,26 @@ class TestLeakCorrect(unittest.TestCase):
         well = 'A01'
         sweep = 0
 
-        leak_correct.fit_linear_leak(self.test_trace, well, sweep,
-                                     self.ramp_bounds, plot=True,
-                                     output_dir=self.output_dir)
+        voltage = self.test_trace.get_voltage()
+        times = self.test_trace.get_times()
+
+        current = self.test_trace.get_trace_sweeps(sweeps=[sweep])[well][0, :]
+
+        leak_correct.fit_linear_leak(current, voltage, times,
+                                     *self.ramp_bounds,
+                                     output_dir=self.output_dir,
+                                     save_fname=f"{well}_sweep{sweep}_leak_correction")
 
     def test_get_leak_correct(self):
         trace = self.test_trace
         currents = self.currents
-        QC_filt = leak_correct.get_QC_dict(self.QC)
+        well = 'A01'
+        sweep = 0
+        voltage = trace.get_voltage()
+        times = trace.get_times()
 
-        # test getting leak corrected data
-        _ = leak_correct.get_leak_corrected(
-            trace, self.ramp_bounds, QC_filt)
-
-        return leak_correct.get_leak_corrected(trace, currents, QC_filt)
+        current = currents[well][sweep, :]
+        return leak_correct.get_leak_corrected(current, voltage, times, *self.ramp_bounds)
 
 
 if __name__ == "__main__":

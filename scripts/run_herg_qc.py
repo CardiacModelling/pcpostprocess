@@ -547,11 +547,12 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['Cm'] = qc_vals[1]
             row_dict['Rseries'] = qc_vals[2]
 
-            before_params, before_leak = fit_linear_leak(before_trace,
-                                                         well, sweep,
-                                                         ramp_bounds,
-                                                         plot=True,
-                                                         output_dir=out_dir)
+            before_params, before_leak = fit_linear_leak(before_current[sweep, :],
+                                                         voltages,
+                                                         *ramp_bounds,
+                                                         output_dir=out_dir,
+                                                         save_fname={f"{well}_sweep{sweep}"}
+                                                         )
 
             before_leak_currents.append(before_leak)
 
@@ -561,10 +562,10 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['gleak_before'] = before_params[1]
             row_dict['E_leak_before'] = -before_params[0] / before_params[1]
 
-            after_params, after_leak = fit_linear_leak(after_trace,
-                                                       well, sweep,
-                                                       ramp_bounds,
-                                                       plot=True,
+            after_params, after_leak = fit_linear_leak(after_current[:, sweep],
+                                                       voltages,
+                                                       *ramp_bounds,
+                                                       save_fname={f"{well}_sweep{sweep}"},
                                                        output_dir=out_dir)
 
             after_leak_currents.append(after_leak)
@@ -795,23 +796,25 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         tstart = desc[ramp_locs[0], 0]
         tend = voltage_protocol.get_ramps()[0][1]
 
-        t = before_trace.get_times()
+        times = before_trace.get_times()
 
-        ramp_bounds = [np.argmax(t > tstart), np.argmax(t > tend)]
+        ramp_bounds = [np.argmax(times > tstart), np.argmax(times > tend)]
 
         assert after_trace.NofSamples == before_trace.NofSamples
 
         for sweep in range(nsweeps):
-            before_params1, before_leak = fit_linear_leak(before_trace, well,
-                                                          sweep, ramp_bounds,
-                                                          plot=True,
-                                                          label=f"{savename}-before",
+            before_params1, before_leak = fit_linear_leak(before_currents[sweep, :],
+                                                          voltage,
+                                                          times,
+                                                          *ramp_bounds,
+                                                          save_fname=f"{well}-sweep{sweep}-before",
                                                           output_dir=savedir)
 
-            after_params1, after_leak = fit_linear_leak(after_trace, well,
-                                                        sweep, ramp_bounds,
-                                                        plot=True,
-                                                        label=f"{savename}-after",
+            after_params1, after_leak = fit_linear_leak(after_currents[sweep, :],
+                                                        voltage,
+                                                        times,
+                                                        *ramp_bounds,
+                                                        save_fname=f"{well}-sweep{sweep}-after",
                                                         output_dir=savedir)
 
             before_raw = np.array(raw_before_all[well])[sweep, :]
@@ -823,8 +826,12 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
 
+        voltage_steps = [tstart \
+                            for tstart, tend, vstart, vend in
+                            voltage_protocol.get_all_sections() if vend == vstart]
+
         # Run QC with leak subtracted currents
-        selected, QC = hergqc.run_qc(voltage_protocol.get_all_sections(), t,
+        selected, QC = hergqc.run_qc(voltage_steps, times,
                                      before_currents, after_currents,
                                      np.array(qc_before[well])[0, :],
                                      np.array(qc_after[well])[0, :], nsweeps)
@@ -869,7 +876,6 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
 
 def qc3_bookend(readname, savename, time_strs, args):
-    #  TODO Run this with subtracted traces
     plot_dir = os.path.join(args.output_dir, args.savedir,
                             f"{args.saveID}-{savename}-qc3-bookend")
 
@@ -880,6 +886,7 @@ def qc3_bookend(readname, savename, time_strs, args):
     json_file_first_before = f"{readname}_{time_strs[0]}"
     json_file_last_before = f"{readname}_{time_strs[1]}"
 
+    # Each Trace object contains two sweeps
     first_before_trace = Trace(filepath_first_before,
                                json_file_first_before)
     last_before_trace = Trace(filepath_last_before,
@@ -890,39 +897,65 @@ def qc3_bookend(readname, savename, time_strs, args):
     voltage_protocol = first_before_trace.get_voltage_protocol()
     ramp_bounds = detect_ramp_bounds(times,
                                      voltage_protocol.get_all_sections())
-    before_traces_first = get_leak_corrected(first_before_trace,
-                                             ramp_bounds)
-    before_traces_last = get_leak_corrected(last_before_trace,
-                                            ramp_bounds)
-
     filepath_first_after = os.path.join(args.data_directory,
                                         f"{readname}_{time_strs[2]}")
     filepath_last_after = os.path.join(args.data_directory,
-                                       f"{readname}_{time_strs[3]}")
+                                        f"{readname}_{time_strs[3]}")
     json_file_first_after = f"{readname}_{time_strs[2]}"
     json_file_last_after = f"{readname}_{time_strs[3]}"
 
     first_after_trace = Trace(filepath_first_after,
-                              json_file_first_after)
+                                json_file_first_after)
     last_after_trace = Trace(filepath_last_after,
-                             json_file_last_after)
+                                json_file_last_after)
 
-    after_traces_first = get_leak_corrected(first_after_trace,
-                                            ramp_bounds)
-    after_traces_last = get_leak_corrected(last_after_trace,
-                                           ramp_bounds)
-
+    # Ensure that all traces use the same voltage protocol
     assert np.all(first_before_trace.get_voltage() == last_before_trace.get_voltage())
     assert np.all(first_after_trace.get_voltage() == last_after_trace.get_voltage())
     assert np.all(first_before_trace.get_voltage() == first_after_trace.get_voltage())
-
-    first_processed = {well: before_traces_first[well] - after_traces_first[well]
-                       for well in before_traces_first}
-
-    last_processed = {well: before_traces_last[well] - after_traces_last[well]
-                      for well in after_traces_first}
-
     assert np.all(first_before_trace.get_voltage() == last_before_trace.get_voltage())
+
+    # Ensure that the same number of sweeps were used
+    assert first_before_trace.NofSweeps == last_before_trace.NofSweeps
+
+    first_before_current_dict = first_before_trace.get_trace_sweeps()
+    first_after_current_dict = first_after_trace.get_trace_sweeps()
+    last_before_current_dict = last_before_trace.get_trace_sweeps()
+    last_after_current_dict = last_after_trace.get_trace_sweeps()
+
+    # Do leak subtraction and store traces for each well
+    # TODO Refactor this code into a single loop. There's no need to store each individual trace.
+    before_traces_first = {}
+    before_traces_last = {}
+    after_traces_first = {}
+    after_traces_last = {}
+    first_processed = {}
+    first_processed = {}
+    for well in Trace().well_ID:
+        first_before_current = first_before_current_dict[well][0, :]
+        first_after_current = first_after_current_dict[well][0, :]
+        last_before_current = first_before_current_dict[well][-1, :]
+        last_after_current = first_before_current_dict[well][-1, :]
+
+
+        before_traces_first[well] = get_leak_corrected(first_before_current,
+                                                 voltage,
+                                                 *ramp_bounds)
+        before_traces_last[well] = get_leak_corrected(last_before_current,
+                                                voltage,
+                                                *ramp_bounds)
+
+        after_traces_first[well] = get_leak_corrected(first_after_current,
+                                                voltage
+                                                *ramp_bounds)
+        after_traces_last[well] = get_leak_corrected(last_after_current,
+                                            voltage,
+                                            *ramp_bounds)
+
+        # Store subtracted traces
+        first_processed[well] = before_traces_first[well] - after_traces_forst[well]
+        last_processed[well] = before_traces_first[well] - after_traces_forst[well]
+
 
     times = first_before_trace.get_times()
     voltage = first_before_trace.get_voltage()
@@ -932,8 +965,6 @@ def qc3_bookend(readname, savename, time_strs, args):
     hergqc = hERGQC(sampling_rate=first_before_trace.sampling_rate,
                     plot_dir=plot_dir,
                     voltage=voltage)
-
-    assert first_before_trace.NofSweeps == last_before_trace.NofSweeps
 
     res_dict = {}
     for well in args.wells:
