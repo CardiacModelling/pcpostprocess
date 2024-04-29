@@ -26,6 +26,7 @@ matplotlib.rc('font', size='9')
 
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
 plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
+sns.set_palette(sns.color_palette(color_cycle))
 
 
 def get_wells_list(input_dir):
@@ -108,6 +109,11 @@ def main():
         leak_parameters_df['protocol'] = pd.Categorical(leak_parameters_df['protocol'],
                                                         categories=protocol_order,
                                                         ordered=True)
+
+        qc_vals_df['protocol'] = pd.Categorical(qc_vals_df['protocol'],
+                                                categories=protocol_order,
+                                                ordered=True)
+
         leak_parameters_df.sort_values(['protocol', 'sweep'], inplace=True)
     except FileNotFoundError as exc:
         logging.warning(str(exc))
@@ -115,6 +121,8 @@ def main():
         leak_parameters_df.sort_values(['protocol', 'sweep'])
 
     do_chronological_plots(leak_parameters_df)
+    do_chronological_plots(leak_parameters_df, normalise=True)
+
     if 'passed QC' not in leak_parameters_df.columns and\
        'passed QC6a' in leak_parameters_df.columns:
         leak_parameters_df['passed QC'] = leak_parameters_df['passed QC6a']
@@ -129,20 +137,20 @@ def main():
     leak_parameters_df['passed QC'] = [well in passed_wells for well in leak_parameters_df.well]
     qc_vals_df['passed QC'] = [well in passed_wells for well in qc_vals_df.well]
 
-    do_scatter_matrices(leak_parameters_df, qc_vals_df)
+    # do_scatter_matrices(leak_parameters_df, qc_vals_df)
     plot_histograms(leak_parameters_df, qc_vals_df)
 
     # Very resource intensive
-    overlay_reversal_plots(leak_parameters_df)
-    do_combined_plots(leak_parameters_df)
+    # overlay_reversal_plots(leak_parameters_df)
+    # do_combined_plots(leak_parameters_df)
 
 
 def compute_leak_magnitude(df, lims=[-120, 60]):
     def compute_magnitude(g, E, lims=lims):
         # RMSE
         lims = np.array(lims)
-        evals = lims**3 / 3 - E * lims**2 + E**2 * lims
-        return np.abs(g) * np.sqrt(evals[1] - evals[0])
+        evals = (lims - E)**3 * np.abs(g) / 3
+        return np.sqrt(evals[1] - evals[0]) / np.sqrt(lims[1] - lims[0])
 
     before_lst = []
     after_lst = []
@@ -163,7 +171,7 @@ def compute_leak_magnitude(df, lims=[-120, 60]):
     return df
 
 
-def do_chronological_plots(df):
+def do_chronological_plots(df, normalise=False):
     fig = plt.figure(figsize=args.figsize, constrained_layout=True)
     ax = fig.subplots()
 
@@ -172,23 +180,42 @@ def do_chronological_plots(df):
     if not os.path.exists(sub_dir):
         os.makedirs(sub_dir)
 
+
     vars = ['gleak_after', 'gleak_before',
             'E_leak_after', 'R_leftover', 'E_leak_before',
             'E_leak_after', 'E_rev', 'pre-drug leak magnitude',
-            'post-drug leak magnitude']
+            'post-drug leak magnitude',
+            'E_rev_before', 'Cm', 'Rseries',
+            '40mV decay time constant']
 
     # df = df[leak_parameters_df['selected']]
+    df = df[df['passed QC']].copy()
+
+    relabel_dict = {protocol: r'$d_{' f"{i}" r'}$' for i, protocol in
+                    enumerate(df.protocol.unique())}
+
+    df = df.replace({'protocol': relabel_dict})
 
     for var in vars:
-        df['x'] = df.protocol.astype(str) + '_' + df.sweep.astype(str)
-        sns.scatterplot(data=df, x='x', y=var, hue='passed QC', ax=ax,
-                        hue_order=[False, True])
-        sns.lineplot(data=df, x='x', y=var, hue='passed QC', ax=ax, style='well', legend=False)
+        df['x'] = [str(x)[:-1] + r'^{(' + str(sweep) + r')}$'
+                   for x, sweep in zip(df.protocol, df.sweep)]
+        sub_df = df
+
+        if normalise:
+            sub_df[var] = sub_df[['well', var]].groupby('well').transform(lambda x: x/x.mean())[var]
+        sns.scatterplot(data=sub_df, x='x', y=var, hue='well', style='well', ax=ax)
+        sns.lineplot(data=df, x='x', y=var, ax=ax, style='well', hue='well',
+                     legend=False)
 
         if var == 'E_rev' and np.isfinite(args.reversal):
             ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
-        fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.pdf"),
-                    format='pdf')
+
+        fname = f"{var.replace(' ', '_')}.pdf"
+
+        if normalise:
+            fname = "normalised_" + fname
+
+        fig.savefig(os.path.join(sub_dir, fname), format='pdf')
 
         ax.cla()
 
@@ -533,10 +560,10 @@ def plot_spatial_passed(df):
                       linewidths=1, antialiased=True,
                       )
 
-    ax.plot([], [], ls='None', marker='s', label='failed QC')
-    ax.plot([], [], ls='None', marker='s', label='passed QC')
+    ax.plot([], [], ls='None', marker='s', label='failed QC', color=color_cycle[0])
+    ax.plot([], [], ls='None', marker='s', label='passed QC', color=color_cycle[1])
     ax.set_aspect('equal')
-    ax.legend()
+    # ax.legend()
 
     ax.set_xticks([i + .5 for i in list(range(24))[1::2]])
     ax.set_yticks([i + .5 for i in range(16)])
@@ -579,6 +606,18 @@ def plot_histograms(df, qc_df):
         ax.axvline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
 
     fig.savefig(os.path.join(output_dir, 'reversal_potential_histogram'))
+
+    vars = ['pre-drug leak magnitude',
+            'post-drug leak magnitude',
+            'R_leftover',
+            'gleak_before',
+            'gleak_after',
+            'Rseries',
+            'Rseal',
+            'Cm'
+            ]
+
+    df = df.groupby('well').agg({**{x: 'mean' for x in vars}, **{'passed QC': 'min'}})
 
     ax.cla()
     sns.histplot(df,

@@ -6,6 +6,7 @@ import matplotlib
 import os
 import string
 import sys
+import scipy
 import cycler
 
 import matplotlib.pyplot as plt
@@ -663,6 +664,24 @@ def extract_protocol(readname, savename, time_strs, selected_wells):
             np.savetxt(out_fname, subtracted_trace.flatten())
             rows.append(row_dict)
 
+            param, leak = fit_linear_leak(before_trace,
+                                          well, sweep,
+                                          ramp_bounds)
+
+            subtracted_trace = current - leak
+
+            t_step = times[1] - times[0]
+            row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
+            res = \
+                get_time_constant_of_first_decay(subtracted_trace,
+                                                 times, desc,
+                                                 output_path=os.path.join(args.output_dir,
+                                                                          'debug', '40mV time constant',
+                                                                          f"{savename}-{well}-sweep{sweep}-time-constant-fit.png"))
+
+            row_dict['40mV decay time constant'] = res[0]
+            row_dict['40mV peak current'] = res[1]
+
         before_leak_current_dict[well] = np.vstack(before_leak_currents)
         after_leak_current_dict[well] = np.vstack(after_leak_currents)
 
@@ -1039,6 +1058,68 @@ def qc3_bookend(readname, savename, time_strs):
         res_dict[well] = passed
 
     return res_dict
+
+def get_time_constant_of_first_decay(trace, times, protocol_desc, output_path=None):
+
+    if output_path:
+        if not os.path.exists(os.path.dirname(output_path)):
+            os.makedirs(os.path.dirname(output_path))
+
+    first_40mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2]==40][0]
+
+    tstart, tend, vstart, vend = protocol_desc[first_40mV_step_index + 1, :]
+    assert(vstart == vend)
+    assert(vstart==-120.0)
+
+    indices = np.argwhere((times >= tstart) & (times <= tend))
+
+    # find peak current
+    peak_current = np.min(trace[indices])
+    peak_index = np.argmax(np.abs(trace[indices]))
+    peak_time = times[indices[peak_index]]
+
+    indices = np.argwhere((times >= peak_time) & (times <= tend - 50))
+
+    def fit_func(x):
+        a, b, c = x
+        prediction = c + a * np.exp((-1.0/b) * (times[indices] - peak_time))
+
+        return np.sum((prediction - trace[indices])**2)
+
+    bounds =  [
+        (-np.abs(trace).max()*2, np.abs(trace).max()*2),
+        (1e-12, 1e4),
+        (-np.abs(trace).max()*2, np.abs(trace).max()*2),
+    ]
+
+    # Repeat optimisation with different starting guesses
+    x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
+
+    best_res = None
+    for x0 in x0s:
+        res = scipy.optimize.minimize(fit_func, x0=x0,
+                                      bounds=bounds)
+        if best_res is None:
+            best_res = res
+        elif res.fun < best_res.fun and res.success and res.fun != 0:
+            best_res = res
+
+    res = best_res
+
+    if output_path and res:
+        fig = plt.figure(figsize=args.figsize)
+        ax = fig.subplots()
+
+        ax.plot(times[indices], trace[indices], color='grey', alpha=.5)
+        a, b, c = res.x
+        ax.plot(times[indices], c + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
+                color='red', linestyle='--')
+
+        ax.set_title(f"timescale {b}ms")
+        fig.savefig(output_path)
+        plt.close(fig)
+
+    return res.x[1], peak_current if res else np.nan, peak_current
 
 
 def setup_subtraction_grid(fig, nsweeps):
