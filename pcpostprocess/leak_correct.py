@@ -3,8 +3,6 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
-from .trace import Trace
-
 
 def linear_reg(V, I_obs):
     # number of observations/points
@@ -36,6 +34,7 @@ def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
     @returns:
     A dictionary where the keys are wells and the values are sweeps that passed QC
     '''
+    # TODO decouple this code from syncropatch export
 
     QC_dict = {}
     for well in QC:
@@ -58,65 +57,48 @@ def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
     return QC_dict
 
 
-def detect_ramp_bounds(trace, voltage_protocol):
-    t = trace.get_times()
-    tstart, tend = voltage_protocol.get_ramps()[0][:2]
-    ramp_bounds = [np.argmax(t > tstart), np.argmax(t > tend)]
-    return ramp_bounds
-
-
-def get_leak_corrected(trace: Trace, ramp_bounds, QC_dict=None):
+def get_leak_corrected(current, voltages, times, ramp_start_index,
+                       ramp_end_index, **kwargs):
     """Leak correct all data in a trace
 
     @Params:
-    trace: the Trace instance to leak correct
+    current: the observed currents taken from the entire sweep
 
-    ramp_bounds: an tuple of two floats describing the start and end of the leak ramp
+    voltages: the voltages at each timepoint; has the same shape as current
 
-    QC_dict: an optional dictionary of the same format outputted by get_QC_dict
-    for filtering which wells and sweeps are outputted
+    ramp_start_index: the index of the observation where the leak ramp begins
 
+    ramp_end_index: the index of the observation where the leak ramp ends
 
-    @Returns: A dictionary where the key is the well and the value is a
-    leak-corrected trace
+    @Returns: A leak correct trace with the same shape as current
 
     """
 
-    leak_corrected = {}
-    currents = trace.get_trace_sweeps()
-
-    V = trace.get_voltage()
-
-    nobs = V.shape[0]
-
-    for row in trace.WELL_ID:
-        for well in row:
-            leak_corrected[well] = np.full((trace.NofSweeps, nobs), np.nan)
-            for sweep in range(trace.NofSweeps):
-
-                if QC_dict:
-                    if well not in QC_dict:
-                        continue
-                    if sweep not in QC_dict[well]:
-                        continue
-
-                I_obs = currents[well][sweep]  # pA
-                b_0, b_1 = linear_reg(
-                    V[ramp_bounds[0]:ramp_bounds[1]+1],
-                    I_obs[ramp_bounds[0]:ramp_bounds[1]+1])
-                I_leak = b_1*V + b_0
-                leak_corrected[well][sweep, :] = I_obs - I_leak
-
-    return leak_corrected
+    (b0, b1), I_leak = fit_linear_leak(current, voltages, times, ramp_start_index,
+                                       ramp_end_index, **kwargs)
 
 
-def fit_linear_leak(trace: Trace, well, sweep, ramp_bounds, plot=False,
-                    label='', output_dir=None):
+    return current - I_leak
 
-    voltage = trace.get_voltage()
-    times = trace.get_times()
 
-    current = trace.get_trace_sweeps([sweep])[well]
+def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
+                    save_fname='', output_dir='',
+                    figsize=(7.5, 6)):
+    """
+
+
+    @params
+    current: the observed currents taken from the entire sweep
+
+    voltages: the voltages at each timepoint; has the same shape as current
+
+    ramp_start_index: the index of the observation where the leak ramp begins
+
+    ramp_end_index: the index of the observation where the leak ramp ends
+
+    @Returns: the linear regression parameters obtained from fitting the leak ramp (tuple),
+    and the leak current (np.array with the same shape as current)
+    """
 
     if len(current) == 0:
         return (np.nan, np.nan), np.empty(times.shape)
@@ -127,16 +109,16 @@ def fit_linear_leak(trace: Trace, well, sweep, ramp_bounds, plot=False,
     V = voltage
 
     I_obs = current  # pA
-    b_0, b_1 = linear_reg(V[ramp_bounds[0]:ramp_bounds[1]+1],
-                          I_obs[ramp_bounds[0]:ramp_bounds[1]+1])
+    b_0, b_1 = linear_reg(V[ramp_start_index:ramp_end_index+1],
+                          I_obs[ramp_start_index:ramp_end_index+1])
     I_leak = b_1*V + b_0
 
-    if plot:
+    if save_fname:
         # fit to leak ramp
-        fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(7.5, 6))
+        fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=figsize)
 
-        start_t = times[ramp_bounds[0]]
-        end_t = times[ramp_bounds[1]]
+        start_t = times[ramp_start_index]
+        end_t = times[ramp_end_index]
 
         ax1.set_title('current vs time')
         ax1.set_xlabel('time (ms)')
@@ -146,8 +128,6 @@ def fit_linear_leak(trace: Trace, well, sweep, ramp_bounds, plot=False,
         ax1.axvline(end_t, linestyle='--', color='k', alpha=0.5)
         ax1.set_xlim(left=start_t - 1,
                      right=end_t + 1)
-        ax1.set_ylim(*np.quantile(I_obs[ramp_bounds[0]:ramp_bounds[1]],
-                                  [0, 1]))
 
         ax2.set_title('voltage vs time')
         ax2.set_xlabel('time (ms)')
@@ -161,10 +141,10 @@ def fit_linear_leak(trace: Trace, well, sweep, ramp_bounds, plot=False,
         ax3.set_title('current vs voltage')
         ax3.set_xlabel('voltage (mV)')
         ax3.set_ylabel('current (pA)')
-        ax3.plot(V[ramp_bounds[0]:ramp_bounds[1]+1],
-                 I_obs[ramp_bounds[0]:ramp_bounds[1]+1], 'x')
-        ax3.plot(V[ramp_bounds[0]:ramp_bounds[1]+1],
-                 I_leak[ramp_bounds[0]:ramp_bounds[1]+1], '--')
+        ax3.plot(V[ramp_start_index:ramp_end_index+1],
+                 I_obs[ramp_start_index:ramp_end_index+1], 'x')
+        ax3.plot(V[ramp_start_index:ramp_end_index+1],
+                 I_leak[ramp_start_index:ramp_end_index+1], '--')
 
         ax4.set_title(
             f'current vs. time (gleak: {np.round(b_1,1)}, Eleak: {np.round(b_0/b_1,1)})')
@@ -177,14 +157,12 @@ def fit_linear_leak(trace: Trace, well, sweep, ramp_bounds, plot=False,
         ax4.legend()
 
         fig.tight_layout()
-        fname = f"{label}_{well}_sweep{sweep}" if label != '' \
-            else f"{well}_sweep{sweep}"
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         if output_dir:
-            fig.savefig(os.path.join(output_dir, fname))
+            fig.savefig(os.path.join(output_dir, save_fname))
         plt.close(fig)
 
     return (b_0, b_1), I_leak

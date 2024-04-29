@@ -45,7 +45,7 @@ setup(
         'pandas>=1.3',
         'regex>=2023.12.25',
         'openpyxl>=3.1.2',
-        'jinja2>=3.1.0'
+        'jinja2>=3.1.0',
     ],
     extras_require={
         'test': [
@@ -55,6 +55,7 @@ setup(
             'isort',
             'mock>=3.0.5',         # For mocking command line args etc.
             'codecov>=2.1.3',
+            'syncropatch_export'
         ],
     },
 )

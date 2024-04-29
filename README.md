@@ -1,34 +1,17 @@
 
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
 <a name="readme-top"></a>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
-
-
 
 <!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
+[![Unit tests](https://github.com/CardiacModelling/pcpostprocess/actions/workflows/pytest.yml/badge.svg)](https://github.com//CardiacModelling/pcpostprocess/actions/workflows/pytest.yml)
+[![codecov](https://codecov.io/gh/CardiacModelling/pcpostprocess/graph/badge.svg?token=HOL0FrpGqs)](https://codecov.io/gh/CardiacModelling/pcpostprocess)
 
 
 <!-- PROJECT LOGO -->
 <!-- <br /> -->
 <!-- <div align="center"> -->
-<!--   <a href="https://github.com/CardiacModelling/pcpostprocess"> -->
 <!--     <img src="images/logo.png" alt="Logo" width="80" height="80"> -->
 <!--   </a> -->
-
-<!-- <h3 align="center">pcpostprocess</h3> -->
 
 
 <!-- TABLE OF CONTENTS -->
@@ -58,21 +41,11 @@
 </details>
 
 
-
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-This project contains a python package and scripts for extracting data from highthroughput patch-clamp experiments such as those performed on a Nanion SynroPatch 384. The package contains a lot of useful functionality that can be used to perform:
-- leak correction;
-- QC checks;
-- plotting trace;
-- exporting data into different file.
-
+This project contains a python package and scripts for handling time-series data from patch-clamp experiments. The package has been tested with data from a SyncroPatch 384, but may be adapted to work with data in other formats. The package can also be used to perform quality control (QC) as described in [Lei et al. (2019)](https://doi.org/10.1016%2Fj.bpj.2019.07.029).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- GETTING STARTED -->
@@ -83,11 +56,11 @@ To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-This package has been tested on Ubuntu with Python3.7 Python3.8 Python3.9 Python3.10 and Python3.11.
+This package has been tested on Ubuntu with Python 3.7, 3.8, 3.9, 3.10 and 3.11.
 
 ### Installation
 
-irst clone this repository
+First clone this repository
 
 ```
 git clone git@github.com:CardiacModelling/pcpostprocess && cd pcpostprocess
@@ -96,25 +69,26 @@ git clone git@github.com:CardiacModelling/pcpostprocess && cd pcpostprocess
 With one of these versions install, create and activate a virtual environment.
 
   ```sh
-  python3 -m venv .venv && activate .venv/bin/activate
+  python3 -m venv .venv && source .venv/bin/activate
   ```
 
 Then install the package with `pip`.
 
 ```
-python3 -m pip --upgrade pip && python3 -m pip install -e .[test]
+python3 -m pip install --upgrade pip && python3 -m pip install -e .'[test]'
 ```
 
-You can then run the tests using `unittest`.
+To run the tests you must first download some test data. Test data is available at [cardiac.nottingham.ac.uk/syncropatch\_export](https://cardiac.nottingham.ac.uk/pcpostprocess)
 
+```
+wget https://cardiac.nottingham.ac.uk/pcpostprocess/test_data.tar.xz -P tests/
+tar xvf tests/test_data.tar.xz -C tests/
+```
+
+Then you can run the tests.
 ```
 python3 -m unittest
 ```
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-TODO
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -143,18 +117,9 @@ If you have a suggestion that would make this better, please fork the repo and c
 
 Joseph Shuttleworth joseph.shuttleworth@nottingham.ac.uk
 
-Project Link: [https://github.com/CardiacModelling/pcpostprocess](https://github.com/CardiacModelling/pcpostprocess)
+Project Link: [https://github.com/CardiacModelling/syncropatch\_export](https://github.com/CardiacModelling/pcpostprocess)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* []()
-* []()
-* []()
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -170,7 +135,7 @@ Project Link: [https://github.com/CardiacModelling/pcpostprocess](https://github
 [stars-url]: https://github.com/CardiacModelling/pcpostprocess/stargazers
 [issues-shield]: https://img.shields.io/github/issues/CardiacModelling/pcpostprocess.svg?style=for-the-badge
 [issues-url]: https://github.com/CardiacModelling/pcpostprocess/issues
-[license-shield]: https://img.shields.io/github/license/CardiacModelling/pcpostprocess.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/Cardiac/Modelling/pcpostprocess.svg?style=for-the-badge
 [license-url]: https://github.com/CardiacModelling/pcpostprocess/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username

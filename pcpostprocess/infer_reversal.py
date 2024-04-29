@@ -5,12 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.polynomial.polynomial as poly
 
-from .trace import Trace
 
-
-def infer_reversal_potential(trace: Trace, sweep: int, well: str, ax=None,
-                             output_path=None, plot=None, known_Erev=None,
-                             current=None, figsize=(5, 3)):
+def infer_reversal_potential(current, times, voltage_segments, voltages,
+                             ax=None, output_path=None, plot=None,
+                             known_Erev=None, figsize=(5, 3)):
 
     if output_path:
         dirname = os.path.dirname(output_path)
@@ -20,16 +18,8 @@ def infer_reversal_potential(trace: Trace, sweep: int, well: str, ax=None,
     if (ax or output_path) and plot is not False:
         plot = True
 
-    times = trace.get_times()
-    # convert to ms
-    times = times
-
-    voltages = trace.get_voltage()
-    # convert to mV
-    voltages = voltages
-
     # Find indices of observations during the reversal ramp
-    ramps = trace.get_voltage_protocol().get_ramps()
+    ramps = [line for line in voltage_segments if line[2] != line[3]]
 
     # Assume the last ramp is the reversal ramp (convert to ms)
     tstart, tend = np.array(ramps)[-1, :2]

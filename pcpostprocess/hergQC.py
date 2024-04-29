@@ -100,25 +100,23 @@ class hERGQC(object):
     def set_debug(self, debug):
         self._debug = debug
 
-    def run_qc(self, voltage_protocol, times,
-               before=None, after=None, qc_vals_before=None,
-               qc_vals_after=None, n_sweeps=None):
+    def run_qc(self, voltage_steps, times,
+               before, after, qc_vals_before,
+               qc_vals_after, n_sweeps=None):
         """Run each QC criteria on a single (before-trace, after-trace) pair.
 
-        This requires self._before, and self._after should only be called by
-        self.run_hergqc.
+        @param voltage_steps is a list of times at which there are discontinuities in Vcmd
+        @param times is the array of observation times
+        @param before is the before-drug current trace
+        @param after is the post-drug current trace
+        @param qc_vals_before is an array of values for each pre-drug sweep where each row is (Rseal, Cm, Rseries)
+        @param qc_vals_before is an array of values for each post-drug sweep where each row is (Rseal, Cm, Rseries)
+        @n_sweeps is the number of sweeps to be considered
         """
-
-        if before is None:
-            before = self.before
 
         if not n_sweeps:
             n_sweeps = len(before)
 
-        if after is None:
-            after = self.after
-
-        voltage_steps = voltage_protocol.get_all_sections()
         before = np.array(before)
         after = np.array(after)
 
@@ -127,12 +125,6 @@ class hERGQC(object):
 
         if len(before) == 0 or len(after) == 0:
             return False, [False for lab in self.qc_labels]
-
-        if qc_vals_before is None:
-            qc_vals_before = self.qc_vals_before
-
-        if qc_vals_after is None:
-            qc_vals_after = self.qc_vals_after
 
         if (None in qc_vals_before) or (None in qc_vals_after):
             return False, False * self.no_QC
@@ -154,7 +146,7 @@ class hERGQC(object):
 
         rseals = [qc_vals_before[0], qc_vals_after[0]]
         cms = [qc_vals_before[1], qc_vals_after[1]]
-        rseriess = [qc_vals_after[2]]
+        rseriess = [qc_vals_before[2], qc_vals_after[2]]
         qc4 = self.qc4(rseals, cms, rseriess)
 
         # indices where hERG peaks
@@ -385,15 +377,29 @@ class hERGQC(object):
             return False
         return True
 
-    def filter_capacitive_spikes(self, current, times, voltage_steps):
-        for tstart, tend, vstart, vend in voltage_steps[1:-1]:
-            if vstart==vend:
-                win_end = tstart + self.removal_time
-                i_start = np.argmax(times >= tstart)
-                i_end   = np.argmax(times > win_end)
+    def filter_capacitive_spikes(self, current, times, voltage_step_times):
+        """
+        Set values to 0 where they lie less that self.removal time after a change in voltage
 
-                if i_end == 0:
-                    break
+        @param current: The observed current
+        @param times: the times at which the current was observed
+        @param voltage_step_times: the times at which there are discontinuities in Vcmd
+        """
 
+        for tstart, tend in zip(voltage_step_times,
+                                np.append(voltage_step_times[1:], np.inf)):
+            win_end = tstart + self.removal_time
+            win_end = min(tend, win_end)
+            i_start = np.argmax(times >= tstart)
+            i_end   = np.argmax(times > win_end)
+
+            if i_end == 0:
+                break
+            if len(current.shape) == 2:
+                current[:, i_start:i_end] = 0
+            elif len(current.shape) == 1:
                 current[i_start:i_end] = 0
+            else:
+                raise ValueError("Current must have 1 or 2 dimensions")
+
         return current

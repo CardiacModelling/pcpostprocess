@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 from pcpostprocess.hergQC import hERGQC
-from pcpostprocess.trace import Trace
+from syncropatch_export.trace import Trace
 
 
 class TestHergQC(unittest.TestCase):
@@ -37,13 +37,13 @@ class TestHergQC(unittest.TestCase):
 
         v = tr_before.get_voltage()
 
-        ts = tr_after.get_times()
+        times = tr_after.get_times()
 
         self.assertTrue(np.all(np.isfinite(v)))
-        self.assertTrue(np.all(np.isfinite(ts)))
+        self.assertTrue(np.all(np.isfinite(times)))
 
         # Calculate sampling rate in (use kHz)
-        sampling_rate = int(1.0 / (ts[1] - ts[0]))
+        sampling_rate = int(1.0 / (times[1] - times[0]))
 
         plot_dir = os.path.join(self.output_dir,
                                 'test_run_qc')
@@ -68,6 +68,8 @@ class TestHergQC(unittest.TestCase):
 
         test_wells = ['A01', 'A02', 'A03', 'A04', 'A05', 'D01']
 
+        voltage_protocol = tr_before.get_voltage_protocol()
+
         for well in test_wells:
             # Take values from the first sweep only
             qc_vals_before_well = np.array(qc_vals_before[well])[0, :]
@@ -76,10 +78,16 @@ class TestHergQC(unittest.TestCase):
             before_well = np.array(before[well])
             after_well = np.array(after[well])
 
-            passed, qcs = hergqc.run_qc(before_well, after_well,
+            # Assume that there are no discontinuities at the start or end of ramps
+            voltage_steps = [tstart \
+                             for tstart, tend, vstart, vend in
+                             voltage_protocol.get_all_sections() if vend == vstart]
+
+
+            passed, qcs = hergqc.run_qc(voltage_steps,
+                                        times, before_well, after_well,
                                         qc_vals_before_well,
-                                        qc_vals_after_well,
-                                        n_sweeps=2)
+                                        qc_vals_after_well, n_sweeps=2)
 
             logging.debug(well, passed)
             res[well] = passed
