@@ -14,7 +14,7 @@ import cycler
 from matplotlib import rc
 from matplotlib.colors import ListedColormap
 
-from pcpostprocess.voltage_protocols import VoltageProtocol
+from syncropatch_export.voltage_protocols import VoltageProtocol
 
 
 # rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
@@ -196,27 +196,36 @@ def do_chronological_plots(df, normalise=False):
 
     df = df.replace({'protocol': relabel_dict})
 
-    for var in vars:
-        df['x'] = [str(x)[:-1] + r'^{(' + str(sweep) + r')}$'
-                   for x, sweep in zip(df.protocol, df.sweep)]
-        sub_df = df
+    units = {
+        # 'gleak_after': r'',
+        # 'gleak_before':,
+        # 'E_leak_after':,
+        # 'E_leak_before':,
+        'pre-drug leak magnitude': 'pA',
+        '40mV_decay_time_constant': 'ms'
+    }
 
-        if normalise:
-            sub_df[var] = sub_df[['well', var]].groupby('well').transform(lambda x: x/x.mean())[var]
-        sns.scatterplot(data=sub_df, x='x', y=var, hue='well', style='well', ax=ax)
-        sns.lineplot(data=df, x='x', y=var, ax=ax, style='well', hue='well',
-                     legend=False)
+    pretty_vars = {
+        'pre-drug leak magnitude': r'$\bar{I}_\text{l}$',
+        'pre-drug leak magnitude': r'$\tau_{40\textrm{mV}}$'
+    }
+
+    for var in vars:
+        df['x'] = df.protocol.astype(str) + '_' + df.sweep.astype(str)
+        sns.scatterplot(data=df, x='x', y=var, hue='passed QC', ax=ax,
+                        hue_order=[False, True])
+        sns.lineplot(data=df, x='x', y=var, hue='passed QC', ax=ax, style='well', legend=True,
+                     legend_kws={'fontsize': 12})
 
         if var == 'E_rev' and np.isfinite(args.reversal):
             ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
+        ax.set_xlabel('')
 
-        fname = f"{var.replace(' ', '_')}.pdf"
+        if var in pretty_vars and var in units:
+            ax.set_ylabel(f"{pretty_vars[var]} ({units[var]})")
 
-        if normalise:
-            fname = "normalised_" + fname
-
-        fig.savefig(os.path.join(sub_dir, fname), format='pdf')
-
+        fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.pdf"),
+                    format='pdf')
         ax.cla()
 
     plt.close(fig)
