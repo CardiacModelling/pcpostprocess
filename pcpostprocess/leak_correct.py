@@ -1,3 +1,4 @@
+import logging
 import os
 
 import numpy as np
@@ -83,7 +84,7 @@ def get_leak_corrected(current, voltages, times, ramp_start_index,
 
 def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
                     save_fname='', output_dir='',
-                    figsize=(7.5, 6)):
+                    figsize=(5.54, 7)):
     """
 
 
@@ -101,7 +102,7 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
     """
 
     if len(current) == 0:
-        return (np.nan, np.nan), np.empty(times.shape)
+        return (np.nan, np.nan), np.full(times.shape, np.nan)
 
     current = current.flatten()
 
@@ -113,56 +114,75 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
                           I_obs[ramp_start_index:ramp_end_index+1])
     I_leak = b_1*V + b_0
 
+    if not np.all(np.isfinite(I_leak)) or not np.all(np.isfinite(I_obs)):
+        return (np.nan, np.nan), np.full(times.shape, np.nan)
+
     if save_fname:
         # fit to leak ramp
-        fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=figsize)
+        fig = plt.figure(figsize=figsize, constrained_layout=True)
+        (ax1, ax3), (ax2, ax4) = fig.subplots(2, 2)
+
+        for ax in (ax1, ax2, ax3, ax4):
+            ax.spines[['top', 'right']].set_visible(False)
+
+        time_range = (0, times.max() / 5)
+
+        # Current vs time
+        ax1.set_title(r'\textbf{a}', loc='left', usetex=True)
+        ax1.set_xlabel(r'$t$ (ms)')
+        ax1.set_ylabel(r'$I_\text{obs}$ (pA)')
+        ax1.set_xticklabels([])
+        ax1.set_xlim(*time_range)
+
+        # Voltage vs time
+        ax2.set_title(r'\textbf{b}', loc='left', usetex=True)
+        ax2.set_xlabel(r'$t$ (ms)')
+        ax2.set_ylabel(r'$V_\text{cmd}$ (mV)')
+        ax2.set_xlim(*time_range)
+
+
+        # Current vs voltage
+        ax3.set_title(r'\textbf{c}', loc='left', usetex=True)
+        ax3.set_xlabel(r'$V_\text{cmd}$ (mV)')
+        ax3.set_ylabel(r'$I_\text{obs}$ (pA)')
+
+        ax4.set_xlabel(r'$t$ (ms)')
+        ax4.set_ylabel(r'current (pA)')
+        ax4.set_title(r'\textbf{d}', loc='left', usetex=True)
 
         start_t = times[ramp_start_index]
         end_t = times[ramp_end_index]
 
-        ax1.set_title('current vs time')
-        ax1.set_xlabel('time (ms)')
-        ax1.set_ylabel('current (pA)')
+        ax1.axvspan(start_t, end_t, alpha=.5, color='grey')
         ax1.plot(times, I_obs)
-        ax1.axvline(start_t, linestyle='--', color='k', alpha=0.5)
-        ax1.axvline(end_t, linestyle='--', color='k', alpha=0.5)
-        ax1.set_xlim(left=start_t - 1,
-                     right=end_t + 1)
+        # ax1.axvline(start_t, linestyle='--', color='k', alpha=0.5)
+        # ax1.axvline(end_t, linestyle='--', color='k', alpha=0.5)
 
-        ax2.set_title('voltage vs time')
-        ax2.set_xlabel('time (ms)')
-        ax2.set_ylabel('voltage (mV)')
+        ax2.axvspan(start_t, end_t, alpha=.5, color='grey')
         ax2.plot(times, V)
-        ax2.axvline(start_t, linestyle='--', color='k', alpha=0.5)
-        ax2.axvline(end_t, linestyle='--', color='k', alpha=0.5)
-        ax2.set_xlim(left=start_t - 1,
-                     right=end_t + 1)
 
-        ax3.set_title('current vs voltage')
-        ax3.set_xlabel('voltage (mV)')
-        ax3.set_ylabel('current (pA)')
+        # ax2.axvline(start_t, linestyle='--', color='k', alpha=0.5)
+        # ax2.axvline(end_t, linestyle='--', color='k', alpha=0.5)
+
         ax3.plot(V[ramp_start_index:ramp_end_index+1],
                  I_obs[ramp_start_index:ramp_end_index+1], 'x')
         ax3.plot(V[ramp_start_index:ramp_end_index+1],
                  I_leak[ramp_start_index:ramp_end_index+1], '--')
 
-        ax4.set_title(
-            f'current vs. time (gleak: {np.round(b_1,1)}, Eleak: {np.round(b_0/b_1,1)})')
-        ax4.set_xlabel('time (s)')
-        ax4.set_ylabel('current (pA)')
-        ax4.plot(times, I_obs, label='I_obs')
-        ax4.plot(times, I_leak, linestyle='--', label='I_leak')
+        ax4.plot(times, I_obs, label=r'$I_\text{obs}$')
+        ax4.plot(times, I_leak, linestyle='--', label=r'$I_\text{l}$')
         ax4.plot(times, I_obs - I_leak,
-                 linestyle='--', alpha=0.5, label='Ikr')
-        ax4.legend()
-
-        fig.tight_layout()
+                 linestyle='--', alpha=0.5, label=r'$I_\text{obs} - I_\text{l}$')
+        ax4.legend(frameon=False)
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         if output_dir:
-            fig.savefig(os.path.join(output_dir, save_fname))
-        plt.close(fig)
+            try:
+                fig.savefig(os.path.join(output_dir, save_fname))
+                plt.close(fig)
+            except Exception as exc:
+                logging.warning(str(exc))
 
     return (b_0, b_1), I_leak

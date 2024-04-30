@@ -28,6 +28,7 @@ from syncropatch_export.voltage_protocols import VoltageProtocol
 
 
 matplotlib.use('Agg')
+plt.rcParams["axes.formatter.use_mathtext"] = True
 
 pool_kws = {'maxtasksperchild': 1}
 matplotlib.rc('font', size='9')
@@ -584,7 +585,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                                          voltages, times,
                                                          *ramp_bounds,
                                                          output_dir=out_dir,
-                                                         save_fname=f"{well}_sweep{sweep}"
+                                                         save_fname=f"{well}_sweep{sweep}.png"
                                                          )
 
             before_leak_currents.append(before_leak)
@@ -598,7 +599,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             after_params, after_leak = fit_linear_leak(after_current[sweep, :],
                                                        voltages, times,
                                                        *ramp_bounds,
-                                                       save_fname=f"{well}_sweep{sweep}",
+                                                       save_fname=f"{well}_sweep{sweep}.png",
                                                        output_dir=out_dir)
 
             after_leak_currents.append(after_leak)
@@ -653,6 +654,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                             n_sweeps=before_trace.NofSweeps)
 
             times = before_trace.get_times()
+            voltage = before_trace.get_voltage()
             voltage_protocol = before_trace.get_voltage_protocol()
 
             voltage_steps = [tstart \
@@ -680,9 +682,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             np.savetxt(out_fname, subtracted_trace.flatten())
             rows.append(row_dict)
 
-            param, leak = fit_linear_leak(before_trace,
-                                          well, sweep,
-                                          ramp_bounds)
+            param, leak = fit_linear_leak(current, voltage, times,
+                                          *ramp_bounds)
 
             subtracted_trace = current - leak
 
@@ -690,7 +691,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
             res = \
                 get_time_constant_of_first_decay(subtracted_trace,
-                                                 times, desc,
+                                                 times, desc, args=args,
                                                  output_path=os.path.join(args.output_dir,
                                                                           'debug', '40mV time constant',
                                                                           f"{savename}-{well}-sweep{sweep}-time-constant-fit.png"))
@@ -837,8 +838,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         nsweeps = before_trace.NofSweeps
         assert after_trace.NofSweeps == nsweeps
 
-        before_currents = np.empty((nsweeps, before_trace.NofSamples))
-        after_currents = np.empty((nsweeps, after_trace.NofSamples))
+        before_currents_corrected = np.empty((nsweeps, before_trace.NofSamples))
+        after_currents_corrected = np.empty((nsweeps, after_trace.NofSamples))
 
         # Get ramp times from protocol description
         voltage_protocol = VoltageProtocol.from_voltage_trace(voltage,
@@ -857,25 +858,25 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         assert after_trace.NofSamples == before_trace.NofSamples
 
         for sweep in range(nsweeps):
-            before_params1, before_leak = fit_linear_leak(before_currents[sweep, :],
-                                                          voltage,
-                                                          times,
-                                                          *ramp_bounds,
-                                                          save_fname=f"{well}-sweep{sweep}-before",
-                                                          output_dir=savedir)
-
-            after_params1, after_leak = fit_linear_leak(after_currents[sweep, :],
-                                                        voltage,
-                                                        times,
-                                                        *ramp_bounds,
-                                                        save_fname=f"{well}-sweep{sweep}-after",
-                                                        output_dir=savedir)
-
             before_raw = np.array(raw_before_all[well])[sweep, :]
             after_raw = np.array(raw_after_all[well])[sweep, :]
 
-            before_currents[sweep, :] = before_raw - before_leak
-            after_currents[sweep, :] = after_raw - after_leak
+            before_params1, before_leak = fit_linear_leak(before_raw,
+                                                          voltage,
+                                                          times,
+                                                          *ramp_bounds,
+                                                          save_fname=f"{well}-sweep{sweep}-before.png",
+                                                          output_dir=savedir)
+
+            after_params1, after_leak = fit_linear_leak(after_raw,
+                                                        voltage,
+                                                        times,
+                                                        *ramp_bounds,
+                                                        save_fname=f"{well}-sweep{sweep}-after.png",
+                                                        output_dir=savedir)
+
+            before_currents_corrected[sweep, :] = before_raw - before_leak
+            after_currents_corrected[sweep, :] = after_raw - after_leak
 
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
@@ -886,7 +887,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
         # Run QC with leak subtracted currents
         selected, QC = hergqc.run_qc(voltage_steps, times,
-                                     before_currents, after_currents,
+                                     before_currents_corrected,
+                                     after_currents_corrected,
                                      np.array(qc_before[well])[0, :],
                                      np.array(qc_after[well])[0, :], nsweeps)
 
@@ -904,7 +906,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                                     f"{args.saveID}-{savename}-{well}-sweep{i}.csv")
             if not os.path.exists(savedir):
                 os.makedirs(savedir)
-            subtracted_current = before_currents[0, :] - after_currents[0, :]
+            subtracted_current = before_currents_corrected[i, :] - after_currents_corrected[i, :]
             np.savetxt(savepath, subtracted_current, delimiter=',',
                        comments='', header=header)
 
@@ -990,11 +992,11 @@ def qc3_bookend(readname, savename, time_strs, args):
     last_processed = {}
 
     # Iterate over all wells
-    for well in np.array(syncropatch_export.trace.WELL_ID).flatten():
+    for well in np.array(all_wells).flatten():
         first_before_current = first_before_current_dict[well][0, :]
         first_after_current = first_after_current_dict[well][0, :]
-        last_before_current = first_before_current_dict[well][-1, :]
-        last_after_current = first_before_current_dict[well][-1, :]
+        last_before_current = last_before_current_dict[well][-1, :]
+        last_after_current = last_after_current_dict[well][-1, :]
 
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
@@ -1029,6 +1031,10 @@ def qc3_bookend(readname, savename, time_strs, args):
                      for tstart, tend, vstart, vend in
                      voltage_protocol.get_all_sections() if vend == vstart]
     res_dict = {}
+
+
+    fig = plt.figure(figsize=args.figsize)
+    ax = fig.subplots()
     for well in args.wells:
         trace1 = hergqc.filter_capacitive_spikes(
             first_processed[well], times, voltage_steps
@@ -1040,11 +1046,23 @@ def qc3_bookend(readname, savename, time_strs, args):
 
         passed = hergqc.qc3(trace1, trace2)
 
-        res_dict[well] = passed
+        res_dict[well] = passed 
 
+        save_fname = os.path.join(args.output_dir,
+                                  'debug',
+                                  f"debug_{well}_{savename}",
+                                  'qc3_bookend')
+
+        ax.plot(times, trace1)
+        ax.plot(times, trace2)
+        
+        fig.savefig(save_fname)
+        ax.cla()
+
+    plt.close(fig)
     return res_dict
 
-def get_time_constant_of_first_decay(trace, times, protocol_desc, output_path=None):
+def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_path):
 
     if output_path:
         if not os.path.exists(os.path.dirname(output_path)):
