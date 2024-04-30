@@ -179,16 +179,35 @@ def do_chronological_plots(df):
 
     # df = df[leak_parameters_df['selected']]
 
+    units = {
+        # 'gleak_after': r'',
+        # 'gleak_before':,
+        # 'E_leak_after':,
+        # 'E_leak_before':,
+        'pre-drug leak magnitude': 'pA',
+        '40mV_decay_time_constant': 'ms'
+    }
+
+    pretty_vars = {
+        'pre-drug leak magnitude': r'$\bar{I}_\text{l}$',
+        'pre-drug leak magnitude': r'$\tau_{40\textrm{mV}}$'
+    }
+
     for var in vars:
         df['x'] = df.protocol.astype(str) + '_' + df.sweep.astype(str)
         sns.scatterplot(data=df, x='x', y=var, hue='passed QC', ax=ax,
                         hue_order=[False, True])
-        sns.lineplot(data=df, x='x', y=var, hue='passed QC', ax=ax, style='well', legend=False)
+        sns.lineplot(data=df, x='x', y=var, hue='passed QC', ax=ax, style='well', legend=True,
+                     legend_kws={'fontsize': 12})
 
         if var == 'E_rev' and np.isfinite(args.reversal):
             ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
         fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.pdf"),
                     format='pdf')
+        ax.set_xlabel('')
+
+        if var in pretty_vars and var in units:
+            ax.set_ylabel(f"{pretty_vars[var]} ({units[var]})")
 
         ax.cla()
 
