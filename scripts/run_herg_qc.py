@@ -1082,6 +1082,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
     peak_time = times[indices[peak_index]]
 
     indices = np.argwhere((times >= peak_time) & (times <= tend - 50))
+    print(indices)
 
     def fit_func(x):
         a, b, c = x
@@ -1109,16 +1110,33 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
 
     res = best_res
 
+    if not res:
+        logging.warning('finding 40mv decay timeconstant failed:' + str(res))
+
     if output_path and res:
-        fig = plt.figure(figsize=args.figsize)
-        ax = fig.subplots()
+        fig = plt.figure(figsize=args.figsize, constrained_layout=True)
+        axs = fig.subplots(2)
 
-        ax.plot(times[indices], trace[indices], color='grey', alpha=.5)
+        for ax in axs:
+            ax.spines[['top', 'right']].set_visible(False)
+            ax.set_ylabel(r'$I_\text{obs}$ (pA)')
+            ax.set_xlabel(r'$t$ (ms)')
+
+        protocol_ax, fit_ax = axs
+        protocol_ax.set_title('a', fontweight='bold')
+        fit_ax.set_title('b', fontweight='bold')
+        fit_ax.plot(peak_time, tend-50, alpha=.5)
+
         a, b, c = res.x
-        ax.plot(times[indices], c + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
-                color='red', linestyle='--')
+        fit_ax.plot(times[indices], c + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
+                    color='red', linestyle='--')
 
-        ax.set_title(f"timescale {b}ms")
+        res_string = r'$\tau_{40\text{mV}} = ' f"{b:.1f}" r'\text{ms}$'
+        fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
+
+        protocol_ax.plot(times, trace)
+       # protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
+
         fig.savefig(output_path)
         plt.close(fig)
 

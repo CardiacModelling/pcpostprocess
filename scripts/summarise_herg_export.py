@@ -186,7 +186,8 @@ def do_chronological_plots(df, normalise=False):
             'E_leak_after', 'E_rev', 'pre-drug leak magnitude',
             'post-drug leak magnitude',
             'E_rev_before', 'Cm', 'Rseries',
-            '40mV decay time constant']
+            '40mV decay time constant',
+            '40mV peak current']
 
     # df = df[leak_parameters_df['selected']]
     df = df[df['passed QC']].copy()
@@ -202,20 +203,24 @@ def do_chronological_plots(df, normalise=False):
         # 'E_leak_after':,
         # 'E_leak_before':,
         'pre-drug leak magnitude': 'pA',
-        '40mV_decay_time_constant': 'ms'
+        '40mV decay time constant': 'ms',
+        '40mV peak current': 'pA'
     }
 
     pretty_vars = {
         'pre-drug leak magnitude': r'$\bar{I}_\text{l}$',
-        'pre-drug leak magnitude': r'$\tau_{40\textrm{mV}}$'
+        '40mV decay time constant': r'$\tau_{40\text{mV}}$',
+        '40mV peak current': r'$I_\text{peak}$'
     }
 
+    def label_func(p, s):
+        p = p[1:-1]
+        return r'$' + str(p) + r'^{(' + str(s) + r')}$'
+
     for var in vars:
-        df['x'] = df.protocol.astype(str) + '_' + df.sweep.astype(str)
-        sns.scatterplot(data=df, x='x', y=var, hue='passed QC', ax=ax,
-                        hue_order=[False, True])
-        sns.lineplot(data=df, x='x', y=var, hue='passed QC', ax=ax, style='well', legend=True,
-                     legend_kws={'fontsize': 12})
+        df['x'] = [label_func(p, s) for p, s in zip(df.protocol, df.sweep)]
+        sns.lineplot(data=df, x='x', y=var, hue='well', style='well', ax=ax, 
+                     legend=True)
 
         if var == 'E_rev' and np.isfinite(args.reversal):
             ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
