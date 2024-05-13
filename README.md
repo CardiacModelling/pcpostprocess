@@ -81,7 +81,7 @@ python3 -m pip install --upgrade pip && python3 -m pip install -e .'[test]'
 To run the tests you must first download some test data. Test data is available at [cardiac.nottingham.ac.uk/syncropatch\_export](https://cardiac.nottingham.ac.uk/pcpostprocess)
 
 ```
-wget https://cardiac.nottingham.ac.uk/pcpostprocess/test_data.tar.xz -P tests/
+wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/
 tar xvf tests/test_data.tar.xz -C tests/
 ```
 
