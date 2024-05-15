@@ -693,11 +693,12 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                 get_time_constant_of_first_decay(subtracted_trace,
                                                  times, desc, args=args,
                                                  output_path=os.path.join(args.output_dir,
-                                                                          'debug', '40mV time constant',
+                                                                          'debug', '-120mV time constant',
                                                                           f"{savename}-{well}-sweep{sweep}-time-constant-fit.png"))
 
-            row_dict['40mV decay time constant'] = res[0]
-            row_dict['40mV peak current'] = res[1]
+            row_dict['-120mV decay time constant 1'] = res[0][0]
+            row_dict['-120mV decay time constant 2'] = res[0][1]
+            row_dict['-120mV peak current'] = res[1]
 
         before_leak_current_dict[well] = np.vstack(before_leak_currents)
         after_leak_current_dict[well] = np.vstack(after_leak_currents)
@@ -1046,7 +1047,7 @@ def qc3_bookend(readname, savename, time_strs, args):
 
         passed = hergqc.qc3(trace1, trace2)
 
-        res_dict[well] = passed 
+        res_dict[well] = passed
 
         save_fname = os.path.join(args.output_dir,
                                   'debug',
@@ -1055,7 +1056,7 @@ def qc3_bookend(readname, savename, time_strs, args):
 
         ax.plot(times, trace1)
         ax.plot(times, trace2)
-        
+
         fig.savefig(save_fname)
         ax.cla()
 
@@ -1068,9 +1069,9 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         if not os.path.exists(os.path.dirname(output_path)):
             os.makedirs(os.path.dirname(output_path))
 
-    first_40mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2]==40][0]
+    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2]==40][0]
 
-    tstart, tend, vstart, vend = protocol_desc[first_40mV_step_index + 1, :]
+    tstart, tend, vstart, vend = protocol_desc[first_120mV_step_index + 1, :]
     assert(vstart == vend)
     assert(vstart==-120.0)
 
@@ -1079,25 +1080,30 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
     # find peak current
     peak_current = np.min(trace[indices])
     peak_index = np.argmax(np.abs(trace[indices]))
-    peak_time = times[indices[peak_index]]
+    peak_time = times[indices[peak_index]][0]
 
     indices = np.argwhere((times >= peak_time) & (times <= tend - 50))
-    print(indices)
-
     def fit_func(x):
-        a, b, c = x
-        prediction = c + a * np.exp((-1.0/b) * (times[indices] - peak_time))
+        a, b, c, d = x
+
+        if d < b:
+            b, d = d, b
+
+        prediction = c * np.exp((-1.0/d) * (times[indices] - peak_time)) + a * np.exp((-1.0/b) * (times[indices] - peak_time))
 
         return np.sum((prediction - trace[indices])**2)
 
     bounds =  [
-        (-np.abs(trace).max()*2, np.abs(trace).max()*2),
+        (-np.abs(trace).max()*2, 0),
         (1e-12, 1e4),
-        (-np.abs(trace).max()*2, np.abs(trace).max()*2),
+        (-np.abs(trace).max()*2, 0),
+        (1e-12, 1e4),
     ]
 
     # Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
+
+    x0s = [[a, b, c, d] if d < b else [a, d, c, b] for (a, b, c, d) in x0s]
 
     best_res = None
     for x0 in x0s:
@@ -1111,7 +1117,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
     res = best_res
 
     if not res:
-        logging.warning('finding 40mv decay timeconstant failed:' + str(res))
+        logging.warning('finding 120mv decay timeconstant failed:' + str(res))
 
     if output_path and res:
         fig = plt.figure(figsize=args.figsize, constrained_layout=True)
@@ -1125,22 +1131,36 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         protocol_ax, fit_ax = axs
         protocol_ax.set_title('a', fontweight='bold')
         fit_ax.set_title('b', fontweight='bold')
-        fit_ax.plot(peak_time, tend-50, alpha=.5)
+        fit_ax.plot(peak_time, peak_current, marker='x', color='red')
 
-        a, b, c = res.x
-        fit_ax.plot(times[indices], c + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
+        a, b, c, d = res.x
+
+        if d < b:
+            b, d = d, b
+
+        fit_ax.plot(times[indices], trace[indices], color='grey',
+                    alpha=.5)
+        fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))\
+                    + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
                     color='red', linestyle='--')
 
-        res_string = r'$\tau_{40\text{mV}} = ' f"{b:.1f}" r'\text{ms}$'
+        res_string = r'$\tau_{1} = ' f"{d:.1f}" r'\text{ms}'\
+            r'\; \tau_{2} = ' f"{b:.1f}" r'\text{ms}$'
+
         fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
 
         protocol_ax.plot(times, trace)
-       # protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
+        protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
 
         fig.savefig(output_path)
+        fit_ax.set_yscale('symlog')
+
+        dirname, filename = os.path.split(output_path)
+        filename = 'log10_' + filename
+        fig.savefig(os.path.join(dirname, filename))
         plt.close(fig)
 
-    return res.x[1], peak_current if res else np.nan, peak_current
+    return (d, b), peak_current if res else (np.nan, np.nan), peak_current
 
 
 def detect_ramp_bounds(times, voltage_sections, ramp_no=0):

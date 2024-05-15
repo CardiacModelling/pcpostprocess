@@ -186,8 +186,9 @@ def do_chronological_plots(df, normalise=False):
             'E_leak_after', 'E_rev', 'pre-drug leak magnitude',
             'post-drug leak magnitude',
             'E_rev_before', 'Cm', 'Rseries',
-            '40mV decay time constant',
-            '40mV peak current']
+            '-120mV decay time constant 1',
+            '-120mV decay time constant 2',
+            '-120mV peak current']
 
     # df = df[leak_parameters_df['selected']]
     df = df[df['passed QC']].copy()
@@ -203,14 +204,14 @@ def do_chronological_plots(df, normalise=False):
         # 'E_leak_after':,
         # 'E_leak_before':,
         'pre-drug leak magnitude': 'pA',
-        '40mV decay time constant': 'ms',
-        '40mV peak current': 'pA'
+        '-120mV decay time constant 1': 'ms',
+        '-120mV decay time constant 2': 'ms'
     }
 
     pretty_vars = {
         'pre-drug leak magnitude': r'$\bar{I}_\text{l}$',
-        '40mV decay time constant': r'$\tau_{40\text{mV}}$',
-        '40mV peak current': r'$I_\text{peak}$'
+        '-120mV time constant 1': r'$\tau_{1}$',
+        '-120mV time constant 2': r'$\tau_{2}$'
     }
 
     def label_func(p, s):
@@ -219,7 +220,7 @@ def do_chronological_plots(df, normalise=False):
 
     for var in vars:
         df['x'] = [label_func(p, s) for p, s in zip(df.protocol, df.sweep)]
-        sns.lineplot(data=df, x='x', y=var, hue='well', style='well', ax=ax, 
+        sns.lineplot(data=df, x='x', y=var, hue='well', style='well', ax=ax,
                      legend=True)
 
         if var == 'E_rev' and np.isfinite(args.reversal):
