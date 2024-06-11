@@ -188,6 +188,7 @@ def do_chronological_plots(df, normalise=False):
             'E_rev_before', 'Cm', 'Rseries',
             '-120mV decay time constant 1',
             '-120mV decay time constant 2',
+            '-120mV decay time constant 3',
             '-120mV peak current']
 
     # df = df[leak_parameters_df['selected']]
@@ -205,23 +206,35 @@ def do_chronological_plots(df, normalise=False):
         # 'E_leak_before':,
         'pre-drug leak magnitude': 'pA',
         '-120mV decay time constant 1': 'ms',
-        '-120mV decay time constant 2': 'ms'
+        '-120mV decay time constant 2': 'ms',
+        '-120mV decay time constant 3': 'ms'
     }
 
     pretty_vars = {
         'pre-drug leak magnitude': r'$\bar{I}_\text{l}$',
         '-120mV time constant 1': r'$\tau_{1}$',
-        '-120mV time constant 2': r'$\tau_{2}$'
+        '-120mV time constant 2': r'$\tau_{2}$',
+        '-120mV time constant 3': r'$\tau$'
     }
 
     def label_func(p, s):
         p = p[1:-1]
         return r'$' + str(p) + r'^{(' + str(s) + r')}$'
 
+    ax.spines[['top', 'right']].set_visible(False)
+    legend_kws = {'model': 'expand'}
+
     for var in vars:
         df['x'] = [label_func(p, s) for p, s in zip(df.protocol, df.sweep)]
-        sns.lineplot(data=df, x='x', y=var, hue='well', style='well', ax=ax,
-                     legend=True)
+        hist = sns.lineplot(data=df, x='x', y=var, hue='well', 
+                          legend=True)
+        ax = hist.axes
+
+        xlim = list(ax.get_xlim())
+        xlim[1] = xlim[1] + 2.5
+        ax.set_xlim(xlim)
+
+        lgdn = ax.legend(frameon=False, fontsize=8)
 
         if var == 'E_rev' and np.isfinite(args.reversal):
             ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
@@ -229,6 +242,10 @@ def do_chronological_plots(df, normalise=False):
 
         if var in pretty_vars and var in units:
             ax.set_ylabel(f"{pretty_vars[var]} ({units[var]})")
+
+        ax.get_legend().set_title('')
+        legend_handles, _= ax.get_legend_handles_labels()
+        ax.legend(legend_handles, ['failed QC', 'passed QC'],bbox_to_anchor=(1.26,1))
 
         fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.pdf"),
                     format='pdf')
@@ -359,7 +376,7 @@ def do_combined_plots(leak_parameters_df):
 def do_scatter_matrices(df, qc_df):
     grid = sns.pairplot(data=df, hue='passed QC', diag_kind='hist',
                         plot_kws={'alpha': 0.4, 'edgecolor': None},
-                        hue_order=[False, True])
+                        hue_order=[True, False])
     grid.savefig(os.path.join(output_dir, 'scatter_matrix_by_QC'))
 
     if args.reversal:
@@ -370,7 +387,7 @@ def do_scatter_matrices(df, qc_df):
     df['hue'] = df.E_rev.to_numpy() > true_reversal
     grid = sns.pairplot(data=df, hue='hue', diag_kind='hist',
                         plot_kws={'alpha': 0.4, 'edgecolor': None},
-                        hue_order=[False, True])
+                        hue_order=[True, False])
     grid.savefig(os.path.join(output_dir, 'scatter_matrix_by_reversal.pdf'),
                  format='pdf')
 
@@ -392,7 +409,7 @@ def do_scatter_matrices(df, qc_df):
     # qc_df['R_leftover'] = df['R_leftover']
     grid = sns.pairplot(data=qc_df, diag_kind='hist', plot_kws={'alpha': .4,
                                                                 'edgecolor': None},
-                        hue='passed QC', hue_order=[False, True])
+                        hue='passed QC', hue_order=[True, False])
 
     grid.savefig(os.path.join(output_dir, 'scatter_matrix_QC_params_by_QC'))
 
@@ -418,8 +435,8 @@ def plot_reversal_spread(df):
     fig = plt.figure(figsize=args.figsize, constrained_layout=True)
     ax = fig.subplots()
 
-    sns.histplot(data=group_df, x='E_Kr range', hue='passed QC', ax=ax,
-                 stat='count')
+    sns.histplot(data=group_df, x='E_Kr range', hue='passed QC',
+                 stat='count', multiple='stack')
 
     ax.set_xlabel(r'spread in inferred E_Kr / mV')
 
@@ -453,8 +470,8 @@ def plot_reversal_change_sweep_to_sweep(df):
         var_name_ltx = r'$\Delta E_{\mathrm{rev}}$'
         delta_df = pd.DataFrame(rows, columns=['well', var_name_ltx, 'passed QC'])
 
-        sns.histplot(data=delta_df, x=var_name_ltx, hue='passed QC', ax=ax,
-                     stat='count')
+        sns.histplot(data=delta_df, x=var_name_ltx, hue='passed QC',
+                     stat='count', multiple='stack')
         fig.savefig(os.path.join(output_dir, f"E_rev_sweep_to_sweep_{protocol}"))
         ax.cla()
 
@@ -488,8 +505,8 @@ def plot_leak_conductance_change_sweep_to_sweep(df):
         var_name_ltx = r'$\Delta g_{\mathrm{leak}}$'
         delta_df = pd.DataFrame(rows, columns=['well', var_name_ltx, 'passed QC'])
 
-        sns.histplot(data=delta_df, x=var_name_ltx, ax=ax, hue='passed QC',
-                     stat='count')
+        sns.histplot(data=delta_df, x=var_name_ltx, hue='passed QC',
+                     stat='count', multiple='stack')
         fig.savefig(os.path.join(output_dir, f"g_leak_sweep_to_sweep_{protocol}"))
 
     plt.close(fig)
@@ -529,12 +546,13 @@ def plot_spatial_Erev(df):
         fig = plt.figure(figsize=args.figsize)
         ax = fig.subplots()
         # add black color for NaNs
-        # cmap = ListedColormap([orangey_red_rgb, bluey_green_rgb, (0, 0, 0)])
-        ax.pcolormesh(zs, edgecolors='white',
+
+        cmap = matplotlib.colors.ListedColormap([color_cycle[0], color_cycle[1]], 'indexed')
+        ax.pcolormesh(zs, edgecolors='white', cmap=cmap,
                       linewidths=1, antialiased=True)
 
-        ax.plot([], [], ls='None', marker='s', label='high E_rev')
-        ax.plot([], [], ls='None', marker='s', label='low E_rev')
+        ax.plot([], [], ls='None', marker='s', label='high E_rev', color=color_cycle[0])
+        ax.plot([], [], ls='None', marker='s', label='low E_rev', color=color_cycle[1])
         ax.legend()
 
         ax.set_xticks([i + .5 for i in range(24)])
@@ -570,9 +588,9 @@ def plot_spatial_passed(df):
 
     zs = np.array(zs).reshape(16, 24)
 
-    # cmap = ListedColormap([orangey_red_rgb, bluey_green_rgb])
+    cmap = matplotlib.colors.ListedColormap([color_cycle[0], color_cycle[1]], 'indexed')
     _ = ax.pcolormesh(zs, edgecolors='white',
-                      linewidths=1, antialiased=True,
+                      linewidths=1, antialiased=True, cmap=cmap
                       )
 
     ax.plot([], [], ls='None', marker='s', label='failed QC', color=color_cycle[0])
@@ -595,26 +613,17 @@ def plot_spatial_passed(df):
 def plot_histograms(df, qc_df):
     fig = plt.figure(figsize=args.figsize, constrained_layout=True)
     ax = fig.subplots()
-    sns.histplot(df,
-                 x='E_rev', hue='passed QC', ax=ax,
-                 )
 
-    qc_df = qc_df[(qc_df.protocol == 'staircaseramp')
-                  & (qc_df.sweep == 0)]
-
-    if np.isfinite(args.reversal):
-        ax.axvline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
-    fig.savefig(os.path.join(output_dir, 'reversal_potential_histogram'))
-    ax.cla()
+    ax.spines[['top', 'right']].set_visible(False)
 
     averaged_fitted_EKr = df.groupby(['well'])['E_rev'].mean().copy().to_frame()
     averaged_fitted_EKr['passed QC'] = [np.all(df[df.well == well]['passed QC']) for well in averaged_fitted_EKr.index]
 
-    sns.histplot(averaged_fitted_EKr,
-                 x='E_rev', hue='passed QC', ax=ax,
-                 # stat='count',
-                 # common_norm=False
-                 )
+    hist = sns.histplot(averaged_fitted_EKr,
+                  x='E_rev', hue='passed QC', ax=ax, multiple='stack',
+                      stat='count', legend=False
+                     )
+    ax.set_xlabel(r'$\text{mean}(E_{\text{obs}})$')
     fig.savefig(os.path.join(output_dir, 'averaged_reversal_potential_histogram'))
 
     if np.isfinite(args.reversal):
@@ -636,52 +645,61 @@ def plot_histograms(df, qc_df):
 
     ax.cla()
     sns.histplot(df,
-                 x='pre-drug leak magnitude', hue='passed QC', ax=ax,
+                 x='pre-drug leak magnitude', hue='passed QC', multiple='stack',
                  stat='count', common_norm=False)
 
     fig.savefig(os.path.join(output_dir, 'pre_drug_leak_magnitude'))
     ax.cla()
 
     sns.histplot(df,
-                 x='post-drug leak magnitude', hue='passed QC', ax=ax,
-                 stat='count', common_norm=False)
+                 x='post-drug leak magnitude', hue='passed QC', 
+                 stat='count', common_norm=False, multiple='stack')
     fig.savefig(os.path.join(output_dir, 'post_drug_leak_magnitude'))
     ax.cla()
 
     ax.cla()
     sns.histplot(df,
-                 x='R_leftover', hue='passed QC', ax=ax,
+                 x='R_leftover', hue='passed QC', 
+                 multiple='stack',
                  stat='count', common_norm=False)
+
+    ax.get_legend().set_title('')
+    legend_handles, _= ax.get_legend_handles_labels()
+    ax.legend(legend_handles, ['failed QC', 'passed QC'],bbox_to_anchor=(1.26,1))
 
     fig.savefig(os.path.join(output_dir, 'R_leftover'))
     ax.cla()
 
     sns.histplot(df,
-                 x='gleak_before', hue='passed QC', ax=ax,
+                 x='gleak_before', hue='passed QC',
+                 multiple='stack',
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'g_leak_before'))
     ax.cla()
 
     sns.histplot(df,
-                 x='gleak_after', hue='passed QC', ax=ax,
+                 x='gleak_after', hue='passed QC',
+                 multiple='stack',
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'g_leak_after'))
     ax.cla()
 
     sns.histplot(df,
-                 x='Rseries', hue='passed QC', ax=ax,
+                 x='Rseries', hue='passed QC',
+                 multiple='stack',
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'Rseries_before'))
     ax.cla()
 
     sns.histplot(df,
-                 x='Rseal', hue='passed QC', ax=ax,
+                 x='Rseal', hue='passed QC',
+                 multiple='stack',
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'Rseal_before'))
     ax.cla()
 
     sns.histplot(df,
-                 x='Cm', hue='passed QC', ax=ax,
+                 x='Cm', hue='passed QC', multiple='stack',
                  stat='count', common_norm=False)
     fig.savefig(os.path.join(output_dir, 'Cm_before'))
 

@@ -50,6 +50,7 @@ def main():
     parser.add_argument('--output_dir')
     parser.add_argument('-w', '--wells', nargs='+')
     parser.add_argument('--protocols', nargs='+')
+    parser.add_argument('--reversal_spread_threshold', type=float, default=10)
     parser.add_argument('--export_failed', action='store_true')
     parser.add_argument('--selection_file')
     parser.add_argument('--subtracted_only', action='store_true')
@@ -303,7 +304,7 @@ def main():
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
         # QC Erev spread: check spread in reversal potential isn't too large
-        passed_QC_Erev_spread = E_rev_spread <= 10.0
+        passed_QC_Erev_spread = E_rev_spread <= args.reversal_spread_threshold
         logging.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
 
         qc_erev_spread[well] = passed_QC_Erev_spread
@@ -698,7 +699,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
-            row_dict['-120mV peak current'] = res[1]
+            row_dict['-120mV decay time constant 3'] = res[1]
+            row_dict['-120mV peak current'] = res[2]
 
         before_leak_current_dict[well] = np.vstack(before_leak_currents)
         after_leak_current_dict[well] = np.vstack(after_leak_currents)
@@ -1083,21 +1085,30 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
     peak_time = times[indices[peak_index]][0]
 
     indices = np.argwhere((times >= peak_time) & (times <= tend - 50))
-    def fit_func(x):
-        a, b, c, d = x
+    def fit_func(x, args=None):
+        # Pass 'args=single' when we want to use a single exponential.
+        # Otherwise use 2 exponentials
+        if args:
+            single = args == 'single'
+        else:
+            single = False
 
-        if d < b:
-            b, d = d, b
-
-        prediction = c * np.exp((-1.0/d) * (times[indices] - peak_time)) + a * np.exp((-1.0/b) * (times[indices] - peak_time))
+        if not single:
+            a, b, c, d = x
+            if d < b:
+                b, d = d, b
+            prediction = c * np.exp((-1.0/d) * (times[indices] - peak_time)) + a * np.exp((-1.0/b) * (times[indices] - peak_time))
+        else:
+            a, b = x
+            prediction = a * np.exp((-1.0/b) * (times[indices] - peak_time))
 
         return np.sum((prediction - trace[indices])**2)
 
     bounds =  [
         (-np.abs(trace).max()*2, 0),
-        (1e-12, 1e4),
+        (1e-12, 5e3),
         (-np.abs(trace).max()*2, 0),
-        (1e-12, 1e4),
+        (1e-12, 5e3),
     ]
 
     # Repeat optimisation with different starting guesses
@@ -1113,10 +1124,28 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
             best_res = res
         elif res.fun < best_res.fun and res.success and res.fun != 0:
             best_res = res
+    res1 = best_res
 
-    res = best_res
+    # Re-run with single exponential
+    bounds =  [
+        (-np.abs(trace).max()*2, 0),
+        (1e-12, 5e3),
+    ]
 
-    if not res:
+    # Repeat optimisation with different starting guesses
+    x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
+
+    best_res = None
+    for x0 in x0s:
+        res = scipy.optimize.minimize(fit_func, x0=x0,
+                                      bounds=bounds, args=('single',))
+        if best_res is None:
+            best_res = res
+        elif res.fun < best_res.fun and res.success and res.fun != 0:
+            best_res = res
+    res2 = best_res
+
+    if not res2:
         logging.warning('finding 120mv decay timeconstant failed:' + str(res))
 
     if output_path and res:
@@ -1133,10 +1162,12 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         fit_ax.set_title('b', fontweight='bold')
         fit_ax.plot(peak_time, peak_current, marker='x', color='red')
 
-        a, b, c, d = res.x
+        a, b, c, d = res1.x
 
         if d < b:
             b, d = d, b
+
+        e, f  = res2.x
 
         fit_ax.plot(times[indices], trace[indices], color='grey',
                     alpha=.5)
@@ -1158,9 +1189,31 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         dirname, filename = os.path.split(output_path)
         filename = 'log10_' + filename
         fig.savefig(os.path.join(dirname, filename))
+
+        fit_ax.cla()
+
+        dirname, filename = os.path.split(output_path)
+        filename = 'single_exp_' + filename
+        output_path = os.path.join(dirname, filename)
+
+        fit_ax.plot(times[indices], trace[indices], color='grey',
+                    alpha=.5)
+        fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
+                    color='red', linestyle='--')
+
+        res_string = r'$\tau = ' f"{f:.1f}" r'\text{ms}$'
+
+        fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
+        fig.savefig(output_path)
+
+        dirname, filename = os.path.split(output_path)
+        filename = 'log10_' + filename
+        fit_ax.set_yscale('symlog')
+        fig.savefig(os.path.join(dirname, filename))
+
         plt.close(fig)
 
-    return (d, b), peak_current if res else (np.nan, np.nan), peak_current
+    return (d, b), f, peak_current if res else (np.nan, np.nan), np.nan, peak_current
 
 
 def detect_ramp_bounds(times, voltage_sections, ramp_no=0):
