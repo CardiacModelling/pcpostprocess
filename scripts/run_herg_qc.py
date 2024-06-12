@@ -394,39 +394,67 @@ def create_qc_table(qc_df):
     if len(qc_df.index) == 0:
         return None
 
-    qc_criteria = qc_df.drop(['protocol', 'well'], axis='columns').columns
-    qc_df = qc_df.drop('protocol', axis='columns')
+    if 'Unnamed: 0' in qc_df:
+        qc_df = qc_df.drop('Unnamed: 0', axis='columns')
+
+    qc_criteria = list(qc_df.drop(['protocol', 'well'], axis='columns').columns)
 
     def agg_func(x):
-        x = list(x.values.flatten())
-        x = [True if y == 'True' or y == True  or y == 1 \
-             else False for y in x]
-        return np.all(x)
-
-
-    qc_df = qc_df.groupby('well').agg(
-        func=agg_func).reset_index()
+        x = x.values.flatten().astype(bool)
+        return bool(np.all(x))
 
     qc_df[qc_criteria] = qc_df[qc_criteria].astype(bool)
 
-    agg_dict = {crit: 'min' for crit in qc_criteria}
-    qc_df = qc_df.groupby('well').agg(agg_dict).reset_index()
+    qc_df['protocol'] = ['staircaseramp1_2' if p == 'staircaseramp2' else p
+                         for p in qc_df.protocol]
+
+    print(qc_df.protocol.unique())
 
     fails_dict = {}
     no_wells = 384
-    for crit in sorted(qc_criteria):
-        col = qc_df[crit].copy()
 
-        vals = list(col.values.flatten())
+    dfs = []
+    protocol_headings = ['staircaseramp1', 'staircaseramp1_2', 'all']
+    for protocol in protocol_headings:
+        fails_dict = {}
+        for crit in sorted(qc_criteria) + ['all']:
+            if protocol != 'all':
+                sub_df = qc_df[qc_df.protocol == protocol].copy()
+            else:
+                sub_df = qc_df.copy()
 
-        true_vals = [val for val in vals if val == True or val == 'True' or val == 1]
-        print(crit)
-        print(vals)
+            agg_dict = {crit: agg_func for crit in qc_criteria}
+            if crit != 'all':
+                col = sub_df.groupby('well').agg(agg_dict).reset_index()[crit]
+                vals = col.values.flatten()
+                n_passed = vals.sum()
+            else:
+                excluded = [crit for crit in qc_criteria
+                            if 'all' in crit or 'spread' in crit or 'bookend' in crit]
+                if protocol == 'all':
+                    excluded = []
+                crit_included = [crit for crit in qc_criteria if crit not in excluded]
 
-        crit = re.sub('_', r'\_', crit)
-        fails_dict[crit] = no_wells - len(true_vals)
+                col = sub_df.groupby('well').agg(agg_dict).reset_index()
+                n_passed = np.sum(np.all(col[crit_included].values, axis=1).flatten())
 
-    ret_df = pd.DataFrame.from_dict(fails_dict, orient='index', columns=['wells failing'])
+            crit = re.sub('_', r'\_', crit)
+            fails_dict[crit] = (crit, no_wells - n_passed)
+
+        new_df = pd.DataFrame.from_dict(fails_dict, orient='index',
+                                        columns=['crit', 'wells failing'])
+        new_df['protocol'] = protocol
+        new_df.set_index('crit')
+        dfs.append(new_df)
+
+    ret_df = pd.concat(dfs, ignore_index=True)
+
+    ret_df['wells failing'] = ret_df['wells failing'].astype(int)
+
+    ret_df['protocol'] = pd.Categorical(ret_df['protocol'],
+                                            categories=protocol_headings,
+                                            ordered=True)
+
     return ret_df
 
 
@@ -637,6 +665,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
+
+            row_dict['QC.R_leftover'] = row_dict['R_leftover'] < 0.5
 
             row_dict['E_rev'] = E_rev
             row_dict['E_rev_before'] = E_rev_before
