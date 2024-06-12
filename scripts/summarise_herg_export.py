@@ -16,6 +16,8 @@ from matplotlib.colors import ListedColormap
 
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
+from run_herg_qc import create_qc_table
+
 
 # rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 matplotlib.use('Agg')
@@ -86,6 +88,16 @@ def main():
         os.makedirs(output_dir)
 
     leak_parameters_df = pd.read_csv(os.path.join(args.data_dir, 'subtraction_qc.csv'))
+
+    qc_df = pd.read_csv(os.path.join(args.data_dir, f"QC-{experiment_name}.csv"))
+
+
+    qc_styled_df = create_qc_table(qc_df)
+    qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
+
+    qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
+    qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
+
     qc_vals_df = pd.read_csv(os.path.join(args.qc_estimates_file))
 
     with open(os.path.join(args.data_dir, 'passed_wells.txt')) as fin:
@@ -119,6 +131,8 @@ def main():
         logging.warning(str(exc))
         logger.warning('no chronological information provided. Sorting alphabetically')
         leak_parameters_df.sort_values(['protocol', 'sweep'])
+
+    scatterplot_timescale_E_obs(leak_parameters_df)
 
     do_chronological_plots(leak_parameters_df)
     do_chronological_plots(leak_parameters_df, normalise=True)
@@ -171,12 +185,57 @@ def compute_leak_magnitude(df, lims=[-120, 60]):
     return df
 
 
+def scatterplot_timescale_E_obs(df):
+    fig = plt.figure(figsize=args.figsize, constrained_layout=True)
+    ax = fig.subplots()
+
+    df = df[(df.well.isin(passed_wells))].sort_values('protocol')
+
+    plot_df = {}
+
+    protocols = list(df.protocol.unique())
+
+    if '-120mV decay time constant 3' in df:
+        df['40mV decay time constant'] = df['-120mV decay time constant 3']
+
+    # Shift values so that reversal ramp is close to -120mV step
+    plot_dfs = []
+    for well in df.well.unique():
+        E_rev_values = df[df.well == well]['E_rev'].values[:-1]
+        decay_values = df[df.well == well]['40mV decay time constant'].values[1:]
+        plot_df = pd.DataFrame([(well, p, E_rev, decay) for p, E_rev, decay\
+                                in zip(protocols, E_rev_values, decay_values)],
+                                columns=['well', 'protocol', 'E_rev', '40mV decay time constant'])
+        plot_dfs.append(plot_df)
+
+    plot_df = pd.concat(plot_dfs, ignore_index=True)
+    print(plot_df)
+
+    sns.scatterplot(data=plot_df, y='40mV decay time constant',
+                    x='E_rev', ax=ax, hue='well', style='well')
+
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_ylabel(r'$\tau$ (ms)')
+    ax.set_xlabel(r'$E_\text{obs}$')
+
+    fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_scatter.pdf"))
+    ax.cla()
+
+    sns.lineplot(data=plot_df, y='40mV decay time constant',
+                 x='E_rev', hue='well', style='well',
+                 ax=ax)
+
+    ax.set_ylabel(r'$\tau$ (ms)')
+    ax.set_xlabel(r'$E_\text{obs}$')
+    ax.spines[['top', 'right']].set_visible(False)
+    fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_line.pdf"))
+
+
 def do_chronological_plots(df, normalise=False):
     fig = plt.figure(figsize=args.figsize, constrained_layout=True)
     ax = fig.subplots()
 
     sub_dir = os.path.join(output_dir, 'chrono_plots')
-
     if not os.path.exists(sub_dir):
         os.makedirs(sub_dir)
 
@@ -225,6 +284,8 @@ def do_chronological_plots(df, normalise=False):
     legend_kws = {'model': 'expand'}
 
     for var in vars:
+        if var not in df:
+            continue
         df['x'] = [label_func(p, s) for p, s in zip(df.protocol, df.sweep)]
         hist = sns.lineplot(data=df, x='x', y=var, hue='well', 
                           legend=True)
@@ -463,7 +524,8 @@ def plot_reversal_change_sweep_to_sweep(df):
 
         rows = []
         for well in sub_df.well.unique():
-            delta_rev = sweep2_vals.loc[well]['E_rev'] - sweep1_vals.loc[well]['E_rev']
+            delta_rev = sweep2_vals.loc[well]['E_rev'].astype(float)\
+                - sweep1_vals.loc[well]['E_rev'].astype(float)
             passed_QC = well in passed_wells
             rows.append([well, delta_rev, passed_QC])
 
@@ -497,8 +559,8 @@ def plot_leak_conductance_change_sweep_to_sweep(df):
 
         rows = []
         for well in sub_df.well.unique():
-            delta_rev = sweep2_vals.loc[well]['gleak_before'] - \
-                sweep1_vals.loc[well]['gleak_before']
+            delta_rev = float(sweep2_vals.loc[well]['gleak_before']) - \
+                float(sweep1_vals.loc[well]['gleak_before'])
             passed_QC = well in passed_wells
             rows.append([well, delta_rev, passed_QC])
 
