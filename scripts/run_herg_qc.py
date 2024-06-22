@@ -30,6 +30,10 @@ from syncropatch_export.voltage_protocols import VoltageProtocol
 matplotlib.use('Agg')
 plt.rcParams["axes.formatter.use_mathtext"] = True
 
+#matplotlib/latex problems
+#plt.rcParams['text.usetex'] = True
+#plt.rcParams['text.latex.preamble']=r'\usepackage{amsmath}'
+
 pool_kws = {'maxtasksperchild': 1}
 matplotlib.rc('font', size='9')
 
@@ -1184,7 +1188,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
 
         for ax in axs:
             ax.spines[['top', 'right']].set_visible(False)
-            ax.set_ylabel(r'$I_\text{obs}$ (pA)')
+            ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
             ax.set_xlabel(r'$t$ (ms)')
 
         protocol_ax, fit_ax = axs
@@ -1205,8 +1209,8 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
                     + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
                     color='red', linestyle='--')
 
-        res_string = r'$\tau_{1} = ' f"{d:.1f}" r'\text{ms}'\
-            r'\; \tau_{2} = ' f"{b:.1f}" r'\text{ms}$'
+        res_string = r'$\tau_{1} = ' f"{d:.1f}" r'\mathrm{ms}'\
+            r'\; \tau_{2} = ' f"{b:.1f}" r'\mathrm{ms}$'
 
         fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
 
@@ -1231,7 +1235,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
                     color='red', linestyle='--')
 
-        res_string = r'$\tau = ' f"{f:.1f}" r'\text{ms}$'
+        res_string = r'$\tau = ' f"{f:.1f}" r'\mathrm{ms}$'
 
         fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
         fig.savefig(output_path)

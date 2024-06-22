@@ -216,7 +216,7 @@ def scatterplot_timescale_E_obs(df):
 
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_ylabel(r'$\tau$ (ms)')
-    ax.set_xlabel(r'$E_\text{obs}$')
+    ax.set_xlabel(r'$E_\mathrm{obs}$')
 
     fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_scatter.pdf"))
     ax.cla()
@@ -226,7 +226,7 @@ def scatterplot_timescale_E_obs(df):
                  ax=ax)
 
     ax.set_ylabel(r'$\tau$ (ms)')
-    ax.set_xlabel(r'$E_\text{obs}$')
+    ax.set_xlabel(r'$E_\mathrm{obs}$')
     ax.spines[['top', 'right']].set_visible(False)
     fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_line.pdf"))
 
@@ -270,7 +270,7 @@ def do_chronological_plots(df, normalise=False):
     }
 
     pretty_vars = {
-        'pre-drug leak magnitude': r'$\bar{I}_\text{l}$',
+        'pre-drug leak magnitude': r'$\bar{I}_\mathrm{l}$',
         '-120mV time constant 1': r'$\tau_{1}$',
         '-120mV time constant 2': r'$\tau_{2}$',
         '-120mV time constant 3': r'$\tau$'
@@ -685,7 +685,7 @@ def plot_histograms(df, qc_df):
                   x='E_rev', hue='passed QC', ax=ax, multiple='stack',
                       stat='count', legend=False
                      )
-    ax.set_xlabel(r'$\text{mean}(E_{\text{obs}})$')
+    ax.set_xlabel(r'$\mathrm{mean}(E_{\mathrm{obs}})$')
     fig.savefig(os.path.join(output_dir, 'averaged_reversal_potential_histogram'))
 
     if np.isfinite(args.reversal):

@@ -54,7 +54,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     for ax in protocol_axs:
         ax.plot(times, voltages, color='black')
         ax.set_xlabel('time (s)')
-        ax.set_ylabel(r'$V_\text{command}$ (mV)')
+        ax.set_ylabel(r'$V_\mathrm{command}$ (mV)')
 
     # Compute and store leak currents
     before_leak_currents = np.full((voltages.shape[0], nsweeps),
@@ -75,7 +75,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         gleak, Eleak = sub_df.loc[sweep][['gleak_before', 'E_leak_before']]
         ax.plot(times, before_currents[i, :], label=f"pre-drug raw, sweep {sweep}")
         ax.plot(times, before_leak_currents[i, :],
-                label=r'$I_\text{leak}$.' f"g={gleak:1E}, E={Eleak:.1e}")
+                label=r'$I_\mathrm{leak}$.' f"g={gleak:1E}, E={Eleak:.1e}")
         # ax.legend()
 
         if ax.get_legend():
@@ -89,7 +89,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         gleak, Eleak = sub_df.loc[sweep][['gleak_after', 'E_leak_after']]
         ax.plot(times, after_currents[i, :], label=f"post-drug raw, sweep {sweep}")
         ax.plot(times, after_leak_currents[i, :],
-                label=r"$I_\text{leak}$." f"g={gleak:1E}, E={Eleak:.1e}")
+                label=r"$I_\mathrm{leak}$." f"g={gleak:1E}, E={Eleak:.1e}")
         # ax.legend()
         if ax.get_legend():
             ax.get_legend().remove()
@@ -122,12 +122,12 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
         ax.plot(times, subtracted_currents, label=f"sweep {sweep}")
-        ax.set_ylabel(r'$I_\text{obs, subtracted}$ (mV)')
+        ax.set_ylabel(r'$I_\mathrm{obs, subtracted}$ (mV)')
         ax.set_xlabel('time (s)')
         # ax.tick_params(axis='x', rotation=90)
 
     long_protocol_ax.plot(times, voltages, color='black')
     long_protocol_ax.set_xlabel('time (s)')
-    long_protocol_ax.set_ylabel(r'$V_\text{command}$ (mV)')
+    long_protocol_ax.set_ylabel(r'$V_\mathrm{command}$ (mV)')
     long_protocol_ax.tick_params(axis='y', rotation=90)
 
