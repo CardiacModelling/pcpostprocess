@@ -155,7 +155,7 @@ class hERGQC(object):
 
         qc5_1 = self.qc5_1(before[0, :], after[0, :], label='1')
 
-        # Ensure thatsqthe windows are correct by checking the voltage trace
+        # Ensure thats the windows are correct by checking the voltage trace
         assert np.all(
             np.abs(self.voltage[self.qc6_win[0]: self.qc6_win[1]] - 40.0))\
             < 1e-8
@@ -307,7 +307,7 @@ class hERGQC(object):
         if win is not None:
             i, f = win
         else:
-            i, f = 0, -1
+            i, f = 0, None
 
         if self.plot_dir and self._debug:
             plt.axvspan(win[0], win[1], color='grey', alpha=.1)
@@ -319,6 +319,9 @@ class hERGQC(object):
         wherepeak = np.argmax(recording1[i:f])
         max_diff = recording1[i:f][wherepeak] - recording2[i:f][wherepeak]
         max_diffc = self.max_diffc * recording1[i:f][wherepeak]
+
+        logging.debug(f"qc5: max_diff = {max_diff}, max_diffc = {max_diffc}")
+
         if (max_diff < max_diffc) or not (np.isfinite(max_diff)
                                           and np.isfinite(max_diffc)):
             self.logger.debug(f"max_diff:  {max_diff}, max_diffc: {max_diffc}")

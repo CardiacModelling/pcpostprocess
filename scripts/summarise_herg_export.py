@@ -91,14 +91,23 @@ def main():
 
     qc_df = pd.read_csv(os.path.join(args.data_dir, f"QC-{experiment_name}.csv"))
 
-
     qc_styled_df = create_qc_table(qc_df)
     qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
-
     qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
-
     qc_vals_df = pd.read_csv(os.path.join(args.qc_estimates_file))
+
+    qc_df.protocol = ['staircaseramp1' if protocol == 'staircaseramp' else protocol
+                      for protocol in qc_df.protocol]
+    qc_df.protocol = ['staircaseramp1_2' if protocol == 'staircaseramp_2' else protocol
+                      for protocol in qc_df.protocol]
+
+    leak_parameters_df.protocol = ['staircaseramp1' if protocol =='staircaseramp' else protocol
+                      for protocol in leak_parameters_df.protocol]
+    leak_parameters_df.protocol = ['staircaseramp1_2' if protocol == 'staircaseramp_2' else protocol
+                      for protocol in leak_parameters_df.protocol]
+
+    print(leak_parameters_df.protocol.unique())
 
     with open(os.path.join(args.data_dir, 'passed_wells.txt')) as fin:
         global passed_wells
@@ -118,6 +127,12 @@ def main():
             lines = fin.read().splitlines()
             protocol_order = [line.split(' ')[0] for line in lines]
 
+            protocol_order = ['staircaseramp1' if p=='staircaseramp' else p
+                              for p in protocol_order]
+
+            protocol_order = ['staircaseramp1_2' if p=='staircaseramp_2' else p
+                              for p in protocol_order]
+
         leak_parameters_df['protocol'] = pd.Categorical(leak_parameters_df['protocol'],
                                                         categories=protocol_order,
                                                         ordered=True)
@@ -136,6 +151,9 @@ def main():
 
     do_chronological_plots(leak_parameters_df)
     do_chronological_plots(leak_parameters_df, normalise=True)
+
+    attrition_df = create_attrition_table(qc_df, leak_parameters_df)
+    attrition_df.to_latex(os.path.join(output_dir, 'attrition.tex'))
 
     if 'passed QC' not in leak_parameters_df.columns and\
        'passed QC6a' in leak_parameters_df.columns:
@@ -202,14 +220,18 @@ def scatterplot_timescale_E_obs(df):
     plot_dfs = []
     for well in df.well.unique():
         E_rev_values = df[df.well == well]['E_rev'].values[:-1]
+        E_leak_values = df[df.well == well]['E_leak_before'].values[1:]
         decay_values = df[df.well == well]['40mV decay time constant'].values[1:]
-        plot_df = pd.DataFrame([(well, p, E_rev, decay) for p, E_rev, decay\
-                                in zip(protocols, E_rev_values, decay_values)],
-                                columns=['well', 'protocol', 'E_rev', '40mV decay time constant'])
+        plot_df = pd.DataFrame([(well, p, E_rev, decay, Eleak) for p, E_rev, decay, Eleak\
+                                in zip(protocols, E_rev_values, decay_values, E_leak_values)],
+                                columns=['well', 'protocol', 'E_rev', '40mV decay time constant',
+                                         'E_leak'])
         plot_dfs.append(plot_df)
 
     plot_df = pd.concat(plot_dfs, ignore_index=True)
     print(plot_df)
+
+    plot_df['E_leak'] = (plot_df.set_index('well')['E_leak'] - plot_df.groupby('well')['E_leak'].mean()).reset_index()['E_leak']
 
     sns.scatterplot(data=plot_df, y='40mV decay time constant',
                     x='E_rev', ax=ax, hue='well', style='well')
@@ -229,6 +251,18 @@ def scatterplot_timescale_E_obs(df):
     ax.set_xlabel(r'$E_\text{obs}$')
     ax.spines[['top', 'right']].set_visible(False)
     fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_line.pdf"))
+    ax.cla()
+
+    plot_df['E_rev'] = (plot_df.set_index('well')['E_rev'] - plot_df.groupby('well')['E_rev'].mean()).reset_index()['E_rev']
+    sns.scatterplot(data=plot_df, y='E_leak',
+                    x='E_rev', ax=ax, hue='well', style='well')
+
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_ylabel(r'$E_\text{leak} - \bar E_\text{leak}$ (ms)')
+    ax.set_xlabel(r'$E_\text{obs} - \bar E_\text{obs}$')
+
+    fig.savefig(os.path.join(output_dir, "E_leak_vs_E_rev_scatter.pdf"))
+    ax.cla()
 
 
 def do_chronological_plots(df, normalise=False):
@@ -856,6 +890,78 @@ def scale_to_reference(trace, reference):
 
     res = scipy.optimize.minimize_scalar(error2, method='brent')
     return trace * res.x
+
+
+def create_attrition_table(qc_df, subtraction_df):
+
+    original_qc_criteria = [ 'qc1.rseal', 'qc1.cm', 'qc1.rseries', 'qc2.raw',
+                             'qc2.subtracted', 'qc3.raw', 'qc3.E4031',
+                             'qc3.subtracted', 'qc4.rseal', 'qc4.cm',
+                             'qc4.rseries', 'qc5.staircase', 'qc5.1.staircase',
+                             'qc6.subtracted', 'qc6.1.subtracted',
+                             'qc6.2.subtracted']
+
+    subtraction_df_sc = subtraction_df[subtraction_df.protocol.isin(['staircaseramp1',
+                                                                     'staircaseramp1_2'])]
+    R_leftover_qc = subtraction_df_sc.groupby('well')['R_leftover'].max() < 0.4
+
+    qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] for well in qc_df.well]
+
+    stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
+                                               'QC6.all_protocols']
+    stage_4_criteria = stage_3_criteria + ['qc3.bookend']
+    stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
+
+    stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
+
+
+    agg_dict = {crit: 'min' for crit in stage_6_criteria}
+
+    qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
+    print(qc_df_sc1.values.shape)
+    n_stage_1_wells = np.sum(np.all(qc_df_sc1.groupby('well')\
+                                 .agg(agg_dict)[original_qc_criteria].values,
+                                 axis=1))
+
+    qc_df_sc_both = qc_df[qc_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
+
+    n_stage_2_wells = np.sum(np.all(qc_df_sc_both.groupby('well')\
+                                 .agg(agg_dict)[original_qc_criteria].values,
+                                 axis=1))
+
+    n_stage_3_wells = np.sum(np.all(qc_df_sc_both.groupby('well')\
+                                 .agg(agg_dict)[stage_3_criteria].values,
+                                 axis=1))
+
+    n_stage_4_wells = np.sum(np.all(qc_df.groupby('well')\
+                                 .agg(agg_dict)[stage_4_criteria].values,
+                                 axis=1))
+
+    n_stage_5_wells =  np.sum(np.all(qc_df.groupby('well')\
+                                 .agg(agg_dict)[stage_5_criteria].values,
+                                 axis=1))
+
+    n_stage_6_wells =  np.sum(np.all(qc_df.groupby('well')\
+                                     .agg(agg_dict)[stage_6_criteria].values,
+                                     axis=1))
+
+    passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_6_criteria]
+    print(passed_qc_df)
+    passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
+
+    print(f"passed wells = {passed_wells}")
+
+    res_dict = {
+        'stage1': [n_stage_1_wells],
+        'stage2': [n_stage_2_wells],
+        'stage3': [n_stage_3_wells],
+        'stage4': [n_stage_4_wells],
+        'stage5': [n_stage_5_wells],
+        'stage6': [n_stage_6_wells],
+    }
+
+    res_df = pd.DataFrame.from_records(res_dict)
+    return res_df
 
 
 if __name__ == "__main__":
