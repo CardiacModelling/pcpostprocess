@@ -130,20 +130,20 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
         # Current vs time
         ax1.set_title(r'\textbf{a}', loc='left', usetex=True)
         ax1.set_xlabel(r'$t$ (ms)')
-        ax1.set_ylabel(r'$I_\text{obs}$ (pA)')
+        ax1.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
         ax1.set_xticklabels([])
         ax1.set_xlim(*time_range)
 
         # Voltage vs time
         ax2.set_title(r'\textbf{b}', loc='left', usetex=True)
         ax2.set_xlabel(r'$t$ (ms)')
-        ax2.set_ylabel(r'$V_\text{cmd}$ (mV)')
+        ax2.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
         ax2.set_xlim(*time_range)
 
         # Current vs voltage
         ax3.set_title(r'\textbf{c}', loc='left', usetex=True)
-        ax3.set_xlabel(r'$V_\text{cmd}$ (mV)')
-        ax3.set_ylabel(r'$I_\text{obs}$ (pA)')
+        ax3.set_xlabel(r'$V_\mathrm{cmd}$ (mV)')
+        ax3.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
 
         ax4.set_xlabel(r'$t$ (ms)')
         ax4.set_ylabel(r'current (pA)')
@@ -168,10 +168,10 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
         ax3.plot(V[ramp_start_index:ramp_end_index+1],
                  I_leak[ramp_start_index:ramp_end_index+1], '--')
 
-        ax4.plot(times, I_obs, label=r'$I_\text{obs}$')
-        ax4.plot(times, I_leak, linestyle='--', label=r'$I_\text{l}$')
+        ax4.plot(times, I_obs, label=r'$I_\mathrm{obs}$')
+        ax4.plot(times, I_leak, linestyle='--', label=r'$I_\mathrm{l}$')
         ax4.plot(times, I_obs - I_leak,
-                 linestyle='--', alpha=0.5, label=r'$I_\text{obs} - I_\text{l}$')
+                 linestyle='--', alpha=0.5, label=r'$I_\mathrm{obs} - I_\mathrm{l}$')
         ax4.legend(frameon=False)
 
         if not os.path.exists(output_dir):
