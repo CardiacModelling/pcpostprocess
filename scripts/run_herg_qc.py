@@ -43,6 +43,7 @@ all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
 def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('data_directory')
@@ -58,6 +59,7 @@ def main():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--log_level', default='INFO')
     parser.add_argument('--Erev', default=-90.71, type=float)
+    parser.add_argment('--output_traces', action='store_true')
 
     args = parser.parse_args()
 
@@ -535,23 +537,25 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
         if None in qc_before[well] or None in qc_after[well]:
             continue
 
-        # Save 'before drug' trace as .csv
-        for sweep in range(nsweeps_before):
-            out = before_trace.get_trace_sweeps([sweep])[well][0]
-            save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
-                                      f"{well}-before-sweep{sweep}.csv")
+        if args.output_traces:
+            # Save 'before drug' trace as .csv
+            for sweep in range(nsweeps_before):
+                out = before_trace.get_trace_sweeps([sweep])[well][0]
+                save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
+                                        f"{well}-before-sweep{sweep}.csv")
 
-            np.savetxt(save_fname, out, delimiter=',',
-                       header=header)
+                np.savetxt(save_fname, out, delimiter=',',
+                        header=header)
 
-        # Save 'after drug' trace as .csv
-        for sweep in range(nsweeps_after):
-            save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
-                                      f"{well}-after-sweep{sweep}.csv")
-            out = after_trace.get_trace_sweeps([sweep])[well][0]
-            if len(out) > 0:
-                np.savetxt(save_fname, out,
-                           delimiter=',', comments='', header=header)
+        if args.output_traces:
+            # Save 'after drug' trace as .csv
+            for sweep in range(nsweeps_after):
+                save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
+                                        f"{well}-after-sweep{sweep}.csv")
+                out = after_trace.get_trace_sweeps([sweep])[well][0]
+                if len(out) > 0:
+                    np.savetxt(save_fname, out,
+                            delimiter=',', comments='', header=header)
 
     voltage_before = before_trace.get_voltage()
     voltage_after = after_trace.get_voltage()
@@ -639,8 +643,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
             subtracted_trace = before_current[sweep, :] - before_leak\
                 - (after_current[sweep, :] - after_leak)
-            out_fname = os.path.join(traces_dir,
-                                     f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
             after_corrected = after_current[sweep, :] - after_leak
             before_corrected = before_current[sweep, :] - before_leak
 
@@ -710,7 +712,11 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                              [cm_before, cm_after],
                                              [rseries_before, rseries_after]))
 
-            np.savetxt(out_fname, subtracted_trace.flatten())
+            if args.output_traces:
+                out_fname = os.path.join(traces_dir,
+                                         f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
+
+                np.savetxt(out_fname, subtracted_trace.flatten())
             rows.append(row_dict)
 
             param, leak = fit_linear_leak(current, voltage, times,
