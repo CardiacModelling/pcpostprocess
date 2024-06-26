@@ -27,7 +27,7 @@ from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
 
-plt.rcParams["axes.formatter.use_mathtext"] = True
+matplotlib.use('agg')
 pool_kws = {'maxtasksperchild': 1}
 
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
@@ -37,6 +37,7 @@ all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
              for i in range(1, 25)]
 
 def get_git_revision_hash() -> str:
+    # Requires git to be installed
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 
@@ -55,8 +56,8 @@ def main():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--log_level', default='INFO')
     parser.add_argument('--Erev', default=-90.71, type=float)
-    parser.add_argment('--output_traces', action='store_true',
-                       description="When true output raw and processed traces as .csv files")
+    parser.add_argument('--output_traces', action='store_true',
+                        help="When true output raw and processed traces as .csv files")
 
     args = parser.parse_args()
 
