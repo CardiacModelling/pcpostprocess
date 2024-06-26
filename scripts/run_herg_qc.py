@@ -59,7 +59,8 @@ def main():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--log_level', default='INFO')
     parser.add_argument('--Erev', default=-90.71, type=float)
-    parser.add_argment('--output_traces', action='store_true')
+    parser.add_argment('--output_traces', action='store_true',
+                       description="When true output raw and processed traces as .csv files")
 
     args = parser.parse_args()
 
@@ -1268,8 +1269,6 @@ def detect_ramp_bounds(times, voltage_sections, ramp_no=0):
 
     @returns tstart, tend: the start and end times for the ramp_no+1^nth ramp
     """
-
-    # Decouple this code from syncropatch_export
 
     ramps = [(tstart, tend, vstart, vend) for tstart, tend, vstart, vend
              in voltage_sections if vstart != vend]
