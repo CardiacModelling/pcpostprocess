@@ -30,6 +30,7 @@ jobs:
         python -m pip install .[test]
     - name: Extract test data
       run: |
+       wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/    
         tar xvf tests/test_data.tar.xz -C tests/
     - name: Test with pytest
       run: |
