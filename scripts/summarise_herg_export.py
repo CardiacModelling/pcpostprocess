@@ -19,12 +19,9 @@ from syncropatch_export.voltage_protocols import VoltageProtocol
 from run_herg_qc import create_qc_table
 
 
-# rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-matplotlib.use('Agg')
 matplotlib.rcParams['figure.dpi'] = 300
 
 pool_kws = {'maxtasksperchild': 1}
-matplotlib.rc('font', size='9')
 
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
 plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
