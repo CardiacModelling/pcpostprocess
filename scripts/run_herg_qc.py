@@ -874,6 +874,9 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         before_currents_corrected = np.empty((nsweeps, before_trace.NofSamples))
         after_currents_corrected = np.empty((nsweeps, after_trace.NofSamples))
 
+        before_currents = np.empty((nsweeps, before_trace.NofSamples))
+        after_currents = np.empty((nsweeps, after_trace.NofSamples))
+
         # Get ramp times from protocol description
         voltage_protocol = VoltageProtocol.from_voltage_trace(voltage,
                                                               before_trace.get_times())
@@ -911,6 +914,9 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
             before_currents_corrected[sweep, :] = before_raw - before_leak
             after_currents_corrected[sweep, :] = after_raw - after_leak
 
+            before_currents[sweep, :] = before_raw
+            after_currents[sweep, :] = after_raw
+
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
 
@@ -918,10 +924,10 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                             for tstart, tend, vstart, vend in
                             voltage_protocol.get_all_sections() if vend == vstart]
 
-        # Run QC with leak subtracted currents
+        # Run QC with raw currents
         selected, QC = hergqc.run_qc(voltage_steps, times,
-                                     before_currents_corrected,
-                                     after_currents_corrected,
+                                     before_currents,
+                                     after_currents,
                                      np.array(qc_before[well])[0, :],
                                      np.array(qc_after[well])[0, :], nsweeps)
 
