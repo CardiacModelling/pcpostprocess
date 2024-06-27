@@ -757,8 +757,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     before_leak_current_dict = {key: value * 1e-3 for key, value in before_leak_current_dict.items()}
     after_leak_current_dict = {key: value * 1e-3 for key, value in after_leak_current_dict.items()}
 
-    # TODO Put this code in a seperate function so we can easily plot individual subtractions
-
     for well in selected_wells:
         before_current = before_current_all[well]
         after_current = after_current_all[well]
@@ -1252,31 +1250,6 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         plt.close(fig)
 
     return (d, b), f, peak_current if res else (np.nan, np.nan), np.nan, peak_current
-
-
-def detect_ramp_bounds(times, voltage_sections, ramp_no=0):
-    """
-    Extract the the times at the start and end of the nth ramp in the protocol.
-
-    @param times: np.array containing the time at which each sample was taken
-    @param voltage_sections 2d np.array where each row describes a segment of the protocol: (tstart, tend, vstart, end)
-    @param ramp_no: the index of the ramp to select. Defaults to 0 - the first ramp
-
-    @returns tstart, tend: the start and end times for the ramp_no+1^nth ramp
-    """
-
-    ramps = [(tstart, tend, vstart, vend) for tstart, tend, vstart, vend
-             in voltage_sections if vstart != vend]
-    try:
-        ramp = ramps[ramp_no]
-    except IndexError:
-        print(f"Requested {ramp_no+1}th ramp (ramp_no={ramp_no}),"
-              " but there are only {len(ramps)} ramps")
-
-    tstart, tend = ramp[:2]
-
-    ramp_bounds = [np.argmax(times > tstart), np.argmax(times > tend)]
-    return ramp_bounds
 
 
 if __name__ == '__main__':
