@@ -33,7 +33,7 @@ def setup_subtraction_grid(fig, nsweeps):
 def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
                         sub_df, voltages, well=None, protocol=None):
 
-    # Filter dataframe to relevant entries
+    #  Filter dataframe to relevant entries
     if well in sub_df.columns:
         sub_df = sub_df[sub_df.well == well]
     if protocol in sub_df.columns:
@@ -48,7 +48,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         return
 
     axs = setup_subtraction_grid(fig, nsweeps)
-    protocol_axs, before_axs, after_axs, corrected_axs,\
+    protocol_axs, before_axs, after_axs, corrected_axs, \
         subtracted_ax, long_protocol_ax = axs
 
     for ax in protocol_axs:
@@ -113,30 +113,32 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     ax = subtracted_ax
     for i, sweep in enumerate(sweeps):
         before_params, before_leak = fit_linear_leak(before_trace,
-                                                        well, sweep,
-                                                        ramp_bounds)
+                                                     well, sweep,
+                                                     ramp_bounds)
         after_params, after_leak = fit_linear_leak(after_trace,
-                                                    well, sweep,
-                                                    ramp_bounds)
+                                                   well, sweep,
+                                                   ramp_bounds)
 
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
         ax.plot(times, subtracted_currents, label=f"sweep {sweep}")
-<<<<<<< HEAD
-        ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{l}$ (mV)')
-        ax.set_xlabel('$t$ (s)')
-=======
-        ax.set_ylabel(r'$I_\mathrm{obs, subtracted}$ (mV)')
-        ax.set_xlabel('time (s)')
->>>>>>> 23d9756f5b185d568fcb985437f611b5dbe2c670
-        # ax.tick_params(axis='x', rotation=90)
 
-    long_protocol_ax.plot(times, voltages, color='black')
-    long_protocol_ax.set_xlabel('time (s)')
-<<<<<<< HEAD
-    long_protocol_ax.set_ylabel(r'$V_\cmd{command}$ (mV)')
-=======
-    long_protocol_ax.set_ylabel(r'$V_\mathrm{command}$ (mV)')
->>>>>>> 23d9756f5b185d568fcb985437f611b5dbe2c670
-    long_protocol_ax.tick_params(axis='y', rotation=90)
+
+<< << << < HEAD
+ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{l}$ (mV)')
+ax.set_xlabel('$t$ (s)')
+== == == =
+ax.set_ylabel(r'$I_\mathrm{obs, subtracted}$ (mV)')
+ax.set_xlabel('time (s)')
+>>>>>> > 23d9756f5b185d568fcb985437f611b5dbe2c670
+# ax.tick_params(axis='x', rotation=90)
+
+long_protocol_ax.plot(times, voltages, color='black')
+long_protocol_ax.set_xlabel('time (s)')
+<< << << < HEAD
+long_protocol_ax.set_ylabel(r'$V_\cmd{command}$ (mV)')
+== == == =
+long_protocol_ax.set_ylabel(r'$V_\mathrm{command}$ (mV)')
+>>>>>> > 23d9756f5b185d568fcb985437f611b5dbe2c670
+long_protocol_ax.tick_params(axis='y', rotation=90)
 

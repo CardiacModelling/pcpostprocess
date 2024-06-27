@@ -35,7 +35,7 @@ def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
     @returns:
     A dictionary where the keys are wells and the values are sweeps that passed QC
     '''
-    # TODO decouple this code from syncropatch export
+    #  TODO decouple this code from syncropatch export
 
     QC_dict = {}
     for well in QC:
@@ -77,7 +77,6 @@ def get_leak_corrected(current, voltages, times, ramp_start_index,
 
     (b0, b1), I_leak = fit_linear_leak(current, voltages, times, ramp_start_index,
                                        ramp_end_index, **kwargs)
-
 
     return current - I_leak
 
@@ -127,7 +126,7 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
 
         time_range = (0, times.max() / 5)
 
-        # Current vs time
+        #  Current vs time
         ax1.set_title(r'\textbf{a}', loc='left', usetex=True)
         ax1.set_xlabel(r'$t$ (ms)')
         ax1.set_ylabel(r'$I_\mathrm{obs}$ (pA)')

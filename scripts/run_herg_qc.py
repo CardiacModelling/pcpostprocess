@@ -35,8 +35,9 @@ plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
 all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
              for i in range(1, 25)]
 
+
 def get_git_revision_hash() -> str:
-    # Requires git to be installed
+    #  Requires git to be installed
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 
@@ -330,7 +331,7 @@ def main():
     with open(os.path.join(args.output_dir, 'chrono.txt'), 'w') as fout:
         for key in sorted(chrono_dict):
             val = chrono_dict[key]
-            # Output order of protocols
+            #  Output order of protocols
             fout.write(val)
             fout.write('\n')
 
@@ -451,8 +452,8 @@ def create_qc_table(qc_df):
     ret_df['wells failing'] = ret_df['wells failing'].astype(int)
 
     ret_df['protocol'] = pd.Categorical(ret_df['protocol'],
-                                            categories=protocol_headings,
-                                            ordered=True)
+                                        categories=protocol_headings,
+                                        ordered=True)
 
     return ret_df
 
@@ -497,7 +498,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     times = before_trace.get_times()
     voltages = before_trace.get_voltage()
 
-    # Find start of leak section
+    #  Find start of leak section
     desc = voltage_protocol.get_all_sections()
     ramp_bounds = detect_ramp_bounds(times, desc)
     tstart, tend = ramp_bounds
@@ -539,20 +540,20 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             for sweep in range(nsweeps_before):
                 out = before_trace.get_trace_sweeps([sweep])[well][0]
                 save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
-                                        f"{well}-before-sweep{sweep}.csv")
+                                          f"{well}-before-sweep{sweep}.csv")
 
                 np.savetxt(save_fname, out, delimiter=',',
-                        header=header)
+                           header=header)
 
         if args.output_traces:
             # Save 'after drug' trace as .csv
             for sweep in range(nsweeps_after):
                 save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
-                                        f"{well}-after-sweep{sweep}.csv")
+                                          f"{well}-after-sweep{sweep}.csv")
                 out = after_trace.get_trace_sweeps([sweep])[well][0]
                 if len(out) > 0:
                     np.savetxt(save_fname, out,
-                            delimiter=',', comments='', header=header)
+                               delimiter=',', comments='', header=header)
 
     voltage_before = before_trace.get_voltage()
     voltage_after = after_trace.get_voltage()
@@ -687,7 +688,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             voltage = before_trace.get_voltage()
             voltage_protocol = before_trace.get_voltage_protocol()
 
-            voltage_steps = [tstart \
+            voltage_steps = [tstart
                              for tstart, tend, vstart, vend in
                              voltage_protocol.get_all_sections() if vend == vstart]
 
@@ -884,7 +885,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         voltage_protocol = VoltageProtocol.from_voltage_trace(voltage,
                                                               before_trace.get_times())
 
-        # Find start of leak section
+        #  Find start of leak section
         desc = voltage_protocol.get_all_sections()
         ramp_locs = np.argwhere(desc[:, 2] != desc[:, 3]).flatten()
         tstart = desc[ramp_locs[0], 0]
@@ -923,9 +924,9 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
 
-        voltage_steps = [tstart \
-                            for tstart, tend, vstart, vend in
-                            voltage_protocol.get_all_sections() if vend == vstart]
+        voltage_steps = [tstart
+                         for tstart, tend, vstart, vend in
+                         voltage_protocol.get_all_sections() if vend == vstart]
 
         # Run QC with raw currents
         selected, QC = hergqc.run_qc(voltage_steps, times,
@@ -986,7 +987,7 @@ def qc3_bookend(readname, savename, time_strs, args):
     json_file_first_before = f"{readname}_{time_strs[0]}"
     json_file_last_before = f"{readname}_{time_strs[1]}"
 
-    # Each Trace object contains two sweeps
+    #  Each Trace object contains two sweeps
     first_before_trace = Trace(filepath_first_before,
                                json_file_first_before)
     last_before_trace = Trace(filepath_last_before,
@@ -1001,14 +1002,14 @@ def qc3_bookend(readname, savename, time_strs, args):
     filepath_first_after = os.path.join(args.data_directory,
                                         f"{readname}_{time_strs[2]}")
     filepath_last_after = os.path.join(args.data_directory,
-                                        f"{readname}_{time_strs[3]}")
+                                       f"{readname}_{time_strs[3]}")
     json_file_first_after = f"{readname}_{time_strs[2]}"
     json_file_last_after = f"{readname}_{time_strs[3]}"
 
     first_after_trace = Trace(filepath_first_after,
-                                json_file_first_after)
+                              json_file_first_after)
     last_after_trace = Trace(filepath_last_after,
-                                json_file_last_after)
+                             json_file_last_after)
 
     # Ensure that all traces use the same voltage protocol
     assert np.all(first_before_trace.get_voltage() == last_before_trace.get_voltage())
@@ -1016,7 +1017,7 @@ def qc3_bookend(readname, savename, time_strs, args):
     assert np.all(first_before_trace.get_voltage() == first_after_trace.get_voltage())
     assert np.all(first_before_trace.get_voltage() == last_before_trace.get_voltage())
 
-    # Ensure that the same number of sweeps were used
+    #  Ensure that the same number of sweeps were used
     assert first_before_trace.NofSweeps == last_before_trace.NofSweeps
 
     first_before_current_dict = first_before_trace.get_trace_sweeps()
@@ -1024,8 +1025,8 @@ def qc3_bookend(readname, savename, time_strs, args):
     last_before_current_dict = last_before_trace.get_trace_sweeps()
     last_after_current_dict = last_after_trace.get_trace_sweeps()
 
-    # Do leak subtraction and store traces for each well
-    # TODO Refactor this code into a single loop. There's no need to store each individual trace.
+    #  Do leak subtraction and store traces for each well
+    #  TODO Refactor this code into a single loop. There's no need to store each individual trace.
     before_traces_first = {}
     before_traces_last = {}
     after_traces_first = {}
@@ -1033,13 +1034,12 @@ def qc3_bookend(readname, savename, time_strs, args):
     first_processed = {}
     last_processed = {}
 
-    # Iterate over all wells
+    #  Iterate over all wells
     for well in np.array(all_wells).flatten():
         first_before_current = first_before_current_dict[well][0, :]
         first_after_current = first_after_current_dict[well][0, :]
         last_before_current = last_before_current_dict[well][-1, :]
         last_after_current = last_after_current_dict[well][-1, :]
-
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
@@ -1059,7 +1059,6 @@ def qc3_bookend(readname, savename, time_strs, args):
         first_processed[well] = before_traces_first[well] - after_traces_first[well]
         last_processed[well] = before_traces_last[well] - after_traces_last[well]
 
-
     voltage_protocol = VoltageProtocol.from_voltage_trace(voltage, times)
 
     hergqc = hERGQC(sampling_rate=first_before_trace.sampling_rate,
@@ -1068,12 +1067,10 @@ def qc3_bookend(readname, savename, time_strs, args):
 
     assert first_before_trace.NofSweeps == last_before_trace.NofSweeps
 
-
-    voltage_steps = [tstart \
+    voltage_steps = [tstart
                      for tstart, tend, vstart, vend in
                      voltage_protocol.get_all_sections() if vend == vstart]
     res_dict = {}
-
 
     fig = plt.figure(figsize=args.figsize)
     ax = fig.subplots()
@@ -1104,17 +1101,18 @@ def qc3_bookend(readname, savename, time_strs, args):
     plt.close(fig)
     return res_dict
 
+
 def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_path):
 
     if output_path:
         if not os.path.exists(os.path.dirname(output_path)):
             os.makedirs(os.path.dirname(output_path))
 
-    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2]==40][0]
+    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2] == 40][0]
 
     tstart, tend, vstart, vend = protocol_desc[first_120mV_step_index + 1, :]
-    assert(vstart == vend)
-    assert(vstart==-120.0)
+    assert (vstart == vend)
+    assert (vstart == -120.0)
 
     indices = np.argwhere((times >= tstart) & (times <= tend))
 
@@ -1124,6 +1122,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
     peak_time = times[indices[peak_index]][0]
 
     indices = np.argwhere((times >= peak_time) & (times <= tend - 50))
+
     def fit_func(x, args=None):
         # Pass 'args=single' when we want to use a single exponential.
         # Otherwise use 2 exponentials
@@ -1136,21 +1135,22 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
             a, b, c, d = x
             if d < b:
                 b, d = d, b
-            prediction = c * np.exp((-1.0/d) * (times[indices] - peak_time)) + a * np.exp((-1.0/b) * (times[indices] - peak_time))
+            prediction = c * np.exp((-1.0/d) * (times[indices] - peak_time)) + \
+                a * np.exp((-1.0/b) * (times[indices] - peak_time))
         else:
             a, b = x
             prediction = a * np.exp((-1.0/b) * (times[indices] - peak_time))
 
         return np.sum((prediction - trace[indices])**2)
 
-    bounds =  [
+    bounds = [
         (-np.abs(trace).max()*2, 0),
         (1e-12, 5e3),
         (-np.abs(trace).max()*2, 0),
         (1e-12, 5e3),
     ]
 
-    # Repeat optimisation with different starting guesses
+    #  Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
 
     x0s = [[a, b, c, d] if d < b else [a, d, c, b] for (a, b, c, d) in x0s]
@@ -1165,13 +1165,13 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
             best_res = res
     res1 = best_res
 
-    # Re-run with single exponential
-    bounds =  [
+    #  Re-run with single exponential
+    bounds = [
         (-np.abs(trace).max()*2, 0),
         (1e-12, 5e3),
     ]
 
-    # Repeat optimisation with different starting guesses
+    #  Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
 
     best_res = None
@@ -1206,11 +1206,11 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         if d < b:
             b, d = d, b
 
-        e, f  = res2.x
+        e, f = res2.x
 
         fit_ax.plot(times[indices], trace[indices], color='grey',
                     alpha=.5)
-        fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))\
+        fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))
                     + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
                     color='red', linestyle='--')
 

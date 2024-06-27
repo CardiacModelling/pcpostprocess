@@ -4,6 +4,7 @@ import unittest
 from pcpostprocess import leak_correct
 from syncropatch_export.trace import Trace
 
+
 class TestLeakCorrect(unittest.TestCase):
     def setUp(self):
         test_data_dir = os.path.join('tests', 'test_data', '13112023_MW2_FF',
