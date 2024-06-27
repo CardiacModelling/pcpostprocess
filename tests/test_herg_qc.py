@@ -4,9 +4,9 @@ import string
 import unittest
 
 import numpy as np
+from syncropatch_export.trace import Trace
 
 from pcpostprocess.hergQC import hERGQC
-from syncropatch_export.trace import Trace
 
 
 class TestHergQC(unittest.TestCase):

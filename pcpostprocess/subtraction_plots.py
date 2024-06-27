@@ -1,8 +1,8 @@
 import logging
-import numpy as np
 
-from matplotlib.gridspec import GridSpec
+import numpy as np
 from leak_correct import fit_linear_leak
+from matplotlib.gridspec import GridSpec
 
 
 def setup_subtraction_grid(fig, nsweeps):
