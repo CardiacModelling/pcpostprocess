@@ -30,10 +30,6 @@ from syncropatch_export.voltage_protocols import VoltageProtocol
 matplotlib.use('Agg')
 plt.rcParams["axes.formatter.use_mathtext"] = True
 
-#matplotlib/latex problems
-#plt.rcParams['text.usetex'] = True
-#plt.rcParams['text.latex.preamble']=r'\usepackage{amsmath}'
-
 pool_kws = {'maxtasksperchild': 1}
 matplotlib.rc('font', size='9')
 
