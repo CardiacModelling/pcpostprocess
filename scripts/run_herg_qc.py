@@ -27,6 +27,9 @@ from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
 
+matplotlib.use('Agg')
+plt.rcParams["axes.formatter.use_mathtext"] = True
+
 pool_kws = {'maxtasksperchild': 1}
 
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]

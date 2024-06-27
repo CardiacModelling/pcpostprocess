@@ -18,17 +18,19 @@ jobs:
         lfs: true
     - name: Checkout LFS objects
       run: git lfs checkout
-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        eval `ssh-agent -s`
+        ssh-add - <<< '${{ secrets.syncropatch_export_key }}'
         python -m pip install --upgrade pip
         python -m pip install .[test]
     - name: Extract test data
       run: |
+       wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/    
         tar xvf tests/test_data.tar.xz -C tests/
     - name: Test with pytest
       run: |

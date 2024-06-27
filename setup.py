@@ -55,7 +55,7 @@ setup(
             'isort',
             'mock>=3.0.5',         # For mocking command line args etc.
             'codecov>=2.1.3',
-            'syncropatch_export'
+            'syncropatch_export @ git+ssh://git@github.com/CardiacModelling/syncropatch_export@main'
         ],
     },
 )
