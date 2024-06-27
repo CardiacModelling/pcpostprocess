@@ -1,8 +1,10 @@
 import argparse
+import json
 import logging
 import os
 import string
 
+import cycler
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,14 +12,8 @@ import pandas as pd
 import regex as re
 import scipy
 import seaborn as sns
-import cycler
-from matplotlib import rc
-from matplotlib.colors import ListedColormap
-
-from syncropatch_export.voltage_protocols import VoltageProtocol
-
 from run_herg_qc import create_qc_table
-
+from syncropatch_export.voltage_protocols import VoltageProtocol
 
 matplotlib.rcParams['figure.dpi'] = 300
 
@@ -313,7 +309,6 @@ def do_chronological_plots(df, normalise=False):
         return r'$' + str(p) + r'^{(' + str(s) + r')}$'
 
     ax.spines[['top', 'right']].set_visible(False)
-    legend_kws = {'model': 'expand'}
 
     for var in vars:
         if var not in df:
@@ -327,7 +322,7 @@ def do_chronological_plots(df, normalise=False):
         xlim[1] = xlim[1] + 2.5
         ax.set_xlim(xlim)
 
-        lgdn = ax.legend(frameon=False, fontsize=8)
+        ax.legend(frameon=False, fontsize=8)
 
         if var == 'E_rev' and np.isfinite(args.reversal):
             ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
@@ -601,7 +596,7 @@ def plot_leak_conductance_change_sweep_to_sweep(df):
         delta_df = pd.DataFrame(rows, columns=['well', var_name_ltx, 'passed QC'])
 
         sns.histplot(data=delta_df, x=var_name_ltx, hue='passed QC',
-                     stat='count', multiple='stack')
+                     stat='count', multiple='stack', ax=ax)
         fig.savefig(os.path.join(output_dir, f"g_leak_sweep_to_sweep_{protocol}"))
 
     plt.close(fig)
@@ -714,10 +709,9 @@ def plot_histograms(df, qc_df):
     averaged_fitted_EKr = df.groupby(['well'])['E_rev'].mean().copy().to_frame()
     averaged_fitted_EKr['passed QC'] = [np.all(df[df.well == well]['passed QC']) for well in averaged_fitted_EKr.index]
 
-    hist = sns.histplot(averaged_fitted_EKr,
-                        x='E_rev', hue='passed QC', ax=ax, multiple='stack',
-                        stat='count', legend=False
-                        )
+    sns.histplot(averaged_fitted_EKr, x='E_rev', hue='passed QC', ax=ax,
+                 multiple='stack', stat='count', legend=False)
+
     ax.set_xlabel(r'$\mathrm{mean}(E_{\mathrm{obs}})$')
     fig.savefig(os.path.join(output_dir, 'averaged_reversal_potential_histogram'))
 

@@ -1,31 +1,28 @@
 import argparse
+import datetime
 import importlib.util
+import json
 import logging
 import multiprocessing
-import matplotlib
 import os
 import string
+import subprocess
 import sys
-import scipy
-import cycler
 
+import cycler
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import regex as re
-import json
-import datetime
-import subprocess
-
-import syncropatch_export
-
-from pcpostprocess.hergQC import hERGQC
-from pcpostprocess.infer_reversal import infer_reversal_potential
-from pcpostprocess.subtraction_plots import setup_subtraction_grid, do_subtraction_plot
-from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
+import scipy
 from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
+from pcpostprocess.hergQC import hERGQC
+from pcpostprocess.infer_reversal import infer_reversal_potential
+from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
+from pcpostprocess.subtraction_plots import do_subtraction_plot
 
 matplotlib.use('Agg')
 plt.rcParams["axes.formatter.use_mathtext"] = True
@@ -728,11 +725,13 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             t_step = times[1] - times[0]
             row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
             res = \
-                get_time_constant_of_first_decay(subtracted_trace,
-                                                 times, desc, args=args,
+                get_time_constant_of_first_decay(subtracted_trace, times, desc,
+                                                 args=args,
                                                  output_path=os.path.join(args.output_dir,
-                                                                          'debug', '-120mV time constant',
-                                                                          f"{savename}-{well}-sweep{sweep}-time-constant-fit.png"))
+                                                                          'debug',
+                                                                          '-120mV time constant',
+                                                                          f"{savename}-{well}-sweep"
+                                                                          "{sweep}-time-constant-fit.png"))
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -760,15 +759,12 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
     # TODO Put this code in a seperate function so we can easily plot individual subtractions
 
-    nsweeps = before_trace.NofSweeps
     for well in selected_wells:
         before_current = before_current_all[well]
         after_current = after_current_all[well]
 
         before_leak_currents = before_leak_current_dict[well]
         after_leak_currents = after_leak_current_dict[well]
-
-        nsweeps = before_current_all[well].shape[0]
 
         sub_df = extract_df[extract_df.well == well]
 
@@ -780,7 +776,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
         logging.debug(sub_df)
 
         do_subtraction_plot(fig, times, sweeps, before_current, after_current,
-                            extract_df, voltages, well=well)
+                            extract_df, voltages, ramp_bounds, well=well)
 
         fig.savefig(os.path.join(subtraction_plots_dir,
                                  f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
