@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from leak_correct import fit_linear_leak
+from . leak_correct import fit_linear_leak
 from matplotlib.gridspec import GridSpec
 
 
