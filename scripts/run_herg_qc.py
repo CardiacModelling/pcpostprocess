@@ -25,8 +25,6 @@ from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
-matplotlib.use('Agg')
-plt.rcParams["axes.formatter.use_mathtext"] = True
 
 pool_kws = {'maxtasksperchild': 1}
 
