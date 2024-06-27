@@ -57,13 +57,11 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.set_ylabel(r'$V_\mathrm{command}$ (mV)')
 
     # Compute and store leak currents
-    before_leak_currents = np.full((voltages.shape[0], nsweeps),
+    before_leak_currents = np.full((nsweeps, voltages.shape[0]),
                                    np.nan)
-    after_leak_currents = np.full((voltages.shape[0], nsweeps),
+    after_leak_currents = np.full((nsweeps, voltages.shape[0]),
                                   np.nan)
     for i, sweep in enumerate(sweeps):
-
-        assert sub_df.loc[sweep] == 1
 
         gleak, Eleak = sub_df.loc[sweep][['gleak_before', 'E_leak_before']].values.astype(np.float64)
         before_leak_currents[i, :] = gleak * (voltages - Eleak)
@@ -99,9 +97,9 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         # ax.tick_params(axis='y', rotation=90)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
-        corrected_currents = before_currents[i, :] - before_leak_currents[i, :]
+        corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
         corrected_after_currents = after_currents[i, :] - after_leak_currents[i, :]
-        ax.plot(times, corrected_currents,
+        ax.plot(times, corrected_before_currents,
                 label=f"leak corrected before drug trace, sweep {sweep}")
         ax.plot(times, corrected_after_currents,
                 label=f"leak corrected after drug trace, sweep {sweep}")
@@ -114,13 +112,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     for i, sweep in enumerate(sweeps):
         before_trace = before_currents[i, :].flatten()
         after_trace = after_currents[i, :].flatten()
-        before_params, before_leak = fit_linear_leak(before_trace,
-                                                     well, sweep,
-                                                     ramp_bounds)
-        after_params, after_leak = fit_linear_leak(after_trace,
-                                                   well, sweep,
-                                                   ramp_bounds)
-
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
         ax.plot(times, subtracted_currents, label=f"sweep {sweep}")

@@ -751,15 +751,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     before_current_all = before_trace.get_trace_sweeps()
     after_current_all = after_trace.get_trace_sweeps()
 
-    # Convert everything to nA...
-    before_current_all = {key: value * 1e-3 for key, value in before_current_all.items()}
-    after_current_all = {key: value * 1e-3 for key, value in after_current_all.items()}
-
-    before_leak_current_dict = {key: value * 1e-3 for key, value in before_leak_current_dict.items()}
-    after_leak_current_dict = {key: value * 1e-3 for key, value in after_leak_current_dict.items()}
-
     # TODO Put this code in a seperate function so we can easily plot individual subtractions
-
     for well in selected_wells:
         before_current = before_current_all[well]
         after_current = after_current_all[well]
@@ -769,7 +761,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
         sub_df = extract_df[extract_df.well == well]
 
-        if len(sub_df.index):
+        if len(sub_df.index) == 0:
             continue
 
         sweeps = sorted(list(sub_df.sweep.unique()))
