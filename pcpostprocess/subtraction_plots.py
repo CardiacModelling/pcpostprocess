@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-from . leak_correct import fit_linear_leak
 from matplotlib.gridspec import GridSpec
 
 
@@ -110,8 +109,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
     ax = subtracted_ax
     for i, sweep in enumerate(sweeps):
-        before_trace = before_currents[i, :].flatten()
-        after_trace = after_currents[i, :].flatten()
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
         ax.plot(times, subtracted_currents, label=f"sweep {sweep}")
