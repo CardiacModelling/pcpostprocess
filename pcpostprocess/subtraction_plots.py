@@ -1,8 +1,7 @@
-import logging
-
 import numpy as np
-from . leak_correct import fit_linear_leak
 from matplotlib.gridspec import GridSpec
+
+from .leak_correct import fit_linear_leak
 
 
 def setup_subtraction_grid(fig, nsweeps):
@@ -53,7 +52,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         all_leak_params_before.append(before_params)
 
         after_params, _ = fit_linear_leak(before_currents, voltages, times,
-                                           *ramp_bounds)
+                                          *ramp_bounds)
         all_leak_params_after.append(after_params)
 
     # Compute and store leak currents

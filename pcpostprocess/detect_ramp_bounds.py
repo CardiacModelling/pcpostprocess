@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def detect_ramp_bounds(times, voltage_sections, ramp_no=0):
     """
     Extract the the times at the start and end of the nth ramp in the protocol.

@@ -19,6 +19,7 @@ import scipy
 from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
+from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected

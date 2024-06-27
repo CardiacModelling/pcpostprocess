@@ -2,11 +2,10 @@ import os
 import unittest
 
 import matplotlib.pyplot as plt
-
 from syncropatch_export.trace import Trace
 
-from pcpostprocess.subtraction_plots import do_subtraction_plot
 from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
+from pcpostprocess.subtraction_plots import do_subtraction_plot
 
 
 class TestSubtractionPlots(unittest.TestCase):
@@ -43,6 +42,7 @@ class TestSubtractionPlots(unittest.TestCase):
         voltages = self.before_trace.get_voltage()
         do_subtraction_plot(fig, times, sweeps, before_current, after_current,
                             voltages, ramp_bounds, well=well)
+
 
 if __name__ == "__main__":
     pass
