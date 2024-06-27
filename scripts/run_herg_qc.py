@@ -19,6 +19,7 @@ import scipy
 from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
+from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
@@ -946,11 +947,14 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
             savepath = os.path.join(savedir,
                                     f"{args.saveID}-{savename}-{well}-sweep{i}.csv")
-            if not os.path.exists(savedir):
-                os.makedirs(savedir)
             subtracted_current = before_currents_corrected[i, :] - after_currents_corrected[i, :]
-            np.savetxt(savepath, subtracted_current, delimiter=',',
-                       comments='', header=header)
+
+            if args.output_traces:
+                if not os.path.exists(savedir):
+                    os.makedirs(savedir)
+
+                np.savetxt(savepath, subtracted_current, delimiter=',',
+                           comments='', header=header)
 
     column_labels = ['well', 'qc1.rseal', 'qc1.cm', 'qc1.rseries', 'qc2.raw',
                      'qc2.subtracted', 'qc3.raw', 'qc3.E4031', 'qc3.subtracted',
