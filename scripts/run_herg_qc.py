@@ -775,11 +775,10 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             continue
 
         sweeps = sorted(list(sub_df.sweep.unique()))
-        sub_df = sub_df.set_index('sweep')
-        logging.debug(sub_df)
 
         do_subtraction_plot(fig, times, sweeps, before_current, after_current,
-                            extract_df, voltages, ramp_bounds, well=well)
+                            extract_df, voltages, ramp_bounds, well=well,
+                            protocol=savename)
 
         fig.savefig(os.path.join(subtraction_plots_dir,
                                  f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
