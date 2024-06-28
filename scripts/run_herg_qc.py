@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 import cycler
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -28,6 +29,8 @@ pool_kws = {'maxtasksperchild': 1}
 
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
 plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
+
+matplotlib.use('Agg')
 
 all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
              for i in range(1, 25)]
