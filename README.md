@@ -90,6 +90,41 @@ Then you can run the tests.
 python3 -m unittest
 ```
 
+
+<!-- RUNNING -->
+## Running QC and post-processing
+
+```
+python -m pcpostprocess.scripts.run_herg_qc --help
+
+usage: python -m pcpostprocess.scripts.run_herg_qc [-h] [-c NO_CPUS]
+                      [--output_dir OUTPUT_DIR] [-w WELLS [WELLS ...]]
+                      [--protocols PROTOCOLS [PROTOCOLS ...]]
+                      [--reversal_spread_threshold REVERSAL_SPREAD_THRESHOLD] [--export_failed]
+                      [--selection_file SELECTION_FILE] [--subtracted_only] [--figsize FIGSIZE FIGSIZE]
+                      [--debug] [--log_level LOG_LEVEL] [--Erev EREV]
+                      data_directory
+
+positional arguments:
+  data_directory
+
+options:
+  -h, --help            show this help message and exit
+  -c NO_CPUS, --no_cpus NO_CPUS
+  --output_dir OUTPUT_DIR
+  -w WELLS [WELLS ...], --wells WELLS [WELLS ...]
+  --protocols PROTOCOLS [PROTOCOLS ...]
+  --reversal_spread_threshold REVERSAL_SPREAD_THRESHOLD
+  --export_failed
+  --selection_file SELECTION_FILE
+  --subtracted_only
+  --figsize FIGSIZE FIGSIZE
+  --debug
+  --log_level LOG_LEVEL
+  --Erev EREV
+```
+
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
