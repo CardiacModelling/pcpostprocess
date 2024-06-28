@@ -41,7 +41,6 @@ setup(
     install_requires=[
         'scipy>=1.7',
         'numpy>=1.21',
-	'latex>=0.7',
         'matplotlib>=3.4',
         'pandas>=1.3',
         'regex>=2023.12.25',
