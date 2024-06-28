@@ -761,7 +761,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     before_leak_current_dict = {key: value * 1e-3 for key, value in before_leak_current_dict.items()}
     after_leak_current_dict = {key: value * 1e-3 for key, value in after_leak_current_dict.items()}
 
-    # TODO Put this code in a seperate function so we can easily plot individual subtractions
     for well in selected_wells:
         before_current = before_current_all[well]
         after_current = after_current_all[well]
@@ -777,7 +776,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
         sweeps = sorted(list(sub_df.sweep.unique()))
 
         do_subtraction_plot(fig, times, sweeps, before_current, after_current,
-                            extract_df, voltages, ramp_bounds, well=well,
+                            voltages, ramp_bounds, well=well,
                             protocol=savename)
 
         fig.savefig(os.path.join(subtraction_plots_dir,
