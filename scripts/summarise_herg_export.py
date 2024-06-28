@@ -253,8 +253,8 @@ def scatterplot_timescale_E_obs(df):
                     x='E_rev', ax=ax, hue='well', style='well')
 
     ax.spines[['top', 'right']].set_visible(False)
-    ax.set_ylabel(r'$E_\text{leak} - \bar E_\text{leak}$ (ms)')
-    ax.set_xlabel(r'$E_\text{obs} - \bar E_\text{obs}$')
+    ax.set_ylabel(r'$E_\mathrm{leak} - \bar E_\mathrm{leak}$ (ms)')
+    ax.set_xlabel(r'$E_\mathrm{obs} - \bar E_\mathrm{obs}$')
 
     fig.savefig(os.path.join(output_dir, "E_leak_vs_E_rev_scatter.pdf"))
     ax.cla()
