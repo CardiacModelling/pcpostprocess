@@ -117,7 +117,7 @@ If you have a suggestion that would make this better, please fork the repo and c
 
 Joseph Shuttleworth joseph.shuttleworth@nottingham.ac.uk
 
-Project Link: [https://github.com/CardiacModelling/syncropatch\_export](https://github.com/CardiacModelling/pcpostprocess)
+Project Link: [https://github.com/CardiacModelling/syncropatch\_export](https://github.com/CardiacModelling/syncropatch_export)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
