@@ -38,8 +38,7 @@ jobs:
         python -m pytest --cov --cov-config=.coveragerc
     - name: Run export with test data
       run: |
-        sudo apt install texlive-fonts-recommended texlive-fonts-extra -y
-        sudo apt install dvipng -y
+        sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
         python3 scripts/run_herg_qc.py tests/test_data/13112023_MW2_FF
     - uses: codecov/codecov-action@v1
       with:
