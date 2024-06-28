@@ -276,8 +276,12 @@ def main():
                               **pool_kws) as pool:
         dfs = list(pool.starmap(extract_protocol, args_list))
 
-    extract_df = pd.concat(dfs, ignore_index=True)
-    extract_df['selected'] = extract_df['well'].isin(overall_selection)
+    if dfs:
+        extract_df = pd.concat(dfs, ignore_index=True)
+        extract_df['selected'] = extract_df['well'].isin(overall_selection)
+    else:
+        logging.error("Didn't export any data")
+        return
 
     logging.info(f"extract_df: {extract_df}")
 
