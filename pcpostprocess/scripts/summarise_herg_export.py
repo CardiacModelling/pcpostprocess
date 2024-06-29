@@ -16,7 +16,7 @@ from matplotlib.colors import ListedColormap
 
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
-from run_herg_qc import create_qc_table
+from .run_herg_qc import create_qc_table
 
 
 # rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
