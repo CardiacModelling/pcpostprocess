@@ -1,8 +1,10 @@
 import argparse
+import json
 import logging
 import os
 import string
 
+import cycler
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,21 +12,12 @@ import pandas as pd
 import regex as re
 import scipy
 import seaborn as sns
-import cycler
-from matplotlib import rc
-from matplotlib.colors import ListedColormap
-
+from run_herg_qc import create_qc_table
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
-from run_herg_qc import create_qc_table
-
-
-# rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-matplotlib.use('Agg')
 matplotlib.rcParams['figure.dpi'] = 300
 
 pool_kws = {'maxtasksperchild': 1}
-matplotlib.rc('font', size='9')
 
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
 plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
@@ -91,14 +84,23 @@ def main():
 
     qc_df = pd.read_csv(os.path.join(args.data_dir, f"QC-{experiment_name}.csv"))
 
-
     qc_styled_df = create_qc_table(qc_df)
     qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
-
     qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
-
     qc_vals_df = pd.read_csv(os.path.join(args.qc_estimates_file))
+
+    qc_df.protocol = ['staircaseramp1' if protocol == 'staircaseramp' else protocol
+                      for protocol in qc_df.protocol]
+    qc_df.protocol = ['staircaseramp1_2' if protocol == 'staircaseramp_2' else protocol
+                      for protocol in qc_df.protocol]
+
+    leak_parameters_df.protocol = ['staircaseramp1' if protocol == 'staircaseramp' else protocol
+                                   for protocol in leak_parameters_df.protocol]
+    leak_parameters_df.protocol = ['staircaseramp1_2' if protocol == 'staircaseramp_2' else protocol
+                                   for protocol in leak_parameters_df.protocol]
+
+    print(leak_parameters_df.protocol.unique())
 
     with open(os.path.join(args.data_dir, 'passed_wells.txt')) as fin:
         global passed_wells
@@ -118,6 +120,12 @@ def main():
             lines = fin.read().splitlines()
             protocol_order = [line.split(' ')[0] for line in lines]
 
+            protocol_order = ['staircaseramp1' if p == 'staircaseramp' else p
+                              for p in protocol_order]
+
+            protocol_order = ['staircaseramp1_2' if p == 'staircaseramp_2' else p
+                              for p in protocol_order]
+
         leak_parameters_df['protocol'] = pd.Categorical(leak_parameters_df['protocol'],
                                                         categories=protocol_order,
                                                         ordered=True)
@@ -136,6 +144,9 @@ def main():
 
     do_chronological_plots(leak_parameters_df)
     do_chronological_plots(leak_parameters_df, normalise=True)
+
+    attrition_df = create_attrition_table(qc_df, leak_parameters_df)
+    attrition_df.to_latex(os.path.join(output_dir, 'attrition.tex'))
 
     if 'passed QC' not in leak_parameters_df.columns and\
        'passed QC6a' in leak_parameters_df.columns:
@@ -198,18 +209,23 @@ def scatterplot_timescale_E_obs(df):
     if '-120mV decay time constant 3' in df:
         df['40mV decay time constant'] = df['-120mV decay time constant 3']
 
-    # Shift values so that reversal ramp is close to -120mV step
+    #  Shift values so that reversal ramp is close to -120mV step
     plot_dfs = []
     for well in df.well.unique():
         E_rev_values = df[df.well == well]['E_rev'].values[:-1]
+        E_leak_values = df[df.well == well]['E_leak_before'].values[1:]
         decay_values = df[df.well == well]['40mV decay time constant'].values[1:]
-        plot_df = pd.DataFrame([(well, p, E_rev, decay) for p, E_rev, decay\
-                                in zip(protocols, E_rev_values, decay_values)],
-                                columns=['well', 'protocol', 'E_rev', '40mV decay time constant'])
+        plot_df = pd.DataFrame([(well, p, E_rev, decay, Eleak) for p, E_rev, decay, Eleak
+                                in zip(protocols, E_rev_values, decay_values, E_leak_values)],
+                               columns=['well', 'protocol', 'E_rev', '40mV decay time constant',
+                                        'E_leak'])
         plot_dfs.append(plot_df)
 
     plot_df = pd.concat(plot_dfs, ignore_index=True)
     print(plot_df)
+
+    plot_df['E_leak'] = (plot_df.set_index('well')['E_leak'] - plot_df.groupby('well')
+                         ['E_leak'].mean()).reset_index()['E_leak']
 
     sns.scatterplot(data=plot_df, y='40mV decay time constant',
                     x='E_rev', ax=ax, hue='well', style='well')
@@ -229,6 +245,19 @@ def scatterplot_timescale_E_obs(df):
     ax.set_xlabel(r'$E_\mathrm{obs}$')
     ax.spines[['top', 'right']].set_visible(False)
     fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_line.pdf"))
+    ax.cla()
+
+    plot_df['E_rev'] = (plot_df.set_index('well')['E_rev'] - plot_df.groupby('well')
+                        ['E_rev'].mean()).reset_index()['E_rev']
+    sns.scatterplot(data=plot_df, y='E_leak',
+                    x='E_rev', ax=ax, hue='well', style='well')
+
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_ylabel(r'$E_\mathrm{leak} - \bar E_\mathrm{leak}$ (ms)')
+    ax.set_xlabel(r'$E_\mathrm{obs} - \bar E_\mathrm{obs}$')
+
+    fig.savefig(os.path.join(output_dir, "E_leak_vs_E_rev_scatter.pdf"))
+    ax.cla()
 
 
 def do_chronological_plots(df, normalise=False):
@@ -238,7 +267,6 @@ def do_chronological_plots(df, normalise=False):
     sub_dir = os.path.join(output_dir, 'chrono_plots')
     if not os.path.exists(sub_dir):
         os.makedirs(sub_dir)
-
 
     vars = ['gleak_after', 'gleak_before',
             'E_leak_after', 'R_leftover', 'E_leak_before',
@@ -281,21 +309,20 @@ def do_chronological_plots(df, normalise=False):
         return r'$' + str(p) + r'^{(' + str(s) + r')}$'
 
     ax.spines[['top', 'right']].set_visible(False)
-    legend_kws = {'model': 'expand'}
 
     for var in vars:
         if var not in df:
             continue
         df['x'] = [label_func(p, s) for p, s in zip(df.protocol, df.sweep)]
-        hist = sns.lineplot(data=df, x='x', y=var, hue='well', 
-                          legend=True)
+        hist = sns.lineplot(data=df, x='x', y=var, hue='well',
+                            legend=True)
         ax = hist.axes
 
         xlim = list(ax.get_xlim())
         xlim[1] = xlim[1] + 2.5
         ax.set_xlim(xlim)
 
-        lgdn = ax.legend(frameon=False, fontsize=8)
+        ax.legend(frameon=False, fontsize=8)
 
         if var == 'E_rev' and np.isfinite(args.reversal):
             ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
@@ -305,8 +332,8 @@ def do_chronological_plots(df, normalise=False):
             ax.set_ylabel(f"{pretty_vars[var]} ({units[var]})")
 
         ax.get_legend().set_title('')
-        legend_handles, _= ax.get_legend_handles_labels()
-        ax.legend(legend_handles, ['failed QC', 'passed QC'],bbox_to_anchor=(1.26,1))
+        legend_handles, _ = ax.get_legend_handles_labels()
+        ax.legend(legend_handles, ['failed QC', 'passed QC'], bbox_to_anchor=(1.26, 1))
 
         fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.pdf"),
                     format='pdf')
@@ -463,7 +490,7 @@ def do_scatter_matrices(df, qc_df):
     qc_df = qc_df[(qc_df.protocol == 'staircaseramp1') &
                   (qc_df.sweep == first_sweep)]
     if 'drug' in qc_df:
-        qc_df= qc_df[qc_df.drug == 'before']
+        qc_df = qc_df[qc_df.drug == 'before']
 
     qc_df = qc_df.set_index(['protocol', 'well', 'sweep'])
     qc_df = qc_df[['Rseries', 'Cm', 'Rseal', 'passed QC']]
@@ -482,6 +509,7 @@ def plot_reversal_spread(df):
                        np.all(np.isfinite(df[df.well == well]['E_rev'].values))]
 
     df = df[~df.well.isin(failed_to_infer)]
+
     def spread_func(x):
         return x.max() - x.min()
 
@@ -568,7 +596,7 @@ def plot_leak_conductance_change_sweep_to_sweep(df):
         delta_df = pd.DataFrame(rows, columns=['well', var_name_ltx, 'passed QC'])
 
         sns.histplot(data=delta_df, x=var_name_ltx, hue='passed QC',
-                     stat='count', multiple='stack')
+                     stat='count', multiple='stack', ax=ax)
         fig.savefig(os.path.join(output_dir, f"g_leak_sweep_to_sweep_{protocol}"))
 
     plt.close(fig)
@@ -600,7 +628,7 @@ def plot_spatial_Erev(df):
 
         finite_indices = np.isfinite(zs)
 
-        # This will get casted to float
+        #  This will get casted to float
         zs[finite_indices] = (zs[finite_indices] > zs[finite_indices].mean())
         zs[~np.isfinite(zs)] = 2
         zs = np.array(zs).reshape((16, 24))
@@ -681,10 +709,9 @@ def plot_histograms(df, qc_df):
     averaged_fitted_EKr = df.groupby(['well'])['E_rev'].mean().copy().to_frame()
     averaged_fitted_EKr['passed QC'] = [np.all(df[df.well == well]['passed QC']) for well in averaged_fitted_EKr.index]
 
-    hist = sns.histplot(averaged_fitted_EKr,
-                  x='E_rev', hue='passed QC', ax=ax, multiple='stack',
-                      stat='count', legend=False
-                     )
+    sns.histplot(averaged_fitted_EKr, x='E_rev', hue='passed QC', ax=ax,
+                 multiple='stack', stat='count', legend=False)
+
     ax.set_xlabel(r'$\mathrm{mean}(E_{\mathrm{obs}})$')
     fig.savefig(os.path.join(output_dir, 'averaged_reversal_potential_histogram'))
 
@@ -714,20 +741,20 @@ def plot_histograms(df, qc_df):
     ax.cla()
 
     sns.histplot(df,
-                 x='post-drug leak magnitude', hue='passed QC', 
+                 x='post-drug leak magnitude', hue='passed QC',
                  stat='count', common_norm=False, multiple='stack')
     fig.savefig(os.path.join(output_dir, 'post_drug_leak_magnitude'))
     ax.cla()
 
     ax.cla()
     sns.histplot(df,
-                 x='R_leftover', hue='passed QC', 
+                 x='R_leftover', hue='passed QC',
                  multiple='stack',
                  stat='count', common_norm=False)
 
     ax.get_legend().set_title('')
-    legend_handles, _= ax.get_legend_handles_labels()
-    ax.legend(legend_handles, ['failed QC', 'passed QC'],bbox_to_anchor=(1.26,1))
+    legend_handles, _ = ax.get_legend_handles_labels()
+    ax.legend(legend_handles, ['failed QC', 'passed QC'], bbox_to_anchor=(1.26, 1))
 
     fig.savefig(os.path.join(output_dir, 'R_leftover'))
     ax.cla()
@@ -811,7 +838,8 @@ def overlay_reversal_plots(leak_parameters_df):
                 times = times.flatten().astype(np.float64)
 
                 # First, find the reversal ramp
-                json_protocol = json.load(os.path.join(args.data_dir, 'traces', 'protocols', f"{experiment_name}-{protocol}.json"))
+                json_protocol = json.load(os.path.join(args.data_dir, 'traces', 'protocols',
+                                          f"{experiment_name}-{protocol}.json"))
                 v_protocol = VoltageProtocol.from_json(json_protocol)
                 ramps = v_protocol.get_ramps()
                 reversal_ramp = ramps[-1]
@@ -856,6 +884,77 @@ def scale_to_reference(trace, reference):
 
     res = scipy.optimize.minimize_scalar(error2, method='brent')
     return trace * res.x
+
+
+def create_attrition_table(qc_df, subtraction_df):
+
+    original_qc_criteria = ['qc1.rseal', 'qc1.cm', 'qc1.rseries', 'qc2.raw',
+                            'qc2.subtracted', 'qc3.raw', 'qc3.E4031',
+                            'qc3.subtracted', 'qc4.rseal', 'qc4.cm',
+                            'qc4.rseries', 'qc5.staircase', 'qc5.1.staircase',
+                            'qc6.subtracted', 'qc6.1.subtracted',
+                            'qc6.2.subtracted']
+
+    subtraction_df_sc = subtraction_df[subtraction_df.protocol.isin(['staircaseramp1',
+                                                                     'staircaseramp1_2'])]
+    R_leftover_qc = subtraction_df_sc.groupby('well')['R_leftover'].max() < 0.4
+
+    qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] for well in qc_df.well]
+
+    stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
+                                               'QC6.all_protocols']
+    stage_4_criteria = stage_3_criteria + ['qc3.bookend']
+    stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
+
+    stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
+
+    agg_dict = {crit: 'min' for crit in stage_6_criteria}
+
+    qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
+    print(qc_df_sc1.values.shape)
+    n_stage_1_wells = np.sum(np.all(qc_df_sc1.groupby('well')
+                                    .agg(agg_dict)[original_qc_criteria].values,
+                                    axis=1))
+
+    qc_df_sc_both = qc_df[qc_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
+
+    n_stage_2_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
+                                    .agg(agg_dict)[original_qc_criteria].values,
+                                    axis=1))
+
+    n_stage_3_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
+                                    .agg(agg_dict)[stage_3_criteria].values,
+                                    axis=1))
+
+    n_stage_4_wells = np.sum(np.all(qc_df.groupby('well')
+                                    .agg(agg_dict)[stage_4_criteria].values,
+                                    axis=1))
+
+    n_stage_5_wells = np.sum(np.all(qc_df.groupby('well')
+                                    .agg(agg_dict)[stage_5_criteria].values,
+                                    axis=1))
+
+    n_stage_6_wells = np.sum(np.all(qc_df.groupby('well')
+                                    .agg(agg_dict)[stage_6_criteria].values,
+                                    axis=1))
+
+    passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_6_criteria]
+    print(passed_qc_df)
+    passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
+
+    print(f"passed wells = {passed_wells}")
+
+    res_dict = {
+        'stage1': [n_stage_1_wells],
+        'stage2': [n_stage_2_wells],
+        'stage3': [n_stage_3_wells],
+        'stage4': [n_stage_4_wells],
+        'stage5': [n_stage_5_wells],
+        'stage6': [n_stage_6_wells],
+    }
+
+    res_df = pd.DataFrame.from_records(res_dict)
+    return res_df
 
 
 if __name__ == "__main__":
