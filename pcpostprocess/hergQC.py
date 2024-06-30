@@ -155,7 +155,7 @@ class hERGQC(object):
 
         qc5_1 = self.qc5_1(before[0, :], after[0, :], label='1')
 
-        # Ensure thatsqthe windows are correct by checking the voltage trace
+        # Ensure thats the windows are correct by checking the voltage trace
         assert np.all(
             np.abs(self.voltage[self.qc6_win[0]: self.qc6_win[1]] - 40.0))\
             < 1e-8
@@ -169,7 +169,7 @@ class hERGQC(object):
         qc6, qc6_1, qc6_2 = True, True, True
         for i in range(before.shape[0]):
             qc6 = qc6 and self.qc6((before[i, :] - after[i, :]),
-                                  self.qc6_win, label='0')
+                                   self.qc6_win, label='0')
             qc6_1 = qc6_1 and self.qc6((before[i, :] - after[i, :]),
                                        self.qc6_1_win, label='1')
             qc6_2 = qc6_2 and self.qc6((before[i, :] - after[i, :]),
@@ -307,7 +307,7 @@ class hERGQC(object):
         if win is not None:
             i, f = win
         else:
-            i, f = 0, -1
+            i, f = 0, None
 
         if self.plot_dir and self._debug:
             plt.axvspan(win[0], win[1], color='grey', alpha=.1)
@@ -319,6 +319,9 @@ class hERGQC(object):
         wherepeak = np.argmax(recording1[i:f])
         max_diff = recording1[i:f][wherepeak] - recording2[i:f][wherepeak]
         max_diffc = self.max_diffc * recording1[i:f][wherepeak]
+
+        logging.debug(f"qc5: max_diff = {max_diff}, max_diffc = {max_diffc}")
+
         if (max_diff < max_diffc) or not (np.isfinite(max_diff)
                                           and np.isfinite(max_diffc)):
             self.logger.debug(f"max_diff:  {max_diff}, max_diffc: {max_diffc}")
@@ -391,7 +394,7 @@ class hERGQC(object):
             win_end = tstart + self.removal_time
             win_end = min(tend, win_end)
             i_start = np.argmax(times >= tstart)
-            i_end   = np.argmax(times > win_end)
+            i_end = np.argmax(times > win_end)
 
             if i_end == 0:
                 break
