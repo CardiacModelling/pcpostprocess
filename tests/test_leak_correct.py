@@ -1,8 +1,10 @@
 import os
 import unittest
 
-from pcpostprocess import leak_correct
 from syncropatch_export.trace import Trace
+
+from pcpostprocess import leak_correct
+
 
 class TestLeakCorrect(unittest.TestCase):
     def setUp(self):

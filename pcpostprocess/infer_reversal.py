@@ -27,9 +27,6 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
     istart = np.argmax(times > tstart)
     iend = np.argmax(times > tend)
 
-    if current is None:
-        current = trace.get_trace_sweeps([sweep])[well][0, :].flatten()
-
     times = times[istart:iend]
     current = current[istart:iend]
     voltages = voltages[istart:iend]
@@ -67,7 +64,7 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
 
         # Now plot current vs voltage
         ax.plot(voltages, current, 'x', markersize=2, color='grey', alpha=.5)
-        ax.axvline(roots[-1], linestyle='--', color='grey', label="$E_\mathrm{obs}$")
+        ax.axvline(roots[-1], linestyle='--', color='grey', label=r'$E_\mathrm{obs}$')
         if known_Erev:
             ax.axvline(known_Erev, linestyle='--', color='orange',
                        label="Calculated $E_{Kr}$")

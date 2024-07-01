@@ -4,9 +4,9 @@ import string
 import unittest
 
 import numpy as np
+from syncropatch_export.trace import Trace
 
 from pcpostprocess.hergQC import hERGQC
-from syncropatch_export.trace import Trace
 
 
 class TestHergQC(unittest.TestCase):
@@ -78,11 +78,10 @@ class TestHergQC(unittest.TestCase):
             before_well = np.array(before[well])
             after_well = np.array(after[well])
 
-            # Assume that there are no discontinuities at the start or end of ramps
-            voltage_steps = [tstart \
+            #  Assume that there are no discontinuities at the start or end of ramps
+            voltage_steps = [tstart
                              for tstart, tend, vstart, vend in
                              voltage_protocol.get_all_sections() if vend == vstart]
-
 
             passed, qcs = hergqc.run_qc(voltage_steps,
                                         times, before_well, after_well,
