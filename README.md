@@ -78,7 +78,7 @@ Then install the package with `pip`.
 python3 -m pip install --upgrade pip && python3 -m pip install -e .'[test]'
 ```
 
-To run the tests you must first download some test data. Test data is available at [cardiac.nottingham.ac.uk/syncropatch\_export](https://cardiac.nottingham.ac.uk/pcpostprocess)
+To run the tests you must first download some test data. Test data is available at [cardiac.nottingham.ac.uk/syncropatch\_export](https://cardiac.nottingham.ac.uk/syncropatch_export)
 
 ```
 wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/
@@ -186,7 +186,7 @@ If you have a suggestion that would make this better, please fork the repo and c
 
 Joseph Shuttleworth joseph.shuttleworth@nottingham.ac.uk
 
-Project Link: [https://github.com/CardiacModelling/syncropatch\_export](https://github.com/CardiacModelling/pcpostprocess)
+Project Link: [https://github.com/CardiacModelling/pcpostprocess](https://github.com/CardiacModelling/pcpostprocess)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
