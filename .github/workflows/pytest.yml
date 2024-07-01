@@ -39,7 +39,7 @@ jobs:
     - name: Run export with test data
       run: |
         sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
-        pcpostprocess run_herg_qc.py tests/test_data/13112023_MW2_FF
+        pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
