@@ -16,7 +16,6 @@ from syncropatch_export.voltage_protocols import VoltageProtocol
 
 from pcpostprocess.scripts.run_herg_qc import create_qc_table
 
-
 matplotlib.use('Agg')
 
 pool_kws = {'maxtasksperchild': 1}
