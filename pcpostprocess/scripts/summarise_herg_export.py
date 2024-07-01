@@ -12,10 +12,11 @@ import pandas as pd
 import regex as re
 import scipy
 import seaborn as sns
-from run_herg_qc import create_qc_table
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
-matplotlib.rcParams['figure.dpi'] = 300
+from pcpostprocess.scripts.run_herg_qc import create_qc_table
+
+matplotlib.use('Agg')
 
 pool_kws = {'maxtasksperchild': 1}
 
