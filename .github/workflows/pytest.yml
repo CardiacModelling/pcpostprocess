@@ -37,15 +37,16 @@ jobs:
         python -m pip install -e .
         python -m pytest --cov --cov-config=.coveragerc
     - name: Run export with test data
+      timeout-minutes: 15
       run: |
         sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
-        python3 scripts/run_herg_qc.py tests/test_data/13112023_MW2_FF
+        pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF -w A01 A02 A03
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
     - name: Lint with flake8
       run: |
-        python -m flake8 pcpostprocess/*.py tests/*.py scripts/*.py
+        python -m flake8 pcpostprocess/*.py tests/*.py pcpostprocess/scripts/*.py
     - name: Import sorting with isort
       run: |
         python -m isort --verbose --check-only --diff pcpostprocess tests setup.py

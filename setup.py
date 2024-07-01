@@ -29,7 +29,7 @@ setup(
 
     # Packages to include
     packages=find_packages(
-        include=('pcpostprocess', 'pcpostprocess.*')),
+        include=('pcpostprocess', 'pcpostprocess.scripts', 'pcpostprocess.*')),
 
     # Include non-python files (via MANIFEST.in)
     include_package_data=True,
@@ -46,6 +46,7 @@ setup(
         'regex>=2023.12.25',
         'openpyxl>=3.1.2',
         'jinja2>=3.1.0',
+        'seaborn>=0.12.2'
     ],
     extras_require={
         'test': [
@@ -56,6 +57,12 @@ setup(
             'mock>=3.0.5',         # For mocking command line args etc.
             'codecov>=2.1.3',
             'syncropatch_export @ git+ssh://git@github.com/CardiacModelling/syncropatch_export@main'
+        ],
+    },
+    entry_points={
+        'console_scripts': [
+            'pcpostprocess='
+            'pcpostprocess.scripts.__main__:main',
         ],
     },
 )

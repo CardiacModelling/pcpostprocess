@@ -90,6 +90,75 @@ Then you can run the tests.
 python3 -m unittest
 ```
 
+
+<!-- USAGE -->
+## Usage
+
+### Running QC and post-processing
+
+```
+$ pcpostprocess run_herg_qc --help
+
+usage: pcpostprocess run_herg_qc [-h] [-c NO_CPUS]
+                      [--output_dir OUTPUT_DIR] [-w WELLS [WELLS ...]]
+                      [--protocols PROTOCOLS [PROTOCOLS ...]]
+                      [--reversal_spread_threshold REVERSAL_SPREAD_THRESHOLD] [--export_failed]
+                      [--selection_file SELECTION_FILE] [--subtracted_only]
+                      [--figsize FIGSIZE FIGSIZE]
+                      [--debug] [--log_level LOG_LEVEL] [--Erev EREV]
+                      data_directory
+
+positional arguments:
+  data_directory
+
+options:
+  -h, --help            show this help message and exit
+  -c NO_CPUS, --no_cpus NO_CPUS
+  --output_dir OUTPUT_DIR
+  -w WELLS [WELLS ...], --wells WELLS [WELLS ...]
+  --protocols PROTOCOLS [PROTOCOLS ...]
+  --reversal_spread_threshold REVERSAL_SPREAD_THRESHOLD
+  --export_failed
+  --selection_file SELECTION_FILE
+  --subtracted_only
+  --figsize FIGSIZE FIGSIZE
+  --debug
+  --log_level LOG_LEVEL
+  --Erev EREV
+```
+
+
+### Exporting Summary
+
+```
+$ pcpostprocess summarise_herg_export --help
+
+usage: pcpostprocess summarise_herg_export [-h] [--cpus CPUS]
+                      [--wells WELLS [WELLS ...]] [--output OUTPUT]
+                      [--protocols PROTOCOLS [PROTOCOLS ...]] [-r REVERSAL]
+                      [--experiment_name EXPERIMENT_NAME]
+                      [--figsize FIGSIZE FIGSIZE] [--output_all]
+                      [--log_level LOG_LEVEL]
+                      data_dir qc_estimates_file
+
+positional arguments:
+  data_dir           path to the directory containing the subtract_leak results
+  qc_estimates_file
+
+options:
+  -h, --help            show this help message and exit
+  --cpus CPUS, -c CPUS
+  --wells WELLS [WELLS ...], -w WELLS [WELLS ...]
+  --output OUTPUT, -o OUTPUT
+  --protocols PROTOCOLS [PROTOCOLS ...]
+  -r REVERSAL, --reversal REVERSAL
+  --experiment_name EXPERIMENT_NAME
+  --figsize FIGSIZE FIGSIZE
+  --output_all
+  --log_level LOG_LEVEL
+```
+
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
