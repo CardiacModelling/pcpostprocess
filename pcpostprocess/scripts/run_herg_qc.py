@@ -1097,7 +1097,7 @@ def qc3_bookend(readname, savename, time_strs, args):
             last_processed[well], times, voltage_steps
         ).flatten()
 
-        passed = hergqc.qc3(trace1 *1e-3, trace2*1e-3)
+        passed = hergqc.qc3(trace1, trace2)
 
         res_dict[well] = passed
 
