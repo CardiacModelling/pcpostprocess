@@ -1044,7 +1044,8 @@ def qc3_bookend(readname, savename, time_strs, args):
         last_before_current = last_before_current_dict[well][-1, :]
         last_after_current = last_after_current_dict[well][-1, :]
 
-        save_fname = os.path.join(output_dir, "leak_correction", f"{well}_{savename}_before0.pdf")
+        save_fname = os.path.join(args.output_dir, "leak_correction",
+                                  f"{well}_{savename}_before0.pdf")
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
