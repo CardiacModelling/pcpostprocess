@@ -735,7 +735,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                                                           'debug',
                                                                           '-120mV time constant',
                                                                           f"{savename}-{well}-sweep"
-                                                                          "{sweep}-time-constant-fit.png"))
+                                                                          "{sweep}-time-constant-fit.pdf"))
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -1044,8 +1044,11 @@ def qc3_bookend(readname, savename, time_strs, args):
         last_before_current = last_before_current_dict[well][-1, :]
         last_after_current = last_after_current_dict[well][-1, :]
 
+        save_fname = os.path.join(output_dir, "leak_correction", f"{well}_{savename}_before0.pdf")
+
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
+                                                       save_fname=save_fname,
                                                        *ramp_bounds)
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,
@@ -1197,11 +1200,12 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         for ax in axs:
             ax.spines[['top', 'right']].set_visible(False)
             ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
-            ax.set_xlabel(r'$t$ (ms)')
+
+        axs[-1].set_xlabel(r'$t$ (ms)')
 
         protocol_ax, fit_ax = axs
-        protocol_ax.set_title('a', fontweight='bold')
-        fit_ax.set_title('b', fontweight='bold')
+        protocol_ax.set_title('a', fontweight='bold', loc='left')
+        fit_ax.set_title('b', fontweight='bold', loc='left')
         fit_ax.plot(peak_time, peak_current, marker='x', color='red')
 
         a, b, c, d = res1.x
