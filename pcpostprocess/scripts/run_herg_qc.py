@@ -1050,7 +1050,7 @@ def qc3_bookend(readname, savename, time_strs, args):
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
                                                        save_fname=save_fname,
-                                                       output_dur=output_directory,
+                                                       output_dirr=output_directory,
                                                        *ramp_bounds)
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,
