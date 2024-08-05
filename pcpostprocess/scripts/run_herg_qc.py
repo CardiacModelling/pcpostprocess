@@ -772,7 +772,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
         sweeps = sorted(list(sub_df.sweep.unique()))
 
-        do_subtraction_plot(fig, times, sweeps, before_current*1e3, after_current,
+        do_subtraction_plot(fig, times, sweeps, before_current, after_current,
                             voltages, ramp_bounds, well=well,
                             protocol=savename)
 
@@ -929,8 +929,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         selected, QC = hergqc.run_qc(voltage_steps, times,
                                      before_currents,
                                      after_currents,
-                                     np.array(qc_before[well])[0, :] * 1e-3,
-                                     np.array(qc_after[well])[0, :] * 1e-3, nsweeps)
+                                     np.array(qc_before[well])[0, :],
+                                     np.array(qc_after[well])[0, :], nsweeps)
 
         df_rows.append([well] + list(QC))
 
@@ -1045,7 +1045,7 @@ def qc3_bookend(readname, savename, time_strs, args):
         save_fname = f"{well}_{savename}_before0.pdf"
 
         # Plot subtraction
-        get_leak_corrected(first_before_current*1e3,
+        get_leak_corrected(first_before_current,
                            voltage, times,
                            *ramp_bounds,
                            save_fname=save_fname,
