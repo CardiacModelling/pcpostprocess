@@ -26,6 +26,9 @@ def setup_subtraction_grid(fig, nsweeps):
     # Long axis for protocol on the bottom (full width)
     long_protocol_ax = fig.add_subplot(gs[5, :])
 
+    for ax in list(protocol_axs) + list(before_axs) + list(after_axs) + list(corrected_axs) + [subtracted_ax]:
+        ax.spines[['top', 'right']].set_visible(False)
+
     return protocol_axs, before_axs, after_axs, corrected_axs, subtracted_ax, long_protocol_ax
 
 
@@ -39,10 +42,13 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     protocol_axs, before_axs, after_axs, corrected_axs, \
         subtracted_ax, long_protocol_ax = axs
 
+    # Convert times from ms to s
+    times = times * 1e-3
+
     for ax in protocol_axs:
         ax.plot(times, voltages, color='black')
         ax.set_xlabel('time (s)')
-        ax.set_ylabel(r'$V_\mathrm{command}$ (mV)')
+        ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
 
     all_leak_params_before = []
     all_leak_params_after = []
@@ -72,7 +78,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         gleak, Eleak = all_leak_params_before[i]
         ax.plot(times, before_currents[i, :], label=f"pre-drug raw, sweep {sweep}")
         ax.plot(times, before_leak_currents[i, :],
-                label=r'$I_\mathrm{leak}$.' f"g={gleak:1E}, E={Eleak:.1e}")
+                label=r'$I_\mathrm{L}$.' f"g={gleak:1E}, E={Eleak:.1e}")
         # ax.legend()
 
         if ax.get_legend():
@@ -86,7 +92,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         gleak, Eleak = all_leak_params_before[i]
         ax.plot(times, after_currents[i, :], label=f"post-drug raw, sweep {sweep}")
         ax.plot(times, after_leak_currents[i, :],
-                label=r"$I_\mathrm{leak}$." f"g={gleak:1E}, E={Eleak:.1e}")
+                label=r"$I_\mathrm{L}$." f"g={gleak:1E}, E={Eleak:.1e}")
         # ax.legend()
         if ax.get_legend():
             ax.get_legend().remove()
@@ -120,11 +126,11 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
             (after_currents[i, :] - after_leak_currents[i, :])
         ax.plot(times, subtracted_currents, label=f"sweep {sweep}")
 
-    ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{l}$ (mV)')
+    ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{L}$ (mV)')
     ax.set_xlabel('$t$ (s)')
 
     long_protocol_ax.plot(times, voltages, color='black')
     long_protocol_ax.set_xlabel('time (s)')
-    long_protocol_ax.set_ylabel(r'$V_\mathrm{command}$ (mV)')
+    long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
     long_protocol_ax.tick_params(axis='y', rotation=90)
 

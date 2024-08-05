@@ -755,11 +755,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     after_current_all = after_trace.get_trace_sweeps()
 
     # Convert everything to nA...
-    before_current_all = {key: value * 1e-3 for key, value in before_current_all.items()}
-    after_current_all = {key: value * 1e-3 for key, value in after_current_all.items()}
-
-    before_leak_current_dict = {key: value * 1e-3 for key, value in before_leak_current_dict.items()}
-    after_leak_current_dict = {key: value * 1e-3 for key, value in after_leak_current_dict.items()}
+    # before_current_all = {key: value * 1e-3 for key, value in before_current_all.items()}
+    # after_current_all = {key: value * 1e-3 for key, value in after_current_all.items()}
 
     for well in selected_wells:
         before_current = before_current_all[well]
@@ -1049,9 +1046,10 @@ def qc3_bookend(readname, savename, time_strs, args):
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
+                                                       *ramp_bounds
                                                        save_fname=save_fname,
-                                                       output_dir=output_directory,
-                                                       *ramp_bounds)
+                                                       output_dir=output_directory)
+
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,
                                                       *ramp_bounds)
