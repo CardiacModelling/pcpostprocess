@@ -1044,11 +1044,19 @@ def qc3_bookend(readname, savename, time_strs, args):
         output_directory = os.path.join(args.output_dir, "leak_correction")
         save_fname = f"{well}_{savename}_before0.pdf"
 
+        # Plot subtraction
+        get_leak_corrected(first_before_current*1e3,
+                           voltage, times,
+                           *ramp_bounds,
+                           save_fname=save_fname,
+                           output_dir=output_directory)
+
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
                                                        *ramp_bounds,
                                                        save_fname=save_fname,
                                                        output_dir=output_directory)
+
 
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,

@@ -26,7 +26,7 @@ def setup_subtraction_grid(fig, nsweeps):
     # Long axis for protocol on the bottom (full width)
     long_protocol_ax = fig.add_subplot(gs[5, :])
 
-    for ax in list(protocol_axs) + list(before_axs) + list(after_axs) + list(corrected_axs) + [subtracted_ax]:
+    for ax in list(protocol_axs) + list(before_axs) + list(after_axs) + list(corrected_axs) + [subtracted_ax] + [long_protocol_ax]:
         ax.spines[['top', 'right']].set_visible(False)
 
     return protocol_axs, before_axs, after_axs, corrected_axs, subtracted_ax, long_protocol_ax
@@ -105,11 +105,11 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
         corrected_after_currents = after_currents[i, :] - after_leak_currents[i, :]
         ax.plot(times, corrected_before_currents,
-                label=f"leak corrected before drug trace, sweep {sweep}")
+                label=f"leak-corrected pre-drug trace, sweep {sweep}")
         ax.plot(times, corrected_after_currents,
-                label=f"leak corrected after drug trace, sweep {sweep}")
+                label=f"leak-corrected post-drug trace, sweep {sweep}")
         ax.set_xlabel(r'$t$ (s)')
-        ax.set_ylabel(r'leak corrected traces')
+        ax.set_ylabel(r'leak-corrected traces')
         # ax.tick_params(axis='y', rotation=90)
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
 
@@ -124,7 +124,10 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
-        ax.plot(times, subtracted_currents, label=f"sweep {sweep}")
+        ax.plot(times, subtracted_currents, label=f"sweep {sweep}", alpha=.5)
+
+        # Cycle to next colour
+        ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
 
     ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{L}$ (mV)')
     ax.set_xlabel('$t$ (s)')
