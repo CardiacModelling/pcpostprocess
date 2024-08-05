@@ -929,8 +929,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         selected, QC = hergqc.run_qc(voltage_steps, times,
                                      before_currents,
                                      after_currents,
-                                     np.array(qc_before[well])[0, :],
-                                     np.array(qc_after[well])[0, :], nsweeps)
+                                     np.array(qc_before[well])[0, :] * 1e-3,
+                                     np.array(qc_after[well])[0, :] * 1e-3, nsweeps)
 
         df_rows.append([well] + list(QC))
 
@@ -1069,9 +1069,9 @@ def qc3_bookend(readname, savename, time_strs, args):
                                                      voltage, times,
                                                      *ramp_bounds)
 
-        # Store subtracted traces (converted to nA)
-        first_processed[well] = (before_traces_first[well] - after_traces_first[well]) * 1e-3
-        last_processed[well] = (before_traces_last[well] - after_traces_last[well]) * 1e-3
+        # Store subtracted traces
+        first_processed[well] = (before_traces_first[well] - after_traces_first[well])
+        last_processed[well] = (before_traces_last[well] - after_traces_last[well])
 
     voltage_protocol = VoltageProtocol.from_voltage_trace(voltage, times)
 
@@ -1097,7 +1097,7 @@ def qc3_bookend(readname, savename, time_strs, args):
             last_processed[well], times, voltage_steps
         ).flatten()
 
-        passed = hergqc.qc3(trace1, trace2)
+        passed = hergqc.qc3(trace1 *1e-3, trace2*1e-3)
 
         res_dict[well] = passed
 
