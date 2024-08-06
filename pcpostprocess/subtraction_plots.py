@@ -71,12 +71,12 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
         b0, b1 = all_leak_params_before[i]
         gleak = b1
-        Eleak = -b2/b1
+        Eleak = -b1/b0
         before_leak_currents[i, :] = gleak * (voltages - Eleak)
 
         b0, b1 = all_leak_params_after[i]
         gleak = b1
-        Eleak = -b2/b1
+        Eleak = -b1/b0
 
         after_leak_currents[i, :] = gleak * (voltages - Eleak)
 
