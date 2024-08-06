@@ -39,8 +39,8 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     nsweeps = before_currents.shape[0]
     sweeps = list(range(nsweeps))
 
-    before_currents = before_currents * 1e3
-    after_currents = after_currents * 1e3
+    before_currents = before_currents
+    after_currents = after_currents
 
     axs = setup_subtraction_grid(fig, nsweeps)
     protocol_axs, before_axs, after_axs, corrected_axs, \
@@ -69,10 +69,15 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
                                   np.nan)
     for i, sweep in enumerate(sweeps):
 
-        gleak, Eleak = all_leak_params_before[i]
+        b0, b1 = all_leak_params_before[i]
+        gleak = b1
+        Eleak = -b2/b1
         before_leak_currents[i, :] = gleak * (voltages - Eleak)
 
-        gleak, Eleak = all_leak_params_after[i]
+        b0, b1 = all_leak_params_after[i]
+        gleak = b1
+        Eleak = -b2/b1
+
         after_leak_currents[i, :] = gleak * (voltages - Eleak)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, before_axs)):
