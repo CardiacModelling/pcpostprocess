@@ -666,6 +666,9 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
 
+            QC_R_leftover = np.all(R_leftover < 0.5)
+            row_dict['QC.R_leftover'] = QC_R_leftover
+
             row_dict['E_rev'] = E_rev
             row_dict['E_rev_before'] = E_rev_before
             row_dict['E_rev_after'] = E_rev_after
@@ -917,7 +920,6 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
             R_leftover[sweep] = np.sqrt(np.sum((after_currents_corrected[sweep, :])**2)/\
                                         (np.sum(before_currents_corrected[sweep, :]**2)))
 
-        QC_R_leftover = np.all(R_leftover < 0.5)
 
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
@@ -933,7 +935,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                                      np.array(qc_before[well])[0, :],
                                      np.array(qc_after[well])[0, :], nsweeps)
 
-        QC = list(QC) + [QC_R_leftover]
+        QC = list(QC)
         df_rows.append([well] + list(QC))
 
         selected = QC_R_leftover and np.all(QC) and not no_cell
@@ -960,7 +962,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                      'qc2.subtracted', 'qc3.raw', 'qc3.E4031', 'qc3.subtracted',
                      'qc4.rseal', 'qc4.cm', 'qc4.rseries', 'qc5.staircase',
                      'qc5.1.staircase', 'qc6.subtracted', 'qc6.1.subtracted',
-                     'qc6.2.subtracted', 'qc_r_leftover']
+                     'qc6.2.subtracted']
 
     df = pd.DataFrame(np.array(df_rows), columns=column_labels)
 
