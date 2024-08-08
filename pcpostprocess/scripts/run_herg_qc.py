@@ -666,7 +666,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
 
-            QC_R_leftover = np.all(R_leftover < 0.5)
+            QC_R_leftover = np.all(row_dict['R_leftover'] < 0.5)
             row_dict['QC.R_leftover'] = QC_R_leftover
 
             row_dict['E_rev'] = E_rev
@@ -938,7 +938,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         QC = list(QC)
         df_rows.append([well] + list(QC))
 
-        selected = QC_R_leftover and np.all(QC) and not no_cell
+        selected = np.all(QC) and not no_cell
         if selected:
             selected_wells.append(well)
 
