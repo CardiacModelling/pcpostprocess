@@ -229,10 +229,6 @@ def main():
             fout.write(well)
             fout.write('\n')
 
-    logfile = os.path.join(savedir, 'table-%s.txt' % saveID)
-    with open(logfile, 'a') as f:
-        f.write('\\end{table}\n')
-
     # Export all protocols
     savenames, readnames, times_list = [], [], []
     for protocol in res_dict:
