@@ -39,8 +39,19 @@ def setup_subtraction_grid(fig, nsweeps):
 def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
                         voltages, ramp_bounds, well=None, protocol=None):
 
-    nsweeps = before_currents.shape[0]
-    sweeps = list(range(nsweeps))
+    #  Filter dataframe to relevant entries
+    if well in sub_df.columns:
+        sub_df = sub_df[sub_df.well == well]
+    if protocol in sub_df.columns:
+        sub_df = sub_df[sub_df.protocol == protocol]
+
+    sweeps = list(sorted(sub_df.sweep.unique()))
+    nsweeps = len(sweeps)
+    sub_df = sub_df.set_index('sweep')
+
+    if len(sub_df.index) == 0:
+        logging.debug("do_subtraction_plot received empty dataframe")
+        return
 
     axs = setup_subtraction_grid(fig, nsweeps)
     protocol_axs, before_axs, after_axs, corrected_axs, \
@@ -142,4 +153,3 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     long_protocol_ax.set_xlabel('time (s)')
     long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
     long_protocol_ax.tick_params(axis='y', rotation=90)
-

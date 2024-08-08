@@ -1200,12 +1200,12 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
             ax.spines[['top', 'right']].set_visible(False)
             ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
 
-        axs[-1].set_xlabel(r'$t$ (ms)')
+        axs[-1].set_xlabel(r'$t$ (s)')
 
         protocol_ax, fit_ax = axs
         protocol_ax.set_title('a', fontweight='bold', loc='left')
         fit_ax.set_title('b', fontweight='bold', loc='left')
-        fit_ax.plot(peak_time, peak_current, marker='x', color='red')
+        fit_ax.plot(peak_time*1e-3, peak_current, marker='x', color='red')
 
         a, b, c, d = res1.x
 
@@ -1214,9 +1214,9 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
 
         e, f = res2.x
 
-        fit_ax.plot(times[indices], trace[indices], color='grey',
+        fit_ax.plot(times[indices]*1e-3, trace[indices], color='grey',
                     alpha=.5)
-        fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))
+        fit_ax.plot(times[indices]*1e-3, c * np.exp((-1.0/d) * (times[indices] - peak_time))
                     + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
                     color='red', linestyle='--')
 
@@ -1241,9 +1241,9 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         filename = 'single_exp_' + filename
         output_path = os.path.join(dirname, filename)
 
-        fit_ax.plot(times[indices], trace[indices], color='grey',
+        fit_ax.plot(times[indices]*1e-3, trace[indices], color='grey',
                     alpha=.5)
-        fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
+        fit_ax.plot(times[indices]*1e-3, e * np.exp((-1.0/f) * (times[indices] - peak_time)),
                     color='red', linestyle='--')
 
         res_string = r'$\tau = ' f"{f:.1f}" r'\mathrm{ms}$'
