@@ -861,7 +861,6 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
         else:
             no_cell = False
-            pass
 
         nsweeps = before_trace.NofSweeps
         assert after_trace.NofSweeps == nsweeps
@@ -923,7 +922,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
 
-        voltage_steps = [tstart
+        voltage_steps = [tend
                          for tstart, tend, vstart, vend in
                          voltage_protocol.get_all_sections() if vend == vstart]
 
