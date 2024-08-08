@@ -18,7 +18,7 @@ class hERGQC(object):
     no_QC = len(QCnames)
 
     def __init__(self, sampling_rate=5, plot_dir=None, voltage=np.array([]),
-                 n_sweeps=None, removal_time=2):
+                 n_sweeps=None, removal_time=5):
         # TODO docstring
 
         if plot_dir is not None:
