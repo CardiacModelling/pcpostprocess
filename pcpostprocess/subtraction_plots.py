@@ -42,9 +42,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     nsweeps = before_currents.shape[0]
     sweeps = list(range(nsweeps))
 
-    before_currents = before_currents
-    after_currents = after_currents
-
     axs = setup_subtraction_grid(fig, nsweeps)
     protocol_axs, before_axs, after_axs, corrected_axs, \
         subtracted_ax, long_protocol_ax = axs

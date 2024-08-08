@@ -197,7 +197,7 @@ def main():
     qc_df.to_json(os.path.join(savedir, 'QC-%s.json' % saveID),
                   orient='records')
 
-    # Overwrite old file
+    # Overwrite old files
     for protocol in list(export_config.D2S_QC.values()):
         fname = os.path.join(savedir, 'selected-%s-%s.txt' % (saveID, protocol))
         with open(fname, 'w') as fout:
@@ -751,10 +751,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     before_current_all = before_trace.get_trace_sweeps()
     after_current_all = after_trace.get_trace_sweeps()
 
-    # Convert everything to nA...
-    # before_current_all = {key: value * 1e-3 for key, value in before_current_all.items()}
-    # after_current_all = {key: value * 1e-3 for key, value in after_current_all.items()}
-
     for well in selected_wells:
         before_current = before_current_all[well]
         after_current = after_current_all[well]
@@ -914,12 +910,6 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
             before_currents[sweep, :] = before_raw
             after_currents[sweep, :] = after_raw
 
-        R_leftover = np.full(before_currents.shape[0], np.nan)
-
-        for sweep in range(before_currents.shape[0]):
-            R_leftover[sweep] = np.sqrt(np.sum((after_currents_corrected[sweep, :])**2) /
-                                        (np.sum(before_currents_corrected[sweep, :]**2)))
-
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
 
@@ -1057,9 +1047,7 @@ def qc3_bookend(readname, savename, time_strs, args):
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
-                                                       *ramp_bounds,
-                                                       save_fname=save_fname,
-                                                       output_dir=output_directory)
+                                                       *ramp_bounds)
 
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,
@@ -1073,8 +1061,8 @@ def qc3_bookend(readname, savename, time_strs, args):
                                                      *ramp_bounds)
 
         # Store subtracted traces
-        first_processed[well] = (before_traces_first[well] - after_traces_first[well])
-        last_processed[well] = (before_traces_last[well] - after_traces_last[well])
+        first_processed[well] = before_traces_first[well] - after_traces_first[well]
+        last_processed[well] = before_traces_last[well] - after_traces_last[well]
 
     voltage_protocol = VoltageProtocol.from_voltage_trace(voltage, times)
 
