@@ -917,9 +917,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         R_leftover = np.full(before_currents.shape[0], np.nan)
 
         for sweep in range(before_currents.shape[0]):
-            R_leftover[sweep] = np.sqrt(np.sum((after_currents_corrected[sweep, :])**2)/\
+            R_leftover[sweep] = np.sqrt(np.sum((after_currents_corrected[sweep, :])**2) /
                                         (np.sum(before_currents_corrected[sweep, :]**2)))
-
 
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
@@ -930,10 +929,10 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
         # Run QC with raw currents
         _, QC = hergqc.run_qc(voltage_steps, times,
-                                     before_currents_corrected,
-                                     after_currents_corrected,
-                                     np.array(qc_before[well])[0, :],
-                                     np.array(qc_after[well])[0, :], nsweeps)
+                              before_currents_corrected,
+                              after_currents_corrected,
+                              np.array(qc_before[well])[0, :],
+                              np.array(qc_after[well])[0, :], nsweeps)
 
         QC = list(QC)
         df_rows.append([well] + list(QC))
@@ -1049,7 +1048,7 @@ def qc3_bookend(readname, savename, time_strs, args):
         output_directory = os.path.join(args.output_dir, "leak_correction")
         save_fname = f"{well}_{savename}_before0.pdf"
 
-        # Plot subtraction
+        #  Plot subtraction
         get_leak_corrected(first_before_current,
                            voltage, times,
                            *ramp_bounds,
@@ -1061,7 +1060,6 @@ def qc3_bookend(readname, savename, time_strs, args):
                                                        *ramp_bounds,
                                                        save_fname=save_fname,
                                                        output_dir=output_directory)
-
 
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,

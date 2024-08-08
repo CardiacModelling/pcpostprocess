@@ -132,7 +132,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
             (after_currents[i, :] - after_leak_currents[i, :])
         ax.plot(times*1e-3, subtracted_currents, label=f"sweep {sweep}", alpha=.5)
 
-        # Cycle to next colour
+        #  Cycle to next colour
         ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
 
     ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{L}$ (mV)')
