@@ -59,7 +59,7 @@ class TestHergQC(unittest.TestCase):
         before = tr_before.get_trace_sweeps(sweeps)
         after = tr_after.get_trace_sweeps(sweeps)
         qc_vals_before = tr_before.get_onboard_QC_values(sweeps=sweeps)
-        qc_vals_after = tr_before.get_onboard_QC_values(sweeps=sweeps)
+        qc_vals_after = tr_after.get_onboard_QC_values(sweeps=sweeps)
 
         res = {}
 
