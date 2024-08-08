@@ -169,7 +169,7 @@ class hERGQC(object):
         qc6, qc6_1, qc6_2 = True, True, True
         for i in range(before.shape[0]):
             qc6 = qc6 and self.qc6((before[i, :] - after[i, :]),
-                                  self.qc6_win, label='0')
+                                   self.qc6_win, label='0')
             qc6_1 = qc6_1 and self.qc6((before[i, :] - after[i, :]),
                                        self.qc6_1_win, label='1')
             qc6_2 = qc6_2 and self.qc6((before[i, :] - after[i, :]),
@@ -394,7 +394,7 @@ class hERGQC(object):
             win_end = tstart + self.removal_time
             win_end = min(tend, win_end)
             i_start = np.argmax(times >= tstart)
-            i_end   = np.argmax(times > win_end)
+            i_end = np.argmax(times > win_end)
 
             if i_end == 0:
                 break
