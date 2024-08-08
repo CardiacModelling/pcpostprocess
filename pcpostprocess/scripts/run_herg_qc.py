@@ -928,8 +928,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
         # Run QC with raw currents
         _, QC = hergqc.run_qc(voltage_steps, times,
-                                     before_currents,
-                                     after_currents,
+                                     before_currents_corrected,
+                                     after_currents_corrected,
                                      np.array(qc_before[well])[0, :],
                                      np.array(qc_after[well])[0, :], nsweeps)
 
