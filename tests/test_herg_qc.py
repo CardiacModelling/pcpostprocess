@@ -8,8 +8,6 @@ from syncropatch_export.trace import Trace
 
 from pcpostprocess.hergQC import hERGQC
 
-WELLS = ['A01', 'A02', 'A03', 'A04', 'A05', 'D01']
-
 
 class TestHergQC(unittest.TestCase):
 
@@ -35,40 +33,42 @@ class TestHergQC(unittest.TestCase):
         self.test_trace_after = Trace(filepath2, json_file2)
 
     def test_run_qc(self):
-        for well in WELLS:
+        tr_before = self.test_trace_before
+        tr_after = self.test_trace_after
+
+        v = tr_before.get_voltage()
+
+        times = tr_after.get_times()
+
+        self.assertTrue(np.all(np.isfinite(v)))
+        self.assertTrue(np.all(np.isfinite(times)))
+
+        # Calculate sampling rate in (use kHz)
+        sampling_rate = int(1.0 / (times[1] - times[0]))
+
+        plot_dir = os.path.join(self.output_dir,
+                                'test_run_qc')
+
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(sampling_rate=sampling_rate,
+                        plot_dir=plot_dir,
+                        voltage=v)
+
+        sweeps = [0, 1]
+        before = tr_before.get_trace_sweeps(sweeps)
+        after = tr_after.get_trace_sweeps(sweeps)
+        qc_vals_before = tr_before.get_onboard_QC_values(sweeps=sweeps)
+        qc_vals_after = tr_after.get_onboard_QC_values(sweeps=sweeps)
+
+        # Spot check a few wells
+        # We could check all of the wells but it's time consuming
+
+        test_wells = ['A01', 'A02', 'A03', 'A04', 'A05', 'D01']
+
+        for well in test_wells:
             with self.subTest(well):
-                tr_before = self.test_trace_before
-                tr_after = self.test_trace_after
-
-                v = tr_before.get_voltage()
-
-                times = tr_after.get_times()
-
-                self.assertTrue(np.all(np.isfinite(v)))
-                self.assertTrue(np.all(np.isfinite(times)))
-
-                # Calculate sampling rate in (use kHz)
-                sampling_rate = int(1.0 / (times[1] - times[0]))
-
-                plot_dir = os.path.join(self.output_dir,
-                                        'test_run_qc')
-
-                if not os.path.exists(plot_dir):
-                    os.makedirs(plot_dir)
-
-                hergqc = hERGQC(sampling_rate=sampling_rate,
-                                plot_dir=plot_dir,
-                                voltage=v)
-
-                sweeps = [0, 1]
-                before = tr_before.get_trace_sweeps(sweeps)
-                after = tr_after.get_trace_sweeps(sweeps)
-                qc_vals_before = tr_before.get_onboard_QC_values(sweeps=sweeps)
-                qc_vals_after = tr_after.get_onboard_QC_values(sweeps=sweeps)
-
-                # Spot check a few wells
-                # We could check all of the wells but it's time consuming
-
                 voltage_protocol = tr_before.get_voltage_protocol()
 
                 # Take values from the first sweep only
