@@ -197,7 +197,7 @@ def main():
     qc_df.to_json(os.path.join(savedir, 'QC-%s.json' % saveID),
                   orient='records')
 
-    # Overwrite old files
+    # Overwrite old file
     for protocol in list(export_config.D2S_QC.values()):
         fname = os.path.join(savedir, 'selected-%s-%s.txt' % (saveID, protocol))
         with open(fname, 'w') as fout:
@@ -666,8 +666,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
 
-            row_dict['QC.R_leftover'] = row_dict['R_leftover'] < 0.5
-
             row_dict['E_rev'] = E_rev
             row_dict['E_rev_before'] = E_rev_before
             row_dict['E_rev_after'] = E_rev_after
@@ -858,11 +856,11 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
         # Check if any cell first!
         if (None in qc_before[well][0]) or (None in qc_after[well][0]):
-            # no_cell = True
+            no_cell = True
             continue
 
         else:
-            # no_cell = False
+            no_cell = False
             pass
 
         nsweeps = before_trace.NofSweeps
@@ -914,6 +912,14 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
             before_currents[sweep, :] = before_raw
             after_currents[sweep, :] = after_raw
 
+        R_leftover = np.full(before_currents.shape[0], np.nan)
+
+        for sweep in range(before_currents.shape[0]):
+            R_leftover[sweep] = np.sqrt(np.sum((after_currents_corrected[sweep, :])**2)/\
+                                        (np.sum(before_currents_corrected[sweep, :]**2)))
+
+        QC_R_leftover = np.all(R_leftover < 0.5)
+
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
 
@@ -922,14 +928,16 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                          voltage_protocol.get_all_sections() if vend == vstart]
 
         # Run QC with raw currents
-        selected, QC = hergqc.run_qc(voltage_steps, times,
+        _, QC = hergqc.run_qc(voltage_steps, times,
                                      before_currents,
                                      after_currents,
                                      np.array(qc_before[well])[0, :],
                                      np.array(qc_after[well])[0, :], nsweeps)
 
+        QC = list(QC) + [QC_R_leftover]
         df_rows.append([well] + list(QC))
 
+        selected = QC_R_leftover and np.all(QC) and not no_cell
         if selected:
             selected_wells.append(well)
 
@@ -953,7 +961,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                      'qc2.subtracted', 'qc3.raw', 'qc3.E4031', 'qc3.subtracted',
                      'qc4.rseal', 'qc4.cm', 'qc4.rseries', 'qc5.staircase',
                      'qc5.1.staircase', 'qc6.subtracted', 'qc6.1.subtracted',
-                     'qc6.2.subtracted']
+                     'qc6.2.subtracted', 'qc_r_leftover']
 
     df = pd.DataFrame(np.array(df_rows), columns=column_labels)
 
