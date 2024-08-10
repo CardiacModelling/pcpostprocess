@@ -316,10 +316,10 @@ def do_chronological_plots(df, normalise=False):
             staircase = False
 
         if staircase:
-            return p
-        else:
             p = p[1:-1]
             return r'$' + str(p) + r'^{(' + str(s) + r')}$'
+        else:
+            return p
 
     ax.spines[['top', 'right']].set_visible(False)
 
