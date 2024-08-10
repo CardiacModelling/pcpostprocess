@@ -282,7 +282,7 @@ def do_chronological_plots(df, normalise=False):
     # df = df[leak_parameters_df['selected']]
     df = df[df['passed QC']].copy()
 
-    relabel_dict = {protocol: r'$d_{' f"{i}" r'}$' for i, protocol in
+    relabel_dict = {protocol: r'$d_{' f"{i + 1}" r'}$' for i, protocol in
                     enumerate(df.protocol.unique())}
 
     df = df.replace({'protocol': relabel_dict})
@@ -310,8 +310,16 @@ def do_chronological_plots(df, normalise=False):
     }
 
     def label_func(p, s):
-        p = p[1:-1]
-        return r'$' + str(p) + r'^{(' + str(s) + r')}$'
+        if p == r'$d_{1}$':
+            staircase = True
+        else:
+            staircase = False
+
+        if staircase:
+            return p
+        else:
+            p = p[1:-1]
+            return r'$' + str(p) + r'^{(' + str(s) + r')}$'
 
     ax.spines[['top', 'right']].set_visible(False)
 
@@ -337,8 +345,8 @@ def do_chronological_plots(df, normalise=False):
             ax.set_ylabel(f"{pretty_vars[var]} ({units[var]})")
 
         ax.get_legend().set_title('')
-        legend_handles, _ = ax.get_legend_handles_labels()
-        ax.legend(legend_handles, ['failed QC', 'passed QC'], bbox_to_anchor=(1.26, 1))
+        legend_handles, legend_labels = ax.get_legend_handles_labels()
+        ax.legend(legend_handles, legend_labels, bbox_to_anchor=(1.26, 1))
 
         fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.pdf"),
                     format='pdf')
