@@ -296,6 +296,8 @@ def do_chronological_plots(df, normalise=False):
         '-120mV decay time constant 1': 'ms',
         '-120mV decay time constant 2': 'ms',
         '-120mV decay time constant 3': 'ms'
+        'Cm': 'F'
+        'Rseries': '$\Omega$'
     }
 
     pretty_vars = {
@@ -303,6 +305,8 @@ def do_chronological_plots(df, normalise=False):
         '-120mV time constant 1': r'$\tau_{1}$',
         '-120mV time constant 2': r'$\tau_{2}$',
         '-120mV time constant 3': r'$\tau$'
+        'Cm': r'$C_\mathrm{m}$'
+        'Rseries': r'$R_\mathrm{series}$'
     }
 
     def label_func(p, s):
