@@ -902,7 +902,7 @@ def create_attrition_table(qc_df, subtraction_df):
 
     qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] if well in R_leftover_qc.index
                               else False
-                              for well in qc_df.well.unique()]
+                              for well in qc_df.well]
 
     stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
                                                'QC6.all_protocols']
