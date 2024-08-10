@@ -89,4 +89,9 @@ class TestHergQC(unittest.TestCase):
                                             qc_vals_after_well, n_sweeps=2)
 
                 logging.debug(well, passed)
-                self.assertTrue(passed)
+
+                trace = ""
+                for label, results in qcs.items():
+                    if any([x == False for x, _ in results]):
+                        trace += f"{label}: {results}\n"
+                self.assertTrue(passed, trace)
