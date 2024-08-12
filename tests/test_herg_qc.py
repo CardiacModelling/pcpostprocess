@@ -61,18 +61,20 @@ class TestHergQC(unittest.TestCase):
         rseries_lo, rseries_hi = 1e6, 2.5e7
         rseries_mid = (rseries_lo + rseries_hi) / 2
 
-        tol = 1e-3
+        rseal_tol = 0.1
+        cm_tol = 1e-13
+        rseries_tol = 0.1
 
         test_matrix = [
             [(rseal_lo, cm_lo, rseries_lo), True],
             [(rseal_mid, cm_mid, rseries_mid), True],
             [(rseal_hi, cm_hi, rseries_hi), True],
-            [(rseal_lo - tol, cm_lo, rseries_lo), False],
-            [(rseal_lo, cm_lo - tol, rseries_lo), False],
-            [(rseal_lo, cm_lo, rseries_lo - tol), False],
-            [(rseal_hi + tol, cm_hi, rseries_hi), False],
-            [(rseal_hi, cm_hi + tol, rseries_hi), False],
-            [(rseal_hi, cm_hi, rseries_hi + tol), False],
+            [(rseal_lo - rseal_tol, cm_lo, rseries_lo), False],
+            [(rseal_lo, cm_lo - cm_tol, rseries_lo), False],
+            [(rseal_lo, cm_lo, rseries_lo - rseries_tol), False],
+            [(rseal_hi + rseal_tol, cm_hi, rseries_hi), False],
+            [(rseal_hi, cm_hi + cm_tol, rseries_hi), False],
+            [(rseal_hi, cm_hi, rseries_hi + rseries_tol), False],
             [(np.inf, cm_mid, rseries_mid), False],
             [(rseal_mid, np.inf, rseries_mid), False],
             [(rseal_mid, cm_mid, np.inf), False],
