@@ -29,22 +29,85 @@ class TestHergQC(unittest.TestCase):
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
+
         self.test_trace_before = Trace(filepath, json_file)
         self.test_trace_after = Trace(filepath2, json_file2)
 
-    def test_run_qc(self):
-        tr_before = self.test_trace_before
-        tr_after = self.test_trace_after
-
-        v = tr_before.get_voltage()
-
-        times = tr_after.get_times()
-
-        self.assertTrue(np.all(np.isfinite(v)))
-        self.assertTrue(np.all(np.isfinite(times)))
+        self.voltage = self.test_trace_before.get_voltage()
+        self.times = self.test_trace_after.get_times()
 
         # Calculate sampling rate in (use kHz)
-        sampling_rate = int(1.0 / (times[1] - times[0]))
+        self.sampling_rate = int(1.0 / (self.times[1] - self.times[0]))
+
+    def test_qc1(self):
+        def passed(result):
+            return all([x for x, _ in result])
+
+        plot_dir = os.path.join(self.output_dir, "test_qc1")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(sampling_rate=self.sampling_rate,
+                        plot_dir=plot_dir,
+                        voltage=self.voltage)
+
+        # qc1 checks that rseal, cm, rseries are within range
+        rseal_lo, rseal_hi = 1e8, 1e12
+        rseal_mid = (rseal_lo + rseal_hi) / 2
+
+        cm_lo, cm_hi = 1e-12, 1e-10
+        cm_mid = (cm_lo + cm_hi) / 2
+
+        rseries_lo, rseries_hi = 1e6, 2.5e7
+        rseries_mid = (rseries_lo + rseries_hi) / 2
+
+        tol = 1e-3
+
+        test_matrix = [
+            [(rseal_lo, cm_lo, rseries_lo), True],
+            [(rseal_mid, cm_mid, rseries_mid), True],
+            [(rseal_hi, cm_hi, rseries_hi), True],
+            [(rseal_lo - tol, cm_lo, rseries_lo), False],
+            [(rseal_lo, cm_lo - tol, rseries_lo), False],
+            [(rseal_lo, cm_lo, rseries_lo - tol), False],
+            [(rseal_hi + tol, cm_hi, rseries_hi), False],
+            [(rseal_hi, cm_hi + tol, rseries_hi), False],
+            [(rseal_hi, cm_hi, rseries_hi + tol), False],
+            [(np.inf, cm_mid, rseries_mid), False],
+            [(rseal_mid, np.inf, rseries_mid), False],
+            [(rseal_mid, cm_mid, np.inf), False],
+            [(None, cm_mid, rseries_mid), False],
+            [(rseal_mid, None, rseries_mid), False],
+            [(rseal_mid, cm_mid, None), False],
+            [(None, None, None), False],
+            [(0, 0, 0), False],
+        ]
+
+        for (rseal, cm, rseries), expected in test_matrix:
+            self.assertEqual(
+                passed(hergqc.qc1(rseal, cm, rseries)),
+                expected,
+                f"({rseal}, {cm}, {rseries})",
+            )
+
+    def test_qc2(self):
+        pass
+
+    def test_qc3(self):
+        pass
+
+    def test_qc4(self):
+        pass
+
+    def test_qc5(self):
+        pass
+
+    def test_qc6(self):
+        pass
+
+    def test_run_qc(self):
+        self.assertTrue(np.all(np.isfinite(self.voltage)))
+        self.assertTrue(np.all(np.isfinite(self.times)))
 
         plot_dir = os.path.join(self.output_dir,
                                 'test_run_qc')
@@ -52,22 +115,22 @@ class TestHergQC(unittest.TestCase):
         if not os.path.exists(plot_dir):
             os.makedirs(plot_dir)
 
-        hergqc = hERGQC(sampling_rate=sampling_rate,
+        hergqc = hERGQC(sampling_rate=self.sampling_rate,
                         plot_dir=plot_dir,
-                        voltage=v)
+                        voltage=self.voltage)
 
         sweeps = [0, 1]
-        before = tr_before.get_trace_sweeps(sweeps)
-        after = tr_after.get_trace_sweeps(sweeps)
-        qc_vals_before = tr_before.get_onboard_QC_values(sweeps=sweeps)
-        qc_vals_after = tr_after.get_onboard_QC_values(sweeps=sweeps)
+        before = self.test_trace_before.get_trace_sweeps(sweeps)
+        after = self.test_trace_after.get_trace_sweeps(sweeps)
+        qc_vals_before = self.test_trace_before.get_onboard_QC_values(sweeps=sweeps)
+        qc_vals_after = self.test_trace_after.get_onboard_QC_values(sweeps=sweeps)
 
         # Spot check a few wells
         # We could check all of the wells but it's time consuming
 
         test_wells = ['A01', 'A02', 'A03', 'A04', 'A05', 'D01']
 
-        voltage_protocol = tr_before.get_voltage_protocol()
+        voltage_protocol = self.test_trace_before.get_voltage_protocol()
 
         for well in test_wells:
             with self.subTest(well):
@@ -84,7 +147,7 @@ class TestHergQC(unittest.TestCase):
                                  voltage_protocol.get_all_sections() if vend == vstart]
 
                 passed, qcs = hergqc.run_qc(voltage_steps,
-                                            times, before_well, after_well,
+                                            self.times, before_well, after_well,
                                             qc_vals_before_well,
                                             qc_vals_after_well, n_sweeps=2)
 
