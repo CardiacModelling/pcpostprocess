@@ -922,16 +922,15 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                          voltage_protocol.get_all_sections() if vend == vstart]
 
         # Run QC with raw currents
-        _, QC = hergqc.run_qc(voltage_steps, times,
-                              before_currents_corrected,
-                              after_currents_corrected,
-                              np.array(qc_before[well])[0, :],
-                              np.array(qc_after[well])[0, :], nsweeps)
-        
-        passed_qc = [all([x for x, _ in qc]) for qc in QC.values()]
-        df_rows.append([well] + passed_qc)
+        QC = hergqc.run_qc(voltage_steps, times,
+                           before_currents_corrected,
+                           after_currents_corrected,
+                           np.array(qc_before[well])[0, :],
+                           np.array(qc_after[well])[0, :], nsweeps)
 
-        selected = np.all(QC) and not no_cell
+        df_rows.append([well] + QC.passed_list())
+
+        selected = QC.all_passed() and not no_cell
         if selected:
             selected_wells.append(well)
 

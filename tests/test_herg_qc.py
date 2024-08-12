@@ -148,15 +148,15 @@ class TestHergQC(unittest.TestCase):
                                  for tstart, tend, vstart, vend in
                                  voltage_protocol.get_all_sections() if vend == vstart]
 
-                passed, qcs = hergqc.run_qc(voltage_steps,
-                                            self.times, before_well, after_well,
-                                            qc_vals_before_well,
-                                            qc_vals_after_well, n_sweeps=2)
+                QC = hergqc.run_qc(voltage_steps,
+                                   self.times, before_well, after_well,
+                                   qc_vals_before_well,
+                                   qc_vals_after_well, n_sweeps=2)
 
-                logging.debug(well, passed)
+                logging.debug(well, QC.all_passed())
 
                 trace = ""
-                for label, results in qcs.items():
-                    if any([x == False for x, _ in results]):
-                        trace += f"{label}: {results}\n"
-                self.assertTrue(passed, trace)
+                for label, result in QC.items():
+                    if not QC.qc_passed(label):
+                        trace += f"{label}: {result}\n"
+                self.assertTrue(QC.all_passed(), trace)

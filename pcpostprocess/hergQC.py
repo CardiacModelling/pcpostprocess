@@ -8,16 +8,67 @@ import numpy as np
 import scipy.stats
 
 
+class QCDict(object):
+
+    labels = [
+        "qc1.rseal",
+        "qc1.cm",
+        "qc1.rseries",
+        "qc2.raw",
+        "qc2.subtracted",
+        "qc3.raw",
+        "qc3.E4031",
+        "qc3.subtracted",
+        "qc4.rseal",
+        "qc4.cm",
+        "qc4.rseries",
+        "qc5.staircase",
+        "qc5.1.staircase",
+        "qc6.subtracted",
+        "qc6.1.subtracted",
+        "qc6.2.subtracted",
+    ]
+
+    def __init__(self):
+        self._dict = OrderedDict([(label, [(False, None)]) for label in QCDict.labels])
+
+    def __str__(self):
+        return self._dict.__str__()
+
+    def __repr__(self):
+        return self._dict.__repr__()
+
+    def __getitem__(self, key):
+        return self._dict.__getitem__(key)
+
+    def __setitem__(self, key, value):
+        if key not in QCDict.labels:
+            raise KeyError(f"Invalid QC key: {key}")
+        self._dict.__setitem__(key, value)
+
+    def keys(self):
+        return self._dict.keys()
+
+    def items(self):
+        return self._dict.items()
+
+    def values(self):
+        return self._dict.values()
+
+    def qc_passed(self, label):
+        """Return whether a single QC passed."""
+        return all([x for x, _ in self._dict[label]])
+
+    def passed_list(self):
+        """Return a list of booleans indicating whether each QC passed."""
+        return [self.qc_passed(label) for label in QCDict.labels]
+
+    def all_passed(self):
+        """Return whether all QC passed."""
+        return all(self.passed_list())
+
+
 class hERGQC(object):
-
-    QCnames = ['qc1.rseal', 'qc1.cm', 'qc1.rseries',
-               'qc2.raw', 'qc2.subtracted',
-               'qc3.raw', 'qc3.E4031', 'qc3.subtracted',
-               'qc4.rseal', 'qc4.cm', 'qc4.rseries',
-               'qc5.staircase', 'qc5.1.staircase',
-               'qc6.subtracted', 'qc6.1.subtracted', 'qc6.2.subtracted']
-
-    no_QC = len(QCnames)
 
     def __init__(self, sampling_rate=5, plot_dir=None, voltage=np.array([]),
                  n_sweeps=None, removal_time=5):
@@ -82,16 +133,6 @@ class hERGQC(object):
 
         self._debug = True
 
-        self.qc_labels = ['qc1.rseal', 'qc1.cm', 'qc1.rseries', 'qc2.raw',
-                          'qc2.subtracted', 'qc3.raw', 'qc3.E4031',
-                          'qc3.subtracted', 'qc4.rseal', 'qc4.cm',
-                          'qc4.rseries', 'qc5.staircase', 'qc5.1.staircase',
-                          'qc6.subtracted', 'qc6.1.subtracted',
-                          'qc6.2.subtracted']
-
-    def get_qc_names(self):
-        return self.QCnames
-
     def set_trace(self, before, after, qc_vals_before,
                   qc_vals_after, n_sweeps):
         self._before = before
@@ -125,7 +166,7 @@ class hERGQC(object):
         before = self.filter_capacitive_spikes(before, times, voltage_steps)
         after = self.filter_capacitive_spikes(after, times, voltage_steps)
 
-        QC = OrderedDict([(label, [(False, None)]) for label in self.qc_labels])
+        QC = QCDict()
 
         if len(before) == 0 or len(after) == 0:
             return QC
@@ -223,10 +264,7 @@ class hERGQC(object):
             fig.savefig(os.path.join(self.plot_dir, 'qc_debug.png'))
             plt.close(fig)
 
-        # Check if all QC criteria passed
-        passed = all([x for qc in QC.values() for x, _ in qc])
-
-        return passed, QC
+        return QC
 
     def qc1(self, rseal, cm, rseries):
         # Check R_seal, C_m, R_series within desired range
