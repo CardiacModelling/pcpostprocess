@@ -168,9 +168,9 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
                  I_leak[ramp_start_index:ramp_end_index+1], '--')
 
         ax4.plot(times, I_obs, label=r'$I_\mathrm{obs}$')
-        ax4.plot(times, I_leak, linestyle='--', label=r'$I_\mathrm{l}$')
+        ax4.plot(times, I_leak, linestyle='--', label=r'$I_\mathrm{L}$')
         ax4.plot(times, I_obs - I_leak,
-                 linestyle='--', alpha=0.5, label=r'$I_\mathrm{obs} - I_\mathrm{l}$')
+                 linestyle='--', alpha=0.5, label=r'$I_\mathrm{obs} - I_\mathrm{L}$')
         ax4.legend(frameon=False)
 
         if not os.path.exists(output_dir):

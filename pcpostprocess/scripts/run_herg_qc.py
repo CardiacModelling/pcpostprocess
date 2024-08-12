@@ -229,10 +229,6 @@ def main():
             fout.write(well)
             fout.write('\n')
 
-    logfile = os.path.join(savedir, 'table-%s.txt' % saveID)
-    with open(logfile, 'a') as f:
-        f.write('\\end{table}\n')
-
     # Export all protocols
     savenames, readnames, times_list = [], [], []
     for protocol in res_dict:
@@ -670,7 +666,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
 
-            row_dict['QC.R_leftover'] = row_dict['R_leftover'] < 0.5
+            QC_R_leftover = np.all(row_dict['R_leftover'] < 0.5)
+            row_dict['QC.R_leftover'] = QC_R_leftover
 
             row_dict['E_rev'] = E_rev
             row_dict['E_rev_before'] = E_rev_before
@@ -739,7 +736,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                                                           'debug',
                                                                           '-120mV time constant',
                                                                           f"{savename}-{well}-sweep"
-                                                                          "{sweep}-time-constant-fit.png"))
+                                                                          "{sweep}-time-constant-fit.pdf"))
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -757,13 +754,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
     before_current_all = before_trace.get_trace_sweeps()
     after_current_all = after_trace.get_trace_sweeps()
-
-    # Convert everything to nA...
-    before_current_all = {key: value * 1e-3 for key, value in before_current_all.items()}
-    after_current_all = {key: value * 1e-3 for key, value in after_current_all.items()}
-
-    before_leak_current_dict = {key: value * 1e-3 for key, value in before_leak_current_dict.items()}
-    after_leak_current_dict = {key: value * 1e-3 for key, value in after_leak_current_dict.items()}
 
     for well in selected_wells:
         before_current = before_current_all[well]
@@ -869,12 +859,11 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
         # Check if any cell first!
         if (None in qc_before[well][0]) or (None in qc_after[well][0]):
-            # no_cell = True
+            no_cell = True
             continue
 
         else:
-            # no_cell = False
-            pass
+            no_cell = False
 
         nsweeps = before_trace.NofSweeps
         assert after_trace.NofSweeps == nsweeps
@@ -928,19 +917,21 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
         logging.info(f"{well} {savename}\n----------")
         logging.info(f"sampling_rate is {sampling_rate}")
 
-        voltage_steps = [tstart
+        voltage_steps = [tend
                          for tstart, tend, vstart, vend in
                          voltage_protocol.get_all_sections() if vend == vstart]
 
         # Run QC with raw currents
-        selected, QC = hergqc.run_qc(voltage_steps, times,
-                                     before_currents,
-                                     after_currents,
-                                     np.array(qc_before[well])[0, :],
-                                     np.array(qc_after[well])[0, :], nsweeps)
+        _, QC = hergqc.run_qc(voltage_steps, times,
+                              before_currents_corrected,
+                              after_currents_corrected,
+                              np.array(qc_before[well])[0, :],
+                              np.array(qc_after[well])[0, :], nsweeps)
+        
+        passed_qc = [all([x for x, _ in qc]) for qc in QC.values()]
+        df_rows.append([well] + passed_qc)
 
-        df_rows.append([well] + [all([x for x, _ in qc]) for qc in QC.values()])
-
+        selected = np.all(QC) and not no_cell
         if selected:
             selected_wells.append(well)
 
@@ -1048,9 +1039,20 @@ def qc3_bookend(readname, savename, time_strs, args):
         last_before_current = last_before_current_dict[well][-1, :]
         last_after_current = last_after_current_dict[well][-1, :]
 
+        output_directory = os.path.join(args.output_dir, "leak_correction")
+        save_fname = f"{well}_{savename}_before0.pdf"
+
+        #  Plot subtraction
+        get_leak_corrected(first_before_current,
+                           voltage, times,
+                           *ramp_bounds,
+                           save_fname=save_fname,
+                           output_dir=output_directory)
+
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
                                                        *ramp_bounds)
+
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,
                                                       *ramp_bounds)
@@ -1201,11 +1203,12 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         for ax in axs:
             ax.spines[['top', 'right']].set_visible(False)
             ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
-            ax.set_xlabel(r'$t$ (ms)')
+
+        axs[-1].set_xlabel(r'$t$ (ms)')
 
         protocol_ax, fit_ax = axs
-        protocol_ax.set_title('a', fontweight='bold')
-        fit_ax.set_title('b', fontweight='bold')
+        protocol_ax.set_title('a', fontweight='bold', loc='left')
+        fit_ax.set_title('b', fontweight='bold', loc='left')
         fit_ax.plot(peak_time, peak_current, marker='x', color='red')
 
         a, b, c, d = res1.x
