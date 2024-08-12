@@ -38,9 +38,9 @@ class hERGQC(object):
         # Define all thresholds
 
         # qc1
-        self.rsealc = [1e8, 1e12]  # in Ohm # TODO double check values
-        self.cmc = [1e-12, 1e-10]  # in F
-        self.rseriesc = [1e6, 2.5e7]  # in Ohm
+        self.rsealc = [1e8, 1e12]  # in Ohm, converted from [0.1, 1000] GOhm
+        self.cmc = [1e-12, 1e-10]  # in F, converted from [1, 100] pF
+        self.rseriesc = [1e6, 2.5e7]  # in Ohm, converted from [1, 25] MOhm
         # qc2
         self.snrc = 25
         # qc3
