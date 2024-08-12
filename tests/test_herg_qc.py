@@ -67,10 +67,10 @@ class TestHergQC(unittest.TestCase):
 
         test_wells = ['A01', 'A02', 'A03', 'A04', 'A05', 'D01']
 
+        voltage_protocol = tr_before.get_voltage_protocol()
+
         for well in test_wells:
             with self.subTest(well):
-                voltage_protocol = tr_before.get_voltage_protocol()
-
                 # Take values from the first sweep only
                 qc_vals_before_well = np.array(qc_vals_before[well])[0, :]
                 qc_vals_after_well = np.array(qc_vals_after[well])[0, :]

@@ -1,6 +1,8 @@
 import logging
 import os
 
+from collections import OrderedDict
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
@@ -123,7 +125,7 @@ class hERGQC(object):
         before = self.filter_capacitive_spikes(before, times, voltage_steps)
         after = self.filter_capacitive_spikes(after, times, voltage_steps)
 
-        QC = {label: [(False, None)] for label in self.qc_labels}
+        QC = OrderedDict([(label, [(False, None)]) for label in self.qc_labels])
 
         if len(before) == 0 or len(after) == 0:
             return QC
@@ -213,7 +215,7 @@ class hERGQC(object):
             plt.ylabel('Current [pA]')
 
             # https://stackoverflow.com/a/13589144
-            from collections import OrderedDict  # fix legend labels
+            # fix legend labels
             handles, labels = plt.gca().get_legend_handles_labels()
             by_label = OrderedDict(zip(labels, handles))
             fig.legend(by_label.values(), by_label.keys())
