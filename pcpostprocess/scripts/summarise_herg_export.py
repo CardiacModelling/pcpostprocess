@@ -311,6 +311,7 @@ def do_chronological_plots(df, normalise=False):
 
     def label_func(p, s):
         staircase2 = False
+        staircase = False
         if p == r'$d_{1}$':
             staircase = True
         elif p == r'$d_{13}$':
