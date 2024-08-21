@@ -349,7 +349,10 @@ def do_chronological_plots(df, normalise=False):
         ax.set_xlabel('')
 
         if var in pretty_vars and var in units:
-            ax.set_ylabel(f"{pretty_vars[var]} ({units[var]})")
+            if len(units[var]) > 0:
+                ax.set_ylabel(f"{pretty_vars[var]} ({units[var]})")
+            else:
+                ax.set_ylabel(f"{pretty_vars[var]}")
 
         ax.get_legend().set_title('')
         legend_handles, legend_labels = ax.get_legend_handles_labels()
