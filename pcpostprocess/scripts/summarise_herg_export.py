@@ -288,16 +288,14 @@ def do_chronological_plots(df, normalise=False):
     df = df.replace({'protocol': relabel_dict})
 
     units = {
-        # 'gleak_after': r'',
-        # 'gleak_before':,
-        # 'E_leak_after':,
-        # 'E_leak_before':,
         'pre-drug leak magnitude': 'pA',
         '-120mV decay time constant 1': 'ms',
         '-120mV decay time constant 2': 'ms',
         '-120mV decay time constant 3': 'ms',
         'Cm': 'F',
-        'Rseries': '$\Omega$'
+        'Rseries': '$\Omega$',
+        'E_rev_before': r'mV',
+        'R_leftover': r''
     }
 
     pretty_vars = {
@@ -306,18 +304,26 @@ def do_chronological_plots(df, normalise=False):
         '-120mV time constant 2': r'$\tau_{2}$',
         '-120mV time constant 3': r'$\tau$',
         'Cm': r'$C_\mathrm{m}$',
-        'Rseries': r'$R_\mathrm{series}$'
+        'Rseries': r'$R_\mathrm{series}$',
+        'E_rev_before': r'$E_\mathrm{obs}$',
+        'R_leftover': r'$R_\mathrm{leftover}$'
     }
 
     def label_func(p, s):
+        staircase2 = False
         if p == r'$d_{1}$':
             staircase = True
+        elif p == r'$d_{13}$':
+            staircase2 = True
         else:
             staircase = False
 
         if staircase:
             p = p[1:-1]
             return r'$' + str(p) + r'^{(' + str(s) + r')}$'
+        elif staircase2:
+            p = p[1:-1]
+            return r'$' + r'd_1' + r'^{(' + str(s) + r')}$'
         else:
             return p
 
