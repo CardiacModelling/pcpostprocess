@@ -334,7 +334,7 @@ def do_chronological_plots(df, normalise=False):
         if var not in df:
             continue
         df['x'] = [label_func(p, s) for p, s in zip(df.protocol, df.sweep)]
-        hist = sns.lineplot(data=df, x='x', y=var, hue='well',
+        hist = sns.lineplot(data=df, x='x', y=var, hue='well', style='well',
                             legend=True)
         ax = hist.axes
 
