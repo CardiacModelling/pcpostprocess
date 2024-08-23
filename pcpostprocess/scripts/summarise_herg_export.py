@@ -736,6 +736,8 @@ def plot_histograms(df, qc_df):
                  multiple='stack', stat='count', legend=False)
 
     ax.set_xlabel(r'$\mathrm{mean}(E_{\mathrm{obs}})$')
+    ax.spins[['top', 'right']].set_visible(False)
+
     fig.savefig(os.path.join(output_dir, 'averaged_reversal_potential_histogram'))
 
     if np.isfinite(args.reversal):
@@ -774,6 +776,8 @@ def plot_histograms(df, qc_df):
                  x='R_leftover', hue='passed QC',
                  multiple='stack',
                  stat='count', common_norm=False)
+
+    ax.set_xlabel(r'$R_\mathrm{leftover}$')
 
     ax.get_legend().set_title('')
     legend_handles, _ = ax.get_legend_handles_labels()

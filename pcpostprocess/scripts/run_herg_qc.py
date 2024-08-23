@@ -1258,7 +1258,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
 
         plt.close(fig)
 
-    return (d, b), f, peak_current if res else (np.nan, np.nan), np.nan, peak_current
+    return ((d, b), f, peak_current) if res else ((np.nan, np.nan), np.nan, peak_current)
 
 
 if __name__ == '__main__':
