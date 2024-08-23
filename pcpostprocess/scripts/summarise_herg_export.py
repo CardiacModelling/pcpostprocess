@@ -300,9 +300,9 @@ def do_chronological_plots(df, normalise=False):
 
     pretty_vars = {
         'pre-drug leak magnitude': r'$\bar{I}_\mathrm{l}$',
-        '-120mV time constant 1': r'$\tau_{1}$',
-        '-120mV time constant 2': r'$\tau_{2}$',
-        '-120mV time constant 3': r'$\tau$',
+        '-120mV decay time constant 1': r'$\tau_{1}$',
+        '-120mV decay time constant 2': r'$\tau_{2}$',
+        '-120mV decay time constant 3': r'$\tau$',
         'Cm': r'$C_\mathrm{m}$',
         'Rseries': r'$R_\mathrm{series}$',
         'E_rev_before': r'$E_\mathrm{obs}$',
@@ -337,10 +337,6 @@ def do_chronological_plots(df, normalise=False):
         hist = sns.lineplot(data=df, x='x', y=var, hue='well', style='well',
                             legend=True)
         ax = hist.axes
-
-        xlim = list(ax.get_xlim())
-        xlim[1] = xlim[1] + 2.5
-        ax.set_xlim(xlim)
 
         ax.legend(frameon=False, fontsize=8)
 
