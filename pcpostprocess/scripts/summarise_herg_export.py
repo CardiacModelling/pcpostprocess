@@ -60,7 +60,7 @@ def main():
     parser.add_argument('-r', '--reversal', type=float, default=np.nan)
     # parser.add_argument('--selection_file', default=None, type=str)
     parser.add_argument('--experiment_name', default='newtonrun4')
-    parser.add_argument('--figsize', type=int, nargs=2, default=[5, 3])
+    parser.add_argument('--figsize', type=int, nargs=2, default=[5.3, 4])
     parser.add_argument('--output_all', action='store_true')
     parser.add_argument('--log_level', default='INFO')
 
@@ -736,7 +736,7 @@ def plot_histograms(df, qc_df):
                  multiple='stack', stat='count', legend=False)
 
     ax.set_xlabel(r'$\mathrm{mean}(E_{\mathrm{obs}})$')
-    ax.spins[['top', 'right']].set_visible(False)
+    ax.spines[['top', 'right']].set_visible(False)
 
     fig.savefig(os.path.join(output_dir, 'averaged_reversal_potential_histogram'))
 
