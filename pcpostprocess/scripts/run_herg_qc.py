@@ -301,6 +301,8 @@ def main():
         passed_QC6_all = np.all(sub_df.QC6.values)
         logging.info(f"passed_QC6_all {passed_QC1_all}")
 
+        passed_QC_R_leftover_all = np.all(sub_df[sub_df.protocol.isin(args.D2SQC)]['QC_R_leftover'].values)
+
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
         # QC Erev spread: check spread in reversal potential isn't too large
@@ -318,7 +320,7 @@ def main():
         passed_qc = passed_qc3_bookend and was_selected\
             and passed_QC_Erev_all and passed_QC6_all\
             and passed_QC_Erev_spread and passed_QC1_all\
-            and passed_QC4_all
+            and passed_QC4_all and passed_QC_R_leftover_all
 
         passed_qc_dict[well] = passed_qc
 
