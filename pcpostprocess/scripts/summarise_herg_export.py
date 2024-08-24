@@ -930,7 +930,7 @@ def create_attrition_table(qc_df, subtraction_df):
     qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
     qc_df_sc_both = qc_df[qc_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
 
-    stage_1_criteria = ['QC1.all_protocols']
+    stage_1_criteria = ['qc1.rseal', 'qc1.cm', 'qc1.rseries']
     stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
                                                 'QC6.all_protocols']
     stage_4_criteria = stage_3_criteria + ['qc3.bookend']
@@ -947,23 +947,23 @@ def create_attrition_table(qc_df, subtraction_df):
                                     axis=1))
 
     n_stage_3_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
-                                    .agg(agg_dict)[original_qc_criteria].values,
-                                    axis=1))
-
-    n_stage_4_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
                                     .agg(agg_dict)[stage_3_criteria].values,
                                     axis=1))
 
-    n_stage_5_wells = np.sum(np.all(qc_df.groupby('well')
+    n_stage_4_wells = np.sum(np.all(qc_df.groupby('well')
                                     .agg(agg_dict)[stage_4_criteria].values,
                                     axis=1))
 
-    n_stage_6_wells = np.sum(np.all(qc_df.groupby('well')
+    n_stage_5_wells = np.sum(np.all(qc_df.groupby('well')
                                     .agg(agg_dict)[stage_5_criteria].values,
                                     axis=1))
 
-    n_stage_7_wells = np.sum(np.all(qc_df.groupby('well')
+    n_stage_6_wells = np.sum(np.all(qc_df.groupby('well')
                                     .agg(agg_dict)[stage_6_criteria].values,
+                                    axis=1))
+
+    n_stage_7_wells = np.sum(np.all(qc_df.groupby('well')
+                                    .agg(agg_dict)[stage_7_criteria].values,
                                     axis=1))
 
     passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_6_criteria]
