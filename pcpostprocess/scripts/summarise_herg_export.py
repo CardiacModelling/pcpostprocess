@@ -295,6 +295,7 @@ def do_chronological_plots(df, normalise=False):
         'Cm': 'F',
         'Rseries': '$\Omega$',
         'E_rev_before': r'mV',
+        'E_rev': r'mV',
         'R_leftover': r''
     }
 
@@ -306,6 +307,7 @@ def do_chronological_plots(df, normalise=False):
         'Cm': r'$C_\mathrm{m}$',
         'Rseries': r'$R_\mathrm{series}$',
         'E_rev_before': r'$E_\mathrm{obs}$',
+        'E_rev': r'$E_\mathrm{obs}$',
         'R_leftover': r'$R_\mathrm{leftover}$'
     }
 
