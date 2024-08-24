@@ -301,7 +301,7 @@ def main():
         passed_QC6_all = np.all(sub_df.QC6.values)
         logging.info(f"passed_QC6_all {passed_QC1_all}")
 
-        passed_QC_R_leftover_all = np.all(sub_df[sub_df.protocol.isin(args.D2SQC)]['QC.R_leftover'].values)
+        passed_QC_R_leftover_all = np.all(sub_df[sub_df.protocol.isin(args.D2SQC.values()]['QC.R_leftover'].values)
 
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
