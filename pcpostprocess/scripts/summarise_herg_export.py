@@ -933,61 +933,61 @@ def create_attrition_table(qc_df, subtraction_df):
         np.sum(np.all(qc_df_sc_both.groupby('well').agg(agg_dict)[stage_1_criteria].values,
                       axis=1))
 
-        stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
-                                                    'QC6.all_protocols']
-        stage_4_criteria = stage_3_criteria + ['qc3.bookend']
-        stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
+      stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
+                                                  'QC6.all_protocols']
+      stage_4_criteria = stage_3_criteria + ['qc3.bookend']
+      stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
 
-        stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
+      stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
 
-        agg_dict = {crit: 'min' for crit in stage_6_criteria}
+      agg_dict = {crit: 'min' for crit in stage_6_criteria}
 
-        qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
-        print(qc_df_sc1.values.shape)
-        n_stage_2_wells = np.sum(np.all(qc_df_sc1.groupby('well')
-                                        .agg(agg_dict)[original_qc_criteria].values,
-                                        axis=1))
+      qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
+      print(qc_df_sc1.values.shape)
+      n_stage_2_wells = np.sum(np.all(qc_df_sc1.groupby('well')
+                                      .agg(agg_dict)[original_qc_criteria].values,
+                                      axis=1))
 
-        qc_df_sc_both = qc_df[qc_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
+      qc_df_sc_both = qc_df[qc_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
 
-        n_stage_3_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
-                                        .agg(agg_dict)[original_qc_criteria].values,
-                                        axis=1))
+      n_stage_3_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
+                                      .agg(agg_dict)[original_qc_criteria].values,
+                                      axis=1))
 
-        n_stage_4_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
-                                        .agg(agg_dict)[stage_3_criteria].values,
-                                        axis=1))
+      n_stage_4_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
+                                      .agg(agg_dict)[stage_3_criteria].values,
+                                      axis=1))
 
-        n_stage_5_wells = np.sum(np.all(qc_df.groupby('well')
-                                        .agg(agg_dict)[stage_4_criteria].values,
-                                        axis=1))
+      n_stage_5_wells = np.sum(np.all(qc_df.groupby('well')
+                                      .agg(agg_dict)[stage_4_criteria].values,
+                                      axis=1))
 
-        n_stage_6_wells = np.sum(np.all(qc_df.groupby('well')
-                                        .agg(agg_dict)[stage_5_criteria].values,
-                                        axis=1))
+      n_stage_6_wells = np.sum(np.all(qc_df.groupby('well')
+                                      .agg(agg_dict)[stage_5_criteria].values,
+                                      axis=1))
 
-        n_stage_7_wells = np.sum(np.all(qc_df.groupby('well')
-                                        .agg(agg_dict)[stage_6_criteria].values,
-                                        axis=1))
+      n_stage_7_wells = np.sum(np.all(qc_df.groupby('well')
+                                      .agg(agg_dict)[stage_6_criteria].values,
+                                      axis=1))
 
-        passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_6_criteria]
-        print(passed_qc_df)
-        passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
+      passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_6_criteria]
+      print(passed_qc_df)
+      passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
 
-        print(f"passed wells = {passed_wells}")
+      print(f"passed wells = {passed_wells}")
 
-        res_dict = {
-            'stage1': [n_stage_1_wells],
-            'stage2': [n_stage_2_wells],
-            'stage3': [n_stage_3_wells],
-            'stage4': [n_stage_4_wells],
-            'stage5': [n_stage_5_wells],
-            'stage6': [n_stage_6_wells],
-            'stage7': [n_stage_7_wells],
-        }
+      res_dict = {
+          'stage1': [n_stage_1_wells],
+          'stage2': [n_stage_2_wells],
+          'stage3': [n_stage_3_wells],
+          'stage4': [n_stage_4_wells],
+          'stage5': [n_stage_5_wells],
+          'stage6': [n_stage_6_wells],
+          'stage7': [n_stage_7_wells],
+      }
 
-        res_df = pd.DataFrame.from_records(res_dict)
-        return res_df
+      res_df = pd.DataFrame.from_records(res_dict)
+      return res_df
 
 
 if __name__ == "__main__":
