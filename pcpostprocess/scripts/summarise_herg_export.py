@@ -933,9 +933,9 @@ def create_attrition_table(qc_df, subtraction_df):
     stage_1_criteria = ['qc1.rseal', 'qc1.cm', 'qc1.rseries']
     stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
                                                 'QC6.all_protocols']
-    stage_4_criteria = stage_3_criteria + ['qc3.bookend']
-    stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
-    stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
+    stage_5_criteria = stage_4_criteria + ['qc3.bookend']
+    stage_6_criteria = stage_5_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
+    stage_7_criteria = stage_6_criteria + ['QC.R_leftover']
     agg_dict = {crit: 'min' for crit in stage_6_criteria}
 
     n_stage_1_wells = \
