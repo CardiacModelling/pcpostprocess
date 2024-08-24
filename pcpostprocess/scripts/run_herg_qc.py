@@ -668,7 +668,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
 
-            QC_R_leftover = np.all(row_dict['R_leftover'] < 0.5)
+            QC_R_leftover = np.all(row_dict['R_leftover'] < 0.4)
             row_dict['QC.R_leftover'] = QC_R_leftover
 
             row_dict['E_rev'] = E_rev
