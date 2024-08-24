@@ -341,7 +341,7 @@ def do_chronological_plots(df, normalise=False):
         ax.legend(frameon=False, fontsize=8)
 
         if var == 'E_rev' and np.isfinite(args.reversal):
-            ax.axhline(args.reversal, linestyle='--', color='grey', label='Calculated Nernst potential')
+            ax.axhline(args.reversal, linestyle='--', color='grey')
         ax.set_xlabel('')
 
         if var in pretty_vars and var in units:
