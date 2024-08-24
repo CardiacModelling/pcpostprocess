@@ -932,6 +932,7 @@ def create_attrition_table(qc_df, subtraction_df):
                               for well in qc_df.well]
 
     stage_1_criteria = ['QC1.all_protocols']
+    agg_dict = {crit: 'min' for crit in stage_6_criteria}
     n_stage_1_wells = \
         np.sum(np.all(qc_df_sc_both.groupby('well').agg(agg_dict)[stage_1_criteria].values,
                       axis=1))
@@ -942,8 +943,6 @@ def create_attrition_table(qc_df, subtraction_df):
     stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
 
     stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
-
-    agg_dict = {crit: 'min' for crit in stage_6_criteria}
 
     print(qc_df_sc1.values.shape)
     n_stage_2_wells = np.sum(np.all(qc_df_sc1.groupby('well')
