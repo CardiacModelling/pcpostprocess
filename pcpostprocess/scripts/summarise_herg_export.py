@@ -924,6 +924,9 @@ def create_attrition_table(qc_df, subtraction_df):
                                                                      'staircaseramp1_2'])]
     R_leftover_qc = subtraction_df_sc.groupby('well')['R_leftover'].max() < 0.4
 
+    qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
+    qc_df_sc_both = qc_df[qc_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
+
     qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] if well in R_leftover_qc.index
                               else False
                               for well in qc_df.well]
@@ -942,13 +945,10 @@ def create_attrition_table(qc_df, subtraction_df):
 
     agg_dict = {crit: 'min' for crit in stage_6_criteria}
 
-    qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
     print(qc_df_sc1.values.shape)
     n_stage_2_wells = np.sum(np.all(qc_df_sc1.groupby('well')
                                     .agg(agg_dict)[original_qc_criteria].values,
                                     axis=1))
-
-    qc_df_sc_both = qc_df[qc_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
 
     n_stage_3_wells = np.sum(np.all(qc_df_sc_both.groupby('well')
                                     .agg(agg_dict)[original_qc_criteria].values,
