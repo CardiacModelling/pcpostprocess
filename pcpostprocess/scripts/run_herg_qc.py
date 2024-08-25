@@ -361,6 +361,9 @@ def main():
         append_dict['QC6.all_protocols'] =\
             np.all(sub_df['QC6'])
 
+        append_dict['QC.R_leftover'] =\
+            np.all(sub_df['QC.R_leftover'])
+
         update_cols.append(append_dict)
 
     for key in append_dict:
