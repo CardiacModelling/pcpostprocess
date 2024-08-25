@@ -83,7 +83,7 @@ def main():
 
     leak_parameters_df = pd.read_csv(os.path.join(args.data_dir, 'subtraction_qc.csv'))
 
-    qc_df = pd.read_csv(os.path.join(args.data_dir, f"QC-{experiment_name}.csv"))
+    qc_df = pd.read_csv(os.path.join(args.data_dir, f"QC-{experiment_name}_full.csv"))
 
     qc_styled_df = create_qc_table(qc_df)
     qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
