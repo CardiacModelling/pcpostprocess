@@ -727,13 +727,15 @@ def plot_histograms(df, qc_df):
 
     ax.spines[['top', 'right']].set_visible(False)
 
+    df = df[df.selected].copy()
+
     averaged_fitted_EKr = df.groupby(['well'])['E_rev'].mean().copy().to_frame()
     averaged_fitted_EKr['passed QC'] = [np.all(df[df.well == well]['passed QC']) for well in averaged_fitted_EKr.index]
 
     sns.histplot(averaged_fitted_EKr, x='E_rev', hue='passed QC', ax=ax,
                  multiple='stack', stat='count', legend=False)
 
-    ax.set_xlabel(r'$\mathrm{mean}(E_{\mathrm{obs}})$')
+    ax.set_xlabel(r'$\mathrm{mean}(E_{\mathrm{obs}})$ (mV)')
     ax.spines[['top', 'right']].set_visible(False)
 
     fig.savefig(os.path.join(output_dir, 'averaged_reversal_potential_histogram'))
