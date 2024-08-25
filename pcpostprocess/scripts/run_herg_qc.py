@@ -375,10 +375,10 @@ def main():
     qc_styled_df.to_latex(os.path.join(args.output_dir, 'qc_table.tex'))
 
     # Save in csv format
-    qc_df.to_csv(os.path.join(savedir, 'QC-%s.csv' % saveID))
+    qc_df.to_csv(os.path.join(savedir, 'QC-%s_full.csv' % saveID))
 
     # Write data to JSON file
-    qc_df.to_json(os.path.join(savedir, 'QC-%s.json' % saveID),
+    qc_df.to_json(os.path.join(savedir, 'QC-%s_full.json' % saveID),
                   orient='records')
 
     #  Load only QC vals. TODO use a new variabile name to avoid confusion
