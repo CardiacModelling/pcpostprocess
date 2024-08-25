@@ -369,17 +369,17 @@ def main():
     for key in append_dict:
         qc_df[key] = [row[key] for row in update_cols]
 
-    qc_styled_df = create_qc_table(qc_df)
-    logging.info(qc_styled_df)
-    qc_styled_df.to_excel(os.path.join(args.output_dir, 'qc_table.xlsx'))
-    qc_styled_df.to_latex(os.path.join(args.output_dir, 'qc_table.tex'))
-
     # Save in csv format
     qc_df.to_csv(os.path.join(savedir, 'QC-%s_full.csv' % saveID))
 
     # Write data to JSON file
     qc_df.to_json(os.path.join(savedir, 'QC-%s_full.json' % saveID),
                   orient='records')
+
+    qc_styled_df = create_qc_table(qc_df)
+    logging.info(qc_styled_df)
+    qc_styled_df.to_excel(os.path.join(args.output_dir, 'qc_table.xlsx'))
+    qc_styled_df.to_latex(os.path.join(args.output_dir, 'qc_table.tex'))
 
     #  Load only QC vals. TODO use a new variabile name to avoid confusion
     qc_vals_df = extract_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']].copy()
@@ -396,6 +396,7 @@ def main():
 
 
 def create_qc_table(qc_df):
+    qc_df = qc_df.copy()
     if len(qc_df.index) == 0:
         return None
 
