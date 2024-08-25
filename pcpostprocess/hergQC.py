@@ -126,9 +126,6 @@ class hERGQC(object):
         if len(before) == 0 or len(after) == 0:
             return False, [False for lab in self.qc_labels]
 
-        if (None in qc_vals_before) or (None in qc_vals_after):
-            return False, False * self.no_QC
-
         qc1_1 = self.qc1(*qc_vals_before)
         qc1_2 = self.qc1(*qc_vals_after)
         qc1 = [i and j for i, j in zip(qc1_1, qc1_2)]
@@ -389,6 +386,7 @@ class hERGQC(object):
         @param voltage_step_times: the times at which there are discontinuities in Vcmd
         """
 
+        current = current.copy()
         for tstart, tend in zip(voltage_step_times,
                                 np.append(voltage_step_times[1:], np.inf)):
             win_end = tstart + self.removal_time
