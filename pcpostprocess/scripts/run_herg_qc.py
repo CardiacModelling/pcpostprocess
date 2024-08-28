@@ -461,6 +461,9 @@ def create_qc_table(qc_df):
                                         categories=protocol_headings,
                                         ordered=True)
 
+    ret_df.reset_index(inplace=True)
+    ret_df = ret_df.pivot(index='crit', columns='protocol', values='wells failing')
+
     return ret_df
 
 
