@@ -86,7 +86,6 @@ def main():
     qc_df = pd.read_csv(os.path.join(args.data_dir, f"QC-{experiment_name}_full.csv"))
 
     qc_styled_df = create_qc_table(qc_df)
-    qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
     qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
     qc_vals_df = pd.read_csv(os.path.join(args.qc_estimates_file))
