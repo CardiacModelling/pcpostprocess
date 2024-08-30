@@ -306,7 +306,7 @@ def do_chronological_plots(df, normalise=False):
         '-120mV decay time constant 3': r'$\tau$',
         'Cm': r'$C_\mathrm{m}$',
         'pre-drug leak magnitude': r'$\bar{I_\mathrm{L}}^{(\mathrm{before})}$',
-        'post-drug leak magnitude': r'\bar{I_\mathrm{L}^{(\mathrm{after})}}',
+        'post-drug leak magnitude': r'$\bar{I_\mathrm{L}^{(\mathrm{after})}}$',
         'Rseries': r'$R_\mathrm{series}$',
         'E_rev_before': r'$E_\mathrm{obs}$',
         'E_rev': r'$E_\mathrm{obs}$',
