@@ -1235,7 +1235,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
 
         protocol_ax.plot(times * 1e-3, trace)
-        protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
+        protocol_ax.axvspan(peak_time * 1e-3, 1e-3 * (tend - 50), alpha=.5, color='grey')
 
         fig.savefig(output_path)
         fit_ax.set_yscale('symlog')
@@ -1250,9 +1250,9 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         filename = 'single_exp_' + filename
         output_path = os.path.join(dirname, filename)
 
-        fit_ax.plot(times[indices], trace[indices], color='grey',
+        fit_ax.plot(times[indices] * 1e-3, trace[indices], color='grey',
                     alpha=.5)
-        fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
+        fit_ax.plot(times[indices] * 1e-3, e * np.exp((-1.0/f) * (times[indices] - peak_time)),
                     color='red', linestyle='--')
 
         res_string = r'$\tau = ' f"{f:.1f}" r'\mathrm{ms}$'
