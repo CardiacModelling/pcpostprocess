@@ -292,8 +292,8 @@ def do_chronological_plots(df, normalise=False):
         '-120mV decay time constant 1': 'ms',
         '-120mV decay time constant 2': 'ms',
         '-120mV decay time constant 3': 'ms',
-        'pre-drug leak magnitude': r'$\bar{I_\mathrm{L}}$',
-        'post-drug leak magnitude': r'$\bar{I_\mathrm{L}}$',
+        'pre-drug leak magnitude': r'pA',
+        'post-drug leak magnitude': r'pA',
         'Cm': 'F',
         'Rseries': '$\Omega$',
         'E_rev_before': r'mV',
@@ -302,13 +302,12 @@ def do_chronological_plots(df, normalise=False):
     }
 
     pretty_vars = {
-        'pre-drug leak magnitude': r'$\bar{I}_\mathrm{l}$',
         '-120mV decay time constant 1': r'$\tau_{1}$',
         '-120mV decay time constant 2': r'$\tau_{2}$',
         '-120mV decay time constant 3': r'$\tau$',
         'Cm': r'$C_\mathrm{m}$',
         'pre-drug leak magnitude': r'$\bar{I_\mathrm{L}}$',
-        'post-drug leak magnitude': r'pA',
+        'post-drug leak magnitude': r'\bar{I_\mathrm{L}}',
         'Rseries': r'$R_\mathrm{series}$',
         'E_rev_before': r'$E_\mathrm{obs}$',
         'E_rev': r'$E_\mathrm{obs}$',
