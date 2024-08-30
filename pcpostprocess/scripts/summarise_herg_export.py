@@ -970,7 +970,7 @@ def create_attrition_table(qc_df, subtraction_df):
                                     .agg(agg_dict)[stage_7_criteria].values,
                                     axis=1))
 
-    passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_6_criteria]
+    passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_7_criteria]
     print(passed_qc_df)
     passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
 
