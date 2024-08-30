@@ -741,7 +741,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                                                           'debug',
                                                                           '-120mV time constant',
                                                                           f"{savename}-{well}-sweep"
-                                                                          "{sweep}-time-constant-fit.pdf"))
+                                                                          f"{sweep}-time-constant-fit.pdf"))
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -1214,7 +1214,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         protocol_ax, fit_ax = axs
         protocol_ax.set_title('a', fontweight='bold', loc='left')
         fit_ax.set_title('b', fontweight='bold', loc='left')
-        fit_ax.plot(peak_time, peak_current, marker='x', color='red')
+        fit_ax.plot(peak_time*1e-3, peak_current, marker='x', color='red')
 
         a, b, c, d = res1.x
 
