@@ -293,8 +293,8 @@ def do_chronological_plots(df, normalise=False):
         '-120mV decay time constant 3': 'ms',
         'pre-drug leak magnitude': r'pA',
         'post-drug leak magnitude': r'pA',
-        'Cm': 'F',
-        'Rseries': '$\Omega$',
+        'Cm': 'nF',
+        'Rseries': '$\mathrm{M}\Omega$',
         'E_rev_before': r'mV',
         'E_rev': r'mV',
         'R_leftover': r''
@@ -308,10 +308,18 @@ def do_chronological_plots(df, normalise=False):
         'pre-drug leak magnitude': r'$\bar{I_\mathrm{L}}^{(\mathrm{before})}$',
         'post-drug leak magnitude': r'$\bar{I_\mathrm{L}^{(\mathrm{after})}}$',
         'Rseries': r'$R_\mathrm{series}$',
-        'E_rev_before': r'$E_\mathrm{obs}$',
-        'E_rev': r'$E_\mathrm{obs}$',
+        'E_rev_before': r'$E_\mathrm{before}$',
+        'E_rev': r'$E_\mathrm{post}$',
         'R_leftover': r'$R_\mathrm{leftover}$'
     }
+
+    scale_units = {
+        'Cm': 1e9,
+        'Rseries', 1e-6
+    }
+
+    for var in scale_units:
+        df[var] = df[var] * scale_units[var]
 
     def label_func(p, s):
         staircase2 = False
@@ -971,7 +979,6 @@ def create_attrition_table(qc_df, subtraction_df):
                                     axis=1))
 
     passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_7_criteria]
-    print(passed_qc_df)
     passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
 
     print(f"passed wells = {passed_wells}")
