@@ -315,7 +315,7 @@ def do_chronological_plots(df, normalise=False):
 
     scale_units = {
         'Cm': 1e9,
-        'Rseries', 1e-6
+        'Rseries': 1e-6
     }
 
     for var in scale_units:
