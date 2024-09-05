@@ -293,7 +293,7 @@ def do_chronological_plots(df, normalise=False):
         '-120mV decay time constant 3': 'ms',
         'pre-drug leak magnitude': r'pA',
         'post-drug leak magnitude': r'pA',
-        'Cm': 'nF',
+        'Cm': 'pF',
         'Rseries': '$\mathrm{M}\Omega$',
         'E_rev_before': r'mV',
         'E_rev': r'mV',
@@ -314,7 +314,7 @@ def do_chronological_plots(df, normalise=False):
     }
 
     scale_units = {
-        'Cm': 1e9,
+        'Cm': 1e12,
         'Rseries': 1e-6
     }
 
