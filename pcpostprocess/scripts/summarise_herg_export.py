@@ -174,7 +174,7 @@ def compute_leak_magnitude(df, lims=[-120, 60]):
     def compute_magnitude(g, E, lims=lims):
         # RMSE
         lims = np.array(lims)
-        evals = (lims - E)**3 * np.abs(g) / 3
+        evals = (lims - E)**3 * np.abs(g)**2 / 3
         return np.sqrt(evals[1] - evals[0]) / np.sqrt(lims[1] - lims[0])
 
     before_lst = []
