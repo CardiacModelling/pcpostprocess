@@ -105,12 +105,20 @@ def main():
     with open(os.path.join(args.data_dir, 'passed_wells.txt')) as fin:
         global passed_wells
         passed_wells = fin.read().splitlines()
+        if args.wells:
+            passed_wells = [w for w in passed_wells if w in args.wells]
+
+
+    if args.wells:
+        leak_parameters_df = leak_parameters_df[leak_parameters_df.well.isin(args.wells)]
+        qc_df = qc_df[qc_df.well.isin(args.wells)]
 
     # Compute new variables
     leak_parameters_df = compute_leak_magnitude(leak_parameters_df)
 
     global wells
     wells = leak_parameters_df.well.unique()
+
     global protocols
     protocols = leak_parameters_df.protocol.unique()
 
