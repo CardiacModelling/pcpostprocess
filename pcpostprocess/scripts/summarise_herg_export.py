@@ -748,7 +748,7 @@ def plot_histograms(df, qc_df):
     df = df[df.selected].copy()
 
     averaged_fitted_EKr = df.groupby(['well'])['E_rev'].mean().copy().to_frame()
-    averaged_fitted_EKr['passed QC'] = [np.all(df[df.well == well]['passed QC']) for well in averaged_fitted_EKr.index]
+    averaged_fitted_EKr['passed QC'] = [well in passed_wells for well in averaged_fitted_EKr.index]
 
     sns.histplot(averaged_fitted_EKr, x='E_rev', hue='passed QC', ax=ax,
                  multiple='stack', stat='count', legend=False)
