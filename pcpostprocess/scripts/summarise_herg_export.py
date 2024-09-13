@@ -287,7 +287,7 @@ def do_chronological_plots(df, normalise=False):
             '-120mV peak current']
 
     # df = df[leak_parameters_df['selected']]
-    df = df[df['passed QC']].copy()
+    df = df[df.well.isin(passed_wells)].copy()
 
     relabel_dict = {protocol: r'$d_{' f"{i + 1}" r'}$' for i, protocol in
                     enumerate(df.protocol.unique())}
