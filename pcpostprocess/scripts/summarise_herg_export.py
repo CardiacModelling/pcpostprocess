@@ -90,7 +90,7 @@ def main():
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
 
     qc_estimates_file = os.path.join(args.save_dir, f"{args.experiment_name}_subtraction_qc.csv")
-    qc_vals_df = pd.read_csv(os.path.join(args.qc_estimates_file))
+    qc_vals_df = pd.read_csv(os.path.join(qc_estimates_file)
 
     qc_df.protocol = ['staircaseramp1' if protocol == 'staircaseramp' else protocol
                       for protocol in qc_df.protocol]
