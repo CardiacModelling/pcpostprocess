@@ -52,7 +52,6 @@ def main():
     parser = argparse.ArgumentParser(description)
 
     parser.add_argument('data_dir', type=str, help="path to the directory containing the subtract_leak results")
-    parser.add_argument('qc_estimates_file')
     parser.add_argument('--cpus', '-c', default=1, type=int)
     parser.add_argument('--wells', '-w', nargs='+', default=None)
     parser.add_argument('--output', '-o', default='output')
@@ -89,6 +88,8 @@ def main():
     qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
     qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
+
+    qc_estimates_file = os.path.join(args.save_dir, f"{args.experiment_name}_subtraction_qc.csv")
     qc_vals_df = pd.read_csv(os.path.join(args.qc_estimates_file))
 
     qc_df.protocol = ['staircaseramp1' if protocol == 'staircaseramp' else protocol
