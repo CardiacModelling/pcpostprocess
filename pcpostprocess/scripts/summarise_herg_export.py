@@ -900,7 +900,7 @@ def create_attrition_table(qc_df, subtraction_df):
                                                                      'staircaseramp1_2'])]
     R_leftover_qc = subtraction_df_sc.groupby('well')['R_leftover'].max() < 0.4
 
-    qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] for well in qc_df.well]
+    qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] for well in subtraction_df.well.unique()]
 
     stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
                                                'QC6.all_protocols']
