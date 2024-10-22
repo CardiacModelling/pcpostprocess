@@ -96,6 +96,10 @@ python3 -m unittest
 
 ### Running QC and post-processing
 
+Quality control (QC) may be run using the criteria outlined in [Rapid Characterization of hERG Channel Kinetics I](https://doi.org/10.1016/j.bpj.2019.07.030) and [Evaluating the predictive accuracy of ion channel models using data from multiple experimental designs](https://doi.org/10.1101/2024.08.16.608289). These criteria assume the use of the `staircase` protocol for quality control, which should be the first and last protocol performed. We also assume the presence of repeats after the addition of an IKr blocker (such as dofetilide).
+
+Prior to performing QC and exporting, an `export*config.py` file should be added to the root of the data directory. This file (see `example*config.py`) contains a Python `dict` (`Q2S_DC`) specifying the filenames of the protocols used for QC, and names they should be outputted with, as well as `dict` (`D2S`) listing the other protocols and names to be used for their output. Additionally, the `saveID` field specifies the name of the expeirment which is used throughout the output.
+
 ```
 $ pcpostprocess run_herg_qc --help
 
