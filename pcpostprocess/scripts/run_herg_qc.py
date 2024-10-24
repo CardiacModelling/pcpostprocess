@@ -405,7 +405,6 @@ def create_qc_table(qc_df):
 
     qc_df[qc_criteria] = qc_df[qc_criteria].map(lambda x: x=='True' or x==True)
         
-
     qc_df['protocol'] = ['staircaseramp1_2' if p == 'staircaseramp2' else p
                          for p in qc_df.protocol]
 
