@@ -2,6 +2,7 @@ import logging
 import os
 import string
 import unittest
+import pickle
 
 import numpy as np
 from syncropatch_export.trace import Trace
@@ -11,25 +12,22 @@ from pcpostprocess.hergQC import hERGQC
 
 class TestHergQC(unittest.TestCase):
     def setUp(self):
-        filepath = os.path.join('tests', 'test_data', '13112023_MW2_FF',
-                                'staircaseramp (2)_2kHz_15.01.07')
+        filepath = os.path.join('tests', 'test_data')
 
         self.all_wells = [
             lab + str(i).zfill(2) for lab in string.ascii_uppercase[:16]
             for i in range(1, 25)]
 
-        filepath2 = os.path.join('tests', 'test_data', '13112023_MW2_FF',
-                                 'staircaseramp (2)_2kHz_15.11.33')
-
-        json_file = "staircaseramp (2)_2kHz_15.01.07"
-        json_file2 = "staircaseramp (2)_2kHz_15.11.33"
-
         self.output_dir = os.path.join('test_output', 'test_herg_qc')
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
-        self.test_trace_before = Trace(filepath, json_file)
-        self.test_trace_after = Trace(filepath2, json_file2)
+
+        with open(f'{filepath}/tr_before.pkl', 'rb') as f:
+            self.test_trace_before = pickle.load(f)
+
+        with open(f'{filepath}/tr_after.pkl', 'rb') as f:
+            self.test_trace_after = pickle.load(f)
 
     def test_run_qc(self):
         tr_before = self.test_trace_before
