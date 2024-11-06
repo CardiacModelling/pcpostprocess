@@ -341,10 +341,10 @@ def do_chronological_plots(df, normalise=False):
 
         if staircase:
             p = p[1:-1]
-            return r'$' + str(p) + r'^{(' + str(s) + r')}$'
+            return r'$' + str(p) + r'^{(' + str(s + 1) + r')}$'
         elif staircase2:
             p = p[1:-1]
-            return r'$' + r'd_1' + r'^{(' + str(s) + r')}$'
+            return r'$' + r'd_1' + r'^{(' + str(s + 3) + r')}$'
         else:
             return p
 
