@@ -93,7 +93,30 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc2(self):
-        pass
+        plot_dir = os.path.join(self.output_dir, "test_qc2")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(sampling_rate=self.sampling_rate,
+                        plot_dir=plot_dir,
+                        voltage=self.voltage)
+
+        # qc2 checks that raw and subtracted SNR are above a minimum threshold
+        recording = np.asarray([0, 1] * 500 + [0, 10] * 500)  # snr = 70.75
+        result = hergqc.qc2(recording)
+        self.assertTrue(result[0], f"({result[1]})")
+
+        recording = np.asarray([0, 1] * 500 + [0, 6.03125] * 500)  # snr = 25.02
+        result = hergqc.qc2(recording)
+        self.assertTrue(result[0], f"({result[1]})")
+
+        recording = np.asarray([0, 1] * 500 + [0, 6.015625] * 500)  # snr = 24.88
+        result = hergqc.qc2(recording)
+        self.assertFalse(result[0], f"({result[1]})")
+
+        recording = np.asarray([0, 1] * 1000)  # snr = 1.0
+        result = hergqc.qc2(recording)
+        self.assertFalse(result[0], f"({result[1]})")
 
     def test_qc3(self):
         pass
