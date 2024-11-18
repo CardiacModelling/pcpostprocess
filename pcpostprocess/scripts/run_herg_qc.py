@@ -51,7 +51,6 @@ def main():
     parser.add_argument('--reversal_spread_threshold', type=float, default=10)
     parser.add_argument('--export_failed', action='store_true')
     parser.add_argument('--selection_file')
-    parser.add_argument('--subtracted_only', action='store_true')
     parser.add_argument('--figsize', nargs=2, type=int, default=[5, 8])
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--log_level', default='INFO')
@@ -403,7 +402,7 @@ def create_qc_table(qc_df):
         x = x.values.flatten().astype(bool)
         return bool(np.all(x))
 
-    qc_df[qc_criteria] = qc_df[qc_criteria].astype(bool)
+    qc_df[qc_criteria] = qc_df[qc_criteria].apply(lambda column: [elem == 'True' or elem is True for elem in column])
 
     qc_df['protocol'] = ['staircaseramp1_2' if p == 'staircaseramp2' else p
                          for p in qc_df.protocol]

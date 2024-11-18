@@ -92,19 +92,100 @@ class TestHergQC(unittest.TestCase):
                 f"({rseal}, {cm}, {rseries})",
             )
 
+        # TODO: Test on select data
+
     def test_qc2(self):
-        pass
+        plot_dir = os.path.join(self.output_dir, "test_qc2")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(sampling_rate=self.sampling_rate,
+                        plot_dir=plot_dir,
+                        voltage=self.voltage)
+
+        # qc2 checks that raw and subtracted SNR are above a minimum threshold
+        recording = np.asarray([0, 1] * 500 + [0, 10] * 500)  # snr = 70.75
+        result = hergqc.qc2(recording)
+        self.assertTrue(result[0], f"({result[1]})")
+
+        recording = np.asarray([0, 1] * 500 + [0, 6.03125] * 500)  # snr = 25.02
+        result = hergqc.qc2(recording)
+        self.assertTrue(result[0], f"({result[1]})")
+
+        recording = np.asarray([0, 1] * 500 + [0, 6.015625] * 500)  # snr = 24.88
+        result = hergqc.qc2(recording)
+        self.assertFalse(result[0], f"({result[1]})")
+
+        recording = np.asarray([0, 1] * 1000)  # snr = 1.0
+        result = hergqc.qc2(recording)
+        self.assertFalse(result[0], f"({result[1]})")
+
+        # TODO: Test on select data
 
     def test_qc3(self):
-        pass
+        plot_dir = os.path.join(self.output_dir, "test_qc3")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(sampling_rate=self.sampling_rate,
+                        plot_dir=plot_dir,
+                        voltage=self.voltage)
+
+        # qc3 checks that rmsd of two sweeps are similar
+        test_matrix = [
+            (0, True),
+            (1, True),
+            (2, True),
+            (3, True),
+            (4, False),
+            (5, False),
+            (6, False),
+        ]
+
+        for i, expected in test_matrix:
+            recording0 = np.asarray([0, 1] * 1000)
+            recording1 = np.asarray(recording0 + i)
+            result = hergqc.qc3(recording0, recording1)
+            self.assertEqual(result[0], expected, f"({result[1]})")
+
+        # TODO: Test on select data
 
     def test_qc4(self):
-        pass
+        def passed(result):
+            return all([x for x, _ in result])
+
+        plot_dir = os.path.join(self.output_dir, "test_qc1")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(
+            sampling_rate=self.sampling_rate, plot_dir=plot_dir, voltage=self.voltage
+        )
+
+        # qc4 checks that rseal, cm, rseries are similar before/after E-4031 change
+        test_matrix = [
+            [([1, 1], [1, 1], [1, 1]), True],
+            [([1, 2], [1, 2], [1, 2]), True],
+            [([1, 3], [1, 3], [1, 3]), True],
+            [([1, 4], [1, 4], [1, 4]), False],
+            [([1, 5], [1, 5], [1, 5]), False],
+        ]
+
+        for (rseals, cms, rseriess), expected in test_matrix:
+            self.assertEqual(
+                passed(hergqc.qc4(rseals, cms, rseriess)),
+                expected,
+                f"({rseals}, {cms}, {rseriess})",
+            )
+
+        # TODO: Test on select data
 
     def test_qc5(self):
+        # TODO: Test on select data
         pass
 
     def test_qc6(self):
+        # TODO: Test on select data
         pass
 
     def test_run_qc(self):
