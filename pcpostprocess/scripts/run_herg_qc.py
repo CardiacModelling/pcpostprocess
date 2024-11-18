@@ -87,6 +87,18 @@ def main():
 
     else:
         wells = args.wells
+        # this warning addresses the error that occurs if a user inputs wrong data into args.wells
+        wrongWellNames = [well for well in wells if well not in all_wells]
+        if len(wrongWellNames) > 0:
+            if len(wrongWellNames) == len(wells):
+                logging.error("Specified well names are not in the list of available wells.")
+                return
+            else:
+                logging.warning(f"Specified well names {wrongWellNames} are not in the list of available wells."
+                                f"Removing them from the list of wells to be processed.")
+                wells = [well for well in wells if well not in wrongWellNames]
+                # other functions read args.wells later on, so we need to update it
+                args.wells = wells
 
     # Import and exec config file
     global export_config
@@ -159,6 +171,11 @@ def main():
             savenames.append(savename)
             times_list.append([times[1], times[3]])
             readnames.append(protocol)
+
+    # this error is raised if the user has not specified the dictionary of protocols in the export_config.py file
+    if not readnames:
+        logging.error("No compatible protocols found in export config file.")
+        return
 
     with multiprocessing.Pool(min(args.no_cpus, len(readnames)),
                               **pool_kws) as pool:
