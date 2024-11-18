@@ -3,7 +3,6 @@ import datetime
 import importlib.util
 import json
 import logging
-import multiprocessing
 import os
 import string
 import subprocess
@@ -15,14 +14,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import regex as re
-import scipy
 from syncropatch_export.trace import Trace as SyncropatchTrace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
 from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
-from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
 pool_kws = {'maxtasksperchild': 1}
@@ -426,9 +423,6 @@ def run_qc(readname, savename, well, time_strs, args):
     if selected:
         selected_wells.append(well)
 
-    # Save subtracted current in csv file
-    header = "\"current\""
-
     for i in range(nsweeps):
 
         savepath = os.path.join(savedir,
@@ -527,8 +521,6 @@ def extract_protocol(readname, savename, well, time_strs, args):
 
     header = "\"current\""
 
-    qc_before = before_trace.get_onboard_QC_values()
-    qc_after = after_trace.get_onboard_QC_values()
     qc_vals_all = before_trace.get_onboard_QC_values()
 
     voltage_before = before_trace.get_voltage()
@@ -665,9 +657,6 @@ def extract_protocol(readname, savename, well, time_strs, args):
         voltage_steps = [tstart
                          for tstart, tend, vstart, vend in
                          voltage_protocol.get_all_sections() if vend == vstart]
-
-        current = hergqc.filter_capacitive_spikes(before_corrected - after_corrected,
-                                                  times, voltage_steps)
 
         if args.output_traces:
             out_fname = os.path.join(traces_dir,
