@@ -91,7 +91,7 @@ def main():
         wrongWellNames = [well for well in wells if well not in all_wells]
         if len(wrongWellNames) > 0:
             if len(wrongWellNames) == len(wells):
-                logging.error(f"Specified well names are not in the list of available wells")
+                logging.error("Specified well names are not in the list of available wells.")
                 return
             else:
                 logging.warning(f"Specified well names {wrongWellNames} are not in the list of available wells."
