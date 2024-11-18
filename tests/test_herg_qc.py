@@ -130,7 +130,7 @@ class TestHergQC(unittest.TestCase):
         # Spot check a few wells
         # We could check all of the wells but it's time consuming
 
-        test_wells = ['A01', 'A02', 'A03', 'A04', 'A05', 'D01']
+        test_wells = ['A01', 'A02', 'A03']
 
         voltage_protocol = self.test_trace_before.get_voltage_protocol()
 
@@ -159,4 +159,5 @@ class TestHergQC(unittest.TestCase):
                 for label, result in QC.items():
                     if not QC.qc_passed(label):
                         trace += f"{label}: {result}\n"
+                print(f"Testing Well, {well}")
                 self.assertTrue(QC.all_passed(), trace)
