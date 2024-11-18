@@ -146,7 +146,7 @@ class TestHergQC(unittest.TestCase):
             recording0 = np.asarray([0, 1] * 1000)
             recording1 = recording0 + i
             result = hergqc.qc3(recording0, recording1)
-            self.assertEqual(result[0], expected, f"({result[1]})")
+            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 
@@ -206,7 +206,41 @@ class TestHergQC(unittest.TestCase):
             recording0 = np.asarray([0, 1] * 1000)
             recording1 = recording0 + i
             result = hergqc.qc5(recording0, recording1)
-            self.assertEqual(result[0], expected, f"({result[1]})")
+            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+
+        # TODO: Test on select data
+
+    def test_qc5_1(self):
+        plot_dir = os.path.join(self.output_dir, "test_qc5")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(
+            sampling_rate=self.sampling_rate, plot_dir=plot_dir, voltage=self.voltage
+        )
+
+        # qc5_1 checks that the RMSD to zero of staircase protocol changes 
+        # by at least 50% of the raw trace after E-4031 addition.
+        test_matrix = [
+            (0.1, True),
+            (0.2, True),
+            (0.3, True),
+            (0.4, True),
+            (0.49, True),
+            (0.5, True),
+            (0.51, False),
+            (0.6, False),
+            (0.7, False),
+            (0.8, False),
+            (0.9, False),
+            (1.0, False),
+        ]
+
+        for i, expected in test_matrix:
+            recording0 = np.asarray([0, 1] * 1000)
+            recording1 = recording0 * i
+            result = hergqc.qc5_1(recording0, recording1)
+            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 

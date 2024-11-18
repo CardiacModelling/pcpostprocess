@@ -410,8 +410,6 @@ class hERGQC:
         max_diff = recording1[i:f][wherepeak] - recording2[i:f][wherepeak]
         max_diffc = self.max_diffc * recording1[i:f][wherepeak]
 
-        logging.debug(f"qc5: max_diff = {max_diff}, max_diffc = {max_diffc}")
-
         if (max_diff < max_diffc) or not (np.isfinite(max_diff)
                                           and np.isfinite(max_diffc)):
             self.logger.debug(f"max_diff:  {max_diff}, max_diffc: {max_diffc}")
