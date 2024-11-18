@@ -8,7 +8,7 @@ import numpy as np
 import scipy.stats
 
 
-class QCDict(object):
+class QCDict:
 
     labels = [
         "qc1.rseal",
@@ -68,7 +68,7 @@ class QCDict(object):
         return all(self.passed_list())
 
 
-class hERGQC(object):
+class hERGQC:
 
     def __init__(self, sampling_rate=5, plot_dir=None, voltage=np.array([]),
                  n_sweeps=None, removal_time=5):
@@ -399,7 +399,8 @@ class hERGQC(object):
             i, f = 0, None
 
         if self.plot_dir and self._debug:
-            plt.axvspan(win[0], win[1], color='grey', alpha=.1)
+            if win is not None:
+                plt.axvspan(win[0], win[1], color='grey', alpha=.1)
             plt.plot(recording1, label='recording1')
             plt.plot(recording2, label='recording2')
             plt.savefig(os.path.join(self.plot_dir, f"qc5_{label}"))
@@ -429,7 +430,7 @@ class hERGQC(object):
             i, f = 0, -1
 
         if self.plot_dir and self._debug:
-            if win:
+            if win is not None:
                 plt.axvspan(win[0], win[1], color='grey', alpha=.1)
             fig = plt.figure()
             ax = fig.subplots()

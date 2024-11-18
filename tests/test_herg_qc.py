@@ -144,7 +144,7 @@ class TestHergQC(unittest.TestCase):
 
         for i, expected in test_matrix:
             recording0 = np.asarray([0, 1] * 1000)
-            recording1 = np.asarray(recording0 + i)
+            recording1 = recording0 + i
             result = hergqc.qc3(recording0, recording1)
             self.assertEqual(result[0], expected, f"({result[1]})")
 
@@ -181,8 +181,34 @@ class TestHergQC(unittest.TestCase):
         # TODO: Test on select data
 
     def test_qc5(self):
+        plot_dir = os.path.join(self.output_dir, "test_qc5")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(
+            sampling_rate=self.sampling_rate, plot_dir=plot_dir, voltage=self.voltage
+        )
+
+        # qc5 checks that the maximum current during the second half of the 
+        # staircase changes by at least 75% of the raw trace after E-4031 addition
+        test_matrix = [
+            (-2.0, True),
+            (-1.0, True),
+            (-0.75, True),
+            (-0.5, False),
+            (0.0, False),
+            (0.5, False),
+            (0.75, False),
+            (1.0, False),
+        ]
+
+        for i, expected in test_matrix:
+            recording0 = np.asarray([0, 1] * 1000)
+            recording1 = recording0 + i
+            result = hergqc.qc5(recording0, recording1)
+            self.assertEqual(result[0], expected, f"({result[1]})")
+
         # TODO: Test on select data
-        pass
 
     def test_qc6(self):
         # TODO: Test on select data
