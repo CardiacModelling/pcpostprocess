@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from . import run_herg_qc, summarise_herg_export
+from . import run_herg_qc, summarise_herg_export, export_staircase_data
 
 
 def main():
@@ -10,7 +10,7 @@ def main():
     )
     parser.add_argument(
         "subcommand",
-        choices=["run_herg_qc", "summarise_herg_export"],
+        choices=["run_herg_qc", "summarise_herg_export", "export_staircase_data"],
     )
     args = parser.parse_args(sys.argv[1:2])
 
@@ -22,6 +22,9 @@ def main():
 
     elif args.subcommand == "summarise_herg_export":
         summarise_herg_export.main()
+
+    elif args.subcommand == 'export_staircase_data':
+        export_staircase_data.main()
 
 
 if __name__ == "__main__":
