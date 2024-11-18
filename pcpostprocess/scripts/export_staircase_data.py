@@ -172,7 +172,6 @@ def main():
 
     qc_df = pd.concat(qc_dfs, ignore_index=True)
 
-
     # Write qc_df to file
     qc_df.to_csv(os.path.join(args.savedir, 'QC-%s.csv' % args.saveID))
 
@@ -198,7 +197,7 @@ def main():
     for time_strs, (readname, savename) in zip(times_list, export_config.D2S_QC.items()):
         for well in wells:
             qc_df = extract_protocol(readname, savename, well, time_strs,
-                                             args)
+                                     args)
             qc_dfs.append(qc_df)
 
     qc_styled_df = create_qc_table(qc_df)
@@ -310,10 +309,10 @@ def run_qc(readname, savename, well, time_strs, args):
     logging.debug(f"loading {json_file_after} and {json_file_before}")
 
     before_trace = SyncropatchTrace(filepath_before,
-                         json_file_before)
+                                    json_file_before)
 
     after_trace = SyncropatchTrace(filepath_after,
-                        json_file_after)
+                                   json_file_after)
 
     assert before_trace.sampling_rate == after_trace.sampling_rate
 
@@ -368,7 +367,7 @@ def run_qc(readname, savename, well, time_strs, args):
 
     # Get ramp times from protocol description
     voltage_protocol = VoltageProtocol.from_voltage_trace(voltage,
-                                                            before_trace.get_times())
+                                                          before_trace.get_times())
 
     #  Find start of leak section
     desc = voltage_protocol.get_all_sections()
@@ -387,11 +386,11 @@ def run_qc(readname, savename, well, time_strs, args):
         after_raw = np.array(raw_after_all[well])[sweep, :]
 
         before_params1, before_leak = fit_linear_leak(before_raw,
-                                                        voltage,
-                                                        times,
-                                                        *ramp_bounds,
-                                                        save_fname=f"{well}-sweep{sweep}-before.png",
-                                                        output_dir=savedir)
+                                                      voltage,
+                                                      times,
+                                                      *ramp_bounds,
+                                                      save_fname=f"{well}-sweep{sweep}-before.png",
+                                                      output_dir=savedir)
 
         after_params1, after_leak = fit_linear_leak(after_raw,
                                                     voltage,
@@ -410,8 +409,8 @@ def run_qc(readname, savename, well, time_strs, args):
     logging.info(f"sampling_rate is {sampling_rate}")
 
     voltage_steps = [tend
-                        for tstart, tend, vstart, vend in
-                        voltage_protocol.get_all_sections() if vend == vstart]
+                     for tstart, tend, vstart, vend in
+                     voltage_protocol.get_all_sections() if vend == vstart]
 
     # Run QC with raw currents
     passed, QC = hergqc.run_qc(voltage_steps, times,
@@ -441,7 +440,7 @@ def run_qc(readname, savename, well, time_strs, args):
                 os.makedirs(savedir)
 
             np.savetxt(savepath, subtracted_current, delimiter=',',
-                        comments='', header=header)
+                       comments='', header=header)
 
     column_labels = ['well', 'qc1.rseal', 'qc1.cm', 'qc1.rseries', 'qc2.raw',
                      'qc2.subtracted', 'qc3.raw', 'qc3.E4031', 'qc3.subtracted',
@@ -498,9 +497,9 @@ def extract_protocol(readname, savename, well, time_strs, args):
     json_file_before = f"{readname}_{time_strs[0]}"
     json_file_after = f"{readname}_{time_strs[1]}"
     before_trace = SyncropatchTrace(filepath_before,
-                         json_file_before)
+                                    json_file_before)
     after_trace = SyncropatchTrace(filepath_after,
-                        json_file_after)
+                                   json_file_after)
 
     voltage_protocol = before_trace.get_voltage_protocol()
     times = before_trace.get_times()
@@ -560,7 +559,6 @@ def extract_protocol(readname, savename, well, time_strs, args):
 
     rows = []
 
-
     before_current = before_trace.get_trace_sweeps()[well]
     after_current = after_trace.get_trace_sweeps()[well]
 
@@ -568,7 +566,7 @@ def extract_protocol(readname, savename, well, time_strs, args):
     after_leak_currents = []
 
     out_dir = os.path.join(savedir,
-                            f"{saveID}-{savename}-leak_fit-before")
+                           f"{saveID}-{savename}-leak_fit-before")
 
     for sweep in range(before_current.shape[0]):
         row_dict = {
@@ -588,25 +586,25 @@ def extract_protocol(readname, savename, well, time_strs, args):
         row_dict['Rseries'] = qc_vals[2]
 
         before_params, before_leak = fit_linear_leak(before_current[sweep, :],
-                                                        voltages, times,
-                                                        *ramp_bounds,
-                                                        output_dir=out_dir,
-                                                        save_fname=f"{well}_sweep{sweep}.png"
-                                                        )
+                                                     voltages, times,
+                                                     *ramp_bounds,
+                                                     output_dir=out_dir,
+                                                     save_fname=f"{well}_sweep{sweep}.png"
+                                                     )
 
         before_leak_currents.append(before_leak)
 
         out_dir = os.path.join(savedir,
-                                f"{saveID}-{savename}-leak_fit-after")
+                               f"{saveID}-{savename}-leak_fit-after")
         # Convert linear regression parameters into conductance and reversal
         row_dict['gleak_before'] = before_params[1]
         row_dict['E_leak_before'] = -before_params[0] / before_params[1]
 
         after_params, after_leak = fit_linear_leak(after_current[sweep, :],
-                                                    voltages, times,
-                                                    *ramp_bounds,
-                                                    save_fname=f"{well}_sweep{sweep}.png",
-                                                    output_dir=out_dir)
+                                                   voltages, times,
+                                                   *ramp_bounds,
+                                                   save_fname=f"{well}_sweep{sweep}.png",
+                                                   output_dir=out_dir)
 
         after_leak_currents.append(after_leak)
 
@@ -622,21 +620,21 @@ def extract_protocol(readname, savename, well, time_strs, args):
         E_rev_before = infer_reversal_potential(before_corrected, times,
                                                 desc, voltages, plot=True,
                                                 output_path=os.path.join(reversal_plot_dir,
-                                                                            f"{well}_{savename}_sweep{sweep}_before"),
+                                                                         f"{well}_{savename}_sweep{sweep}_before"),
                                                 known_Erev=args.Erev)
 
         E_rev_after = infer_reversal_potential(after_corrected, times,
-                                                desc, voltages,
-                                                plot=True,
-                                                output_path=os.path.join(reversal_plot_dir,
+                                               desc, voltages,
+                                               plot=True,
+                                               output_path=os.path.join(reversal_plot_dir,
                                                                         f"{well}_{savename}_sweep{sweep}_after"),
-                                                known_Erev=args.Erev)
+                                               known_Erev=args.Erev)
 
         E_rev = infer_reversal_potential(subtracted_trace, times, desc,
-                                            voltages, plot=True,
-                                            output_path=os.path.join(reversal_plot_dir,
-                                                                    f"{well}_{savename}_sweep{sweep}_subtracted"),
-                                            known_Erev=args.Erev)
+                                         voltages, plot=True,
+                                         output_path=os.path.join(reversal_plot_dir,
+                                                                  f"{well}_{savename}_sweep{sweep}_subtracted"),
+                                         known_Erev=args.Erev)
 
         row_dict['R_leftover'] =\
             np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
@@ -665,15 +663,15 @@ def extract_protocol(readname, savename, well, time_strs, args):
         voltage_protocol = before_trace.get_voltage_protocol()
 
         voltage_steps = [tstart
-                            for tstart, tend, vstart, vend in
-                            voltage_protocol.get_all_sections() if vend == vstart]
+                         for tstart, tend, vstart, vend in
+                         voltage_protocol.get_all_sections() if vend == vstart]
 
         current = hergqc.filter_capacitive_spikes(before_corrected - after_corrected,
-                                                    times, voltage_steps)
+                                                  times, voltage_steps)
 
         if args.output_traces:
             out_fname = os.path.join(traces_dir,
-                                        f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
+                                     f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
 
             np.savetxt(out_fname, subtracted_trace.flatten())
         rows.append(row_dict)
@@ -702,7 +700,7 @@ def extract_protocol(readname, savename, well, time_strs, args):
                         protocol=savename)
 
     fig.savefig(os.path.join(subtraction_plots_dir,
-                                f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
+                             f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
     fig.clf()
     plt.close(fig)
 

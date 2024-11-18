@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from . import run_herg_qc, summarise_herg_export, export_staircase_data
+from . import export_staircase_data, run_herg_qc, summarise_herg_export
 
 
 def main():
