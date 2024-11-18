@@ -461,7 +461,8 @@ class hERGQC:
         val = np.mean(recording1[i:f])
 
         if self.plot_dir and self._debug:
-            plt.axvspan(win[0], win[1], color='grey', alpha=.1)
+            if win is not None:
+                plt.axvspan(win[0], win[1], color='grey', alpha=.1)
             plt.plot(recording1, label='recording1')
             plt.savefig(os.path.join(self.plot_dir, f"qc6_{label}"))
             plt.clf()

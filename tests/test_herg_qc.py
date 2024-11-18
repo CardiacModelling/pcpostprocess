@@ -104,21 +104,17 @@ class TestHergQC(unittest.TestCase):
                         voltage=self.voltage)
 
         # qc2 checks that raw and subtracted SNR are above a minimum threshold
-        recording = np.asarray([0, 1] * 500 + [0, 10] * 500)  # snr = 70.75
-        result = hergqc.qc2(recording)
-        self.assertTrue(result[0], f"({result[1]})")
+        test_matrix = [
+            (10, True),  # snr = 70.75
+            (6.03125, True),  # snr = 25.02
+            (6.015625, False),  # snr = 24.88
+            (1, False),  # snr = 1.0
+        ]
 
-        recording = np.asarray([0, 1] * 500 + [0, 6.03125] * 500)  # snr = 25.02
-        result = hergqc.qc2(recording)
-        self.assertTrue(result[0], f"({result[1]})")
-
-        recording = np.asarray([0, 1] * 500 + [0, 6.015625] * 500)  # snr = 24.88
-        result = hergqc.qc2(recording)
-        self.assertFalse(result[0], f"({result[1]})")
-
-        recording = np.asarray([0, 1] * 1000)  # snr = 1.0
-        result = hergqc.qc2(recording)
-        self.assertFalse(result[0], f"({result[1]})")
+        for i, expected in test_matrix:
+            recording = np.asarray([0, 1] * 500 + [0, i] * 500)  # snr = 70.75
+            result = hergqc.qc2(recording)
+            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 
@@ -200,6 +196,7 @@ class TestHergQC(unittest.TestCase):
             (0.5, False),
             (0.75, False),
             (1.0, False),
+            (2.0, False),
         ]
 
         for i, expected in test_matrix:
