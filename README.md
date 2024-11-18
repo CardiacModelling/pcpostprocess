@@ -96,6 +96,10 @@ python3 -m unittest
 
 ### Running QC and post-processing
 
+Quality control (QC) may be run using the criteria outlined in [Rapid Characterization of hERG Channel Kinetics I](https://doi.org/10.1016/j.bpj.2019.07.030) and [Evaluating the predictive accuracy of ion channel models using data from multiple experimental designs](https://doi.org/10.1101/2024.08.16.608289). These criteria assume the use of the `staircase` protocol for quality control, which should be the first and last protocol performed. We also assume the presence of repeats after the addition of an IKr blocker (such as dofetilide).
+
+Prior to performing QC and exporting, an `export_config.py` file should be added to the root of the data directory. This file (see `example_config.py`) contains a Python `dict` (`Q2S_DC`) specifying the filenames of the protocols used for QC, and names they should be outputted with, as well as a Python `dict` (`D2S`) listing the other protocols and names to be used for their output. Additionally, the `saveID` field specifies the name of the expeirment which appears in the output file names.
+
 ```
 $ pcpostprocess run_herg_qc --help
 
@@ -113,22 +117,23 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -c NO_CPUS, --no_cpus NO_CPUS
-  --output_dir OUTPUT_DIR
-  -w WELLS [WELLS ...], --wells WELLS [WELLS ...]
-  --protocols PROTOCOLS [PROTOCOLS ...]
-  --reversal_spread_threshold REVERSAL_SPREAD_THRESHOLD
-  --export_failed
-  --selection_file SELECTION_FILE
-  --subtracted_only
+  -c NO_CPUS, --no_cpus NO_CPUS      Number of workers to spawn in the multiprocessing pool (default: 1)
+  --output_dir OUTPUT_DIR      path where the output will be saved
+  -w WELLS [WELLS ...], --wells WELLS [WELLS ...]   wells to include (default: all)
+  --protocols PROTOCOLS [PROTOCOLS ...]  protocols to include (default: all)
+  --reversal_spread_threshold REVERSAL_SPREAD_THRESHOLD       The maximum spread in reversal potential (across sweeps) allowed for QC
+  --export_failed                Flag specifying whether to produce full output for those wells failing QC (default: false)
+  --selection_file SELECTION_FILE      File listing wells to be included
   --figsize FIGSIZE FIGSIZE
   --debug
   --log_level LOG_LEVEL
-  --Erev EREV
+  --Erev EREV           The reversal potential during the experiment
 ```
 
 
 ### Exporting Summary
+
+The `summarise_herg_export` command produces additionally output after `run_herg_qc` has been run.
 
 ```
 $ pcpostprocess summarise_herg_export --help
@@ -142,19 +147,18 @@ usage: pcpostprocess summarise_herg_export [-h] [--cpus CPUS]
                       data_dir qc_estimates_file
 
 positional arguments:
-  data_dir           path to the directory containing the subtract_leak results
-  qc_estimates_file
+  data_dir           path to the directory containing the run_herg_qc results
 
 options:
   -h, --help            show this help message and exit
   --cpus CPUS, -c CPUS
-  --wells WELLS [WELLS ...], -w WELLS [WELLS ...]
-  --output OUTPUT, -o OUTPUT
-  --protocols PROTOCOLS [PROTOCOLS ...]
-  -r REVERSAL, --reversal REVERSAL
+  --wells WELLS [WELLS ...], -w WELLS [WELLS ...]   wells to include in the output (default: all)
+  --output OUTPUT, -o OUTPUT     path where the output will be saved
+  --protocols PROTOCOLS [PROTOCOLS ...]  protocols to include (default: all)
+  -r REVERSAL, --reversal REVERSAL   the reversal potential during the experiment
   --experiment_name EXPERIMENT_NAME
   --figsize FIGSIZE FIGSIZE
-  --output_all
+  --output_all        Flag specifying whether to output all plots (default: false)
   --log_level LOG_LEVEL
 ```
 
