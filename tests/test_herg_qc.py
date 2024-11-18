@@ -119,7 +119,30 @@ class TestHergQC(unittest.TestCase):
         self.assertFalse(result[0], f"({result[1]})")
 
     def test_qc3(self):
-        pass
+        plot_dir = os.path.join(self.output_dir, "test_qc3")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(sampling_rate=self.sampling_rate,
+                        plot_dir=plot_dir,
+                        voltage=self.voltage)
+
+        # qc3 checks that rmsd of two sweeps are similar
+        test_matrix = [
+            (0, True),
+            (1, True),
+            (2, True),
+            (3, True),
+            (4, False),
+            (5, False),
+            (6, False),
+        ]
+
+        for i, expected in test_matrix:
+            recording0 = np.asarray([0, 1] * 1000)
+            recording1 = np.asarray(recording0 + i)
+            result = hergqc.qc3(recording0, recording1)
+            self.assertEqual(result[0], expected, f"({result[1]})")
 
     def test_qc4(self):
         pass
