@@ -21,6 +21,7 @@ from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.subtraction_plots import do_subtraction_plot
+from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 
 pool_kws = {'maxtasksperchild': 1}
 
@@ -423,6 +424,7 @@ def run_qc(readname, savename, well, time_strs, args):
     if selected:
         selected_wells.append(well)
 
+    header = "\"current\""
     for i in range(nsweeps):
 
         savepath = os.path.join(savedir,
@@ -518,8 +520,6 @@ def extract_protocol(readname, savename, well, time_strs, args):
     except Exception as exc:
         logging.warning(f"Exception thrown when handling {savename}: ", str(exc))
         return
-
-    header = "\"current\""
 
     qc_vals_all = before_trace.get_onboard_QC_values()
 
@@ -639,24 +639,6 @@ def extract_protocol(readname, savename, well, time_strs, args):
         row_dict['E_rev_after'] = E_rev_after
 
         row_dict['QC.Erev'] = E_rev < -50 and E_rev > -120
-
-        # Check QC6 for each protocol (not just the staircase)
-        plot_dir = os.path.join(savedir, 'debug')
-
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-
-        hergqc = hERGQC(sampling_rate=before_trace.sampling_rate,
-                        plot_dir=plot_dir,
-                        n_sweeps=before_trace.NofSweeps)
-
-        times = before_trace.get_times()
-        voltage = before_trace.get_voltage()
-        voltage_protocol = before_trace.get_voltage_protocol()
-
-        voltage_steps = [tstart
-                         for tstart, tend, vstart, vend in
-                         voltage_protocol.get_all_sections() if vend == vstart]
 
         if args.output_traces:
             out_fname = os.path.join(traces_dir,
