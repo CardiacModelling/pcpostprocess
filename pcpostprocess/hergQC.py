@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
 
+NOISE_LEN = 200
 
 class QCDict:
 
@@ -309,10 +310,10 @@ class hERGQC:
             # Not sure if this is good...
             snr = scipy.stats.signaltonoise(recording)
         elif method == 2:
-            noise = np.std(recording[:200])
+            noise = np.std(recording[:NOISE_LEN])
             snr = (np.max(recording) - np.min(recording) - 2 * noise) / noise
         elif method == 3:
-            noise = np.std(recording[:200])
+            noise = np.std(recording[:NOISE_LEN])
             snr = (np.std(recording) / noise) ** 2
 
         if snr < self.snrc or not np.isfinite(snr):
@@ -328,15 +329,15 @@ class hERGQC:
         if method == 1:
             rmsdc = 2  # A/F * F
         elif method == 2:
-            noise_1 = np.std(recording1[:200])
+            noise_1 = np.std(recording1[:NOISE_LEN])
             peak_1 = (np.max(recording1) - noise_1)
-            noise_2 = np.std(recording2[:200])
+            noise_2 = np.std(recording2[:NOISE_LEN])
             peak_2 = (np.max(recording2) - noise_2)
             rmsdc = max(np.mean([peak_1, peak_2]) * 0.1,
                         np.mean([noise_1, noise_2]) * 5)
         elif method == 3:
-            noise_1 = np.std(recording1[:200])
-            noise_2 = np.std(recording2[:200])
+            noise_1 = np.std(recording1[:NOISE_LEN])
+            noise_2 = np.std(recording2[:NOISE_LEN])
             rmsd0_1 = np.sqrt(np.mean((recording1) ** 2))
             rmsd0_2 = np.sqrt(np.mean((recording2) ** 2))
             rmsdc = max(np.mean([rmsd0_1, rmsd0_2]) * self.rmsd0c,
@@ -348,7 +349,7 @@ class hERGQC:
         else:
             result = True
 
-        return (result, rmsd)
+        return (result, rmsdc - rmsd)
 
     def qc4(self, rseals, cms, rseriess):
         # Check R_seal, C_m, R_series stability
@@ -417,7 +418,7 @@ class hERGQC:
         else:
             result = True
 
-        return (result, max_diff)
+        return (result, max_diffc - max_diff)
 
     def qc5_1(self, recording1, recording2, win=None, label=''):
         # Check RMSD_0 drops after E-4031 application
@@ -450,7 +451,7 @@ class hERGQC:
         else:
             result = True
 
-        return (result, rmsd0_diff)
+        return (result, rmsd0_diffc - rmsd0_diff)
 
     def qc6(self, recording1, win=None, label=''):
         # Check subtracted staircase +40mV step up is non negative
@@ -458,7 +459,6 @@ class hERGQC:
             i, f = win
         else:
             i, f = 0, -1
-        val = np.mean(recording1[i:f])
 
         if self.plot_dir and self._debug:
             if win is not None:
@@ -467,8 +467,10 @@ class hERGQC:
             plt.savefig(os.path.join(self.plot_dir, f"qc6_{label}"))
             plt.clf()
 
+        val = np.mean(recording1[i:f])
+
         # valc = -0.005 * np.abs(np.sqrt(np.mean((recording1) ** 2)))  # or just 0
-        valc = self.negative_tolc * np.std(recording1[:200])
+        valc = self.negative_tolc * np.std(recording1[:NOISE_LEN])
         if (val < valc) or not (np.isfinite(val)
                                 and np.isfinite(valc)):
             self.logger.debug(f"qc6_{label} val:  {val}, valc: {valc}")
@@ -476,7 +478,7 @@ class hERGQC:
         else:
             result = True
 
-        return (result, val)
+        return (result, valc - val)
 
     def filter_capacitive_spikes(self, current, times, voltage_step_times):
         """

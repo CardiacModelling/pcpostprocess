@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 from syncropatch_export.trace import Trace
 
-from pcpostprocess.hergQC import hERGQC
+from pcpostprocess.hergQC import hERGQC, NOISE_LEN
 
 
 class TestHergQC(unittest.TestCase):
@@ -54,15 +54,14 @@ class TestHergQC(unittest.TestCase):
         # qc1 checks that rseal, cm, rseries are within range
         rseal_lo, rseal_hi = 1e8, 1e12
         rseal_mid = (rseal_lo + rseal_hi) / 2
+        rseal_tol = 0.1
 
         cm_lo, cm_hi = 1e-12, 1e-10
         cm_mid = (cm_lo + cm_hi) / 2
+        cm_tol = 1e-13
 
         rseries_lo, rseries_hi = 1e6, 2.5e7
         rseries_mid = (rseries_lo + rseries_hi) / 2
-
-        rseal_tol = 0.1
-        cm_tol = 1e-13
         rseries_tol = 0.1
 
         test_matrix = [
@@ -105,14 +104,17 @@ class TestHergQC(unittest.TestCase):
 
         # qc2 checks that raw and subtracted SNR are above a minimum threshold
         test_matrix = [
-            (10, True),  # snr = 70.75
-            (6.03125, True),  # snr = 25.02
-            (6.015625, False),  # snr = 24.88
-            (1, False),  # snr = 1.0
+            (40, True),  # snr = 130286
+            (10, True),  # snr = 8082
+            (1, True),  # snr = 74
+            (0.601, True), # snr = 25.07
+            (0.6, False),  # snr = 24.98
+            (0.5, False),  # snr = 17
+            (0.1, False),  # snr = 0.5
         ]
 
         for i, expected in test_matrix:
-            recording = np.asarray([0, 1] * 500 + [0, i] * 500)  # snr = 70.75
+            recording = np.asarray([0, 0.1] * (NOISE_LEN//2) + [i] * 500)
             result = hergqc.qc2(recording)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
@@ -128,20 +130,37 @@ class TestHergQC(unittest.TestCase):
                         voltage=self.voltage)
 
         # qc3 checks that rmsd of two sweeps are similar
+
+        # Test with same noise, different signal
         test_matrix = [
-            (0, True),
-            (1, True),
-            (2, True),
-            (3, True),
-            (4, False),
-            (5, False),
-            (6, False),
+            (-10, False),
+            (-9, False),
+            (-8, False), # rmsdc - rmsd = -0.6761186497920804
+            (-7, True), # rmsdc - rmsd = 0.25355095037585507
+            (0, True), # rmsdc - rmsd = 6.761238263598085
+            (8, True), # rmsdc - rmsd = 0.6761272774054383
+            (9, False), # rmsdc - rmsd = -0.08451158778363332
+            (10, False),
         ]
 
+        recording1 = np.asarray([0, 0.1] * (NOISE_LEN//2) + [40] * 500)
         for i, expected in test_matrix:
-            recording0 = np.asarray([0, 1] * 1000)
-            recording1 = recording0 + i
-            result = hergqc.qc3(recording0, recording1)
+            recording2 = np.asarray([0, 0.1] * (NOISE_LEN//2) + [40 + i] * 500)
+            result = hergqc.qc3(recording1, recording2)
+            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+
+        # Test with same signal, different noise
+        # TODO: Find failing example
+        test_matrix = [
+            (10, True),
+            (100, True),
+            (1000, True),
+        ]
+
+        recording1 = np.asarray([0, 0.1] * (NOISE_LEN//2) + [40] * 500)
+        for i, expected in test_matrix:
+            recording2 = np.asarray([0, 0.1 * i] * (NOISE_LEN//2) + [40] * 500)
+            result = hergqc.qc3(recording1, recording2)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
         # TODO: Test on select data
@@ -159,19 +178,85 @@ class TestHergQC(unittest.TestCase):
         )
 
         # qc4 checks that rseal, cm, rseries are similar before/after E-4031 change
+        r_lo, r_hi = 1e6, 3e7
+        c_lo, c_hi = 1e-12, 1e-10
+
+        # Test rseals
+        cms = [c_lo, c_lo]
+        rseriess = [r_lo, r_lo]
+
         test_matrix = [
-            [([1, 1], [1, 1], [1, 1]), True],
-            [([1, 2], [1, 2], [1, 2]), True],
-            [([1, 3], [1, 3], [1, 3]), True],
-            [([1, 4], [1, 4], [1, 4]), False],
-            [([1, 5], [1, 5], [1, 5]), False],
+            (1.1, True),
+            (3.0, True),
+            (3.5, False),
+            (5.0, False),
         ]
 
-        for (rseals, cms, rseriess), expected in test_matrix:
+        for i, expected in test_matrix:
+            rseals = [r_lo, i * r_lo]
             self.assertEqual(
                 passed(hergqc.qc4(rseals, cms, rseriess)),
                 expected,
-                f"({rseals}, {cms}, {rseriess})",
+                f"({i}: {rseals}, {cms}, {rseriess})",
+            )
+
+            rseals = [r_hi, i * r_hi]
+            self.assertEqual(
+                passed(hergqc.qc4(rseals, cms, rseriess)),
+                expected,
+                f"({i}: {rseals}, {cms}, {rseriess})",
+            )
+
+        # Test cms
+        rseals = [r_lo, r_lo]
+        rseriess = [r_lo, r_lo]
+
+        test_matrix = [
+            (1.1, True),
+            (3.0, True),
+            (3.5, False),
+            (5.0, False),
+        ]
+
+        for i, expected in test_matrix:
+            cms = [c_lo, i * c_lo]
+            self.assertEqual(
+                passed(hergqc.qc4(rseals, cms, rseriess)),
+                expected,
+                f"({i}: {rseals}, {cms}, {rseriess})",
+            )
+
+            cms = [c_hi, i * c_hi]
+            self.assertEqual(
+                passed(hergqc.qc4(rseals, cms, rseriess)),
+                expected,
+                f"({i}: {rseals}, {cms}, {rseriess})",
+            )
+
+        # Test rseriess
+        cms = [c_lo, c_lo]
+        rseals = [r_lo, r_lo]
+
+        test_matrix = [
+            (1.1, True),
+            (3.0, True),
+            (3.5, False),
+            (5.0, False),
+        ]
+
+        for i, expected in test_matrix:
+            rseriess = [r_lo, i * r_lo]
+            self.assertEqual(
+                passed(hergqc.qc4(rseals, cms, rseriess)),
+                expected,
+                f"({i}: {rseals}, {cms}, {rseriess})",
+            )
+
+            rseriess = [r_hi, i * r_hi]
+            self.assertEqual(
+                passed(hergqc.qc4(rseals, cms, rseriess)),
+                expected,
+                f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
         # TODO: Test on select data
@@ -185,30 +270,28 @@ class TestHergQC(unittest.TestCase):
             sampling_rate=self.sampling_rate, plot_dir=plot_dir, voltage=self.voltage
         )
 
-        # qc5 checks that the maximum current during the second half of the 
+        # qc5 checks that the maximum current during the second half of the
         # staircase changes by at least 75% of the raw trace after E-4031 addition
         test_matrix = [
-            (-2.0, True),
             (-1.0, True),
-            (-0.75, True),
-            (-0.5, False),
-            (0.0, False),
+            (0.1, True),
+            (0.2, True),  # max_diffc - max_diff = -0.5
+            (0.25, True),  # max_diffc - max_diff = 0.0
+            (0.3, False),  # max_diffc - max_diff = 0.5
             (0.5, False),
-            (0.75, False),
             (1.0, False),
-            (2.0, False),
         ]
 
+        recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
         for i, expected in test_matrix:
-            recording0 = np.asarray([0, 1] * 1000)
-            recording1 = recording0 + i
-            result = hergqc.qc5(recording0, recording1)
+            recording2 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
+            result = hergqc.qc5(recording1, recording2)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 
     def test_qc5_1(self):
-        plot_dir = os.path.join(self.output_dir, "test_qc5")
+        plot_dir = os.path.join(self.output_dir, "test_qc5_1")
         if not os.path.exists(plot_dir):
             os.makedirs(plot_dir)
 
@@ -216,34 +299,54 @@ class TestHergQC(unittest.TestCase):
             sampling_rate=self.sampling_rate, plot_dir=plot_dir, voltage=self.voltage
         )
 
-        # qc5_1 checks that the RMSD to zero of staircase protocol changes 
+        # qc5_1 checks that the RMSD to zero of staircase protocol changes
         # by at least 50% of the raw trace after E-4031 addition.
         test_matrix = [
-            (0.1, True),
-            (0.2, True),
-            (0.3, True),
-            (0.4, True),
-            (0.49, True),
-            (0.5, True),
-            (0.51, False),
-            (0.6, False),
-            (0.7, False),
-            (0.8, False),
-            (0.9, False),
-            (1.0, False),
+            (-1.0, False),  # rmsd0_diffc - rmsd0_diff = 4.2
+            (-0.5, False),  # rmsd0_diffc - rmsd0_diff = 0.0001
+            (-0.4, True),  # rmsd0_diffc - rmsd0_diff = -0.8
+            (-0.1, True),  # rmsd0_diffc - rmsd0_diff = -3.4
+            (0.1, True),  # rmsd0_diffc - rmsd0_diff = -3.4
+            (0.4, True),  # rmsd0_diffc - rmsd0_diff = -0.8
+            (0.5, False),  # rmsd0_diffc - rmsd0_diff = 0.0001
+            (1.0, False),  # rmsd0_diffc - rmsd0_diff = 4.2
         ]
 
+        recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
         for i, expected in test_matrix:
-            recording0 = np.asarray([0, 1] * 1000)
-            recording1 = recording0 * i
-            result = hergqc.qc5_1(recording0, recording1)
+            recording2 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
+            result = hergqc.qc5_1(recording1, recording2)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 
     def test_qc6(self):
+        plot_dir = os.path.join(self.output_dir, "test_qc2")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        hergqc = hERGQC(
+            sampling_rate=self.sampling_rate, plot_dir=plot_dir, voltage=self.voltage
+        )
+
+        # qc6 checks that the first step up to +40 mV, before the staircase, in
+        # the subtracted trace is bigger than -2 x estimated noise level.
+        test_matrix = [
+            (-1, False),  # valc - val = 9.9
+            (-0.1, False),  # valc - val = 0.9
+            (-0.02, False),  # valc - val = 0.1
+            (-0.01, True),  # valc - val = -1.38
+            (-0.001, True),  # valc - val = -0.09
+            (0.001, True),  # valc - val = -0.11
+            (0.1, True),  # valc - val = -1.1
+            (1, True),  # valc - val = -10.1
+        ]
+        for i, expected in test_matrix:
+            recording = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
+            result = hergqc.qc6(recording, win=[NOISE_LEN, -1])
+            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+
         # TODO: Test on select data
-        pass
 
     def test_run_qc(self):
         self.assertTrue(np.all(np.isfinite(self.voltage)))
