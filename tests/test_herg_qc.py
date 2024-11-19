@@ -332,17 +332,17 @@ class TestHergQC(unittest.TestCase):
         # qc6 checks that the first step up to +40 mV, before the staircase, in
         # the subtracted trace is bigger than -2 x estimated noise level.
         test_matrix = [
-            (-1, False),  # valc - val = 9.9
-            (-0.1, False),  # valc - val = 0.9
-            (-0.02, False),  # valc - val = 0.1
-            (-0.01, True),  # valc - val = -1.38
-            (-0.001, True),  # valc - val = -0.09
-            (0.001, True),  # valc - val = -0.11
-            (0.1, True),  # valc - val = -1.1
-            (1, True),  # valc - val = -10.1
+            (-100, False),  # valc - val = 9.9
+            (-10, False),  # valc - val = 0.9
+            (-2, False),  # valc - val = 0.1
+            (-1, True),  # valc - val = 0
+            (1, True),  # valc - val = -0.2
+            (2, True),  # valc - val = -0.3
+            (10, True),  # valc - val = -1.1
+            (100, True),  # valc - val = -10.1
         ]
         for i, expected in test_matrix:
-            recording = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
+            recording = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [0.1 * i] * 500)
             result = hergqc.qc6(recording, win=[NOISE_LEN, -1])
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
