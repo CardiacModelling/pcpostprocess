@@ -20,8 +20,8 @@ from syncropatch_export.voltage_protocols import VoltageProtocol
 from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
-from pcpostprocess.subtraction_plots import do_subtraction_plot
 from pcpostprocess.leak_correct import fit_linear_leak
+from pcpostprocess.subtraction_plots import do_subtraction_plot
 
 pool_kws = {'maxtasksperchild': 1}
 
@@ -36,7 +36,13 @@ all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
 
 def get_git_revision_hash() -> str:
     #  Requires git to be installed
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    try:
+        git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    
+    except subprocess.CalledProcessError:
+        git_hash = "unknown"
+
+    return git_hash
 
 
 def main():
