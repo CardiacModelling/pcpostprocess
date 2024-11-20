@@ -38,7 +38,7 @@ def get_git_revision_hash() -> str:
     #  Requires git to be installed
     try:
         git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
-    
+
     except subprocess.CalledProcessError:
         git_hash = "unknown"
 
