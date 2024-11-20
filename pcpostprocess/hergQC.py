@@ -75,8 +75,7 @@ class hERGQC:
                  n_sweeps=None, removal_time=5):
         # TODO docstring
 
-        if plot_dir is not None:
-            self.plot_dir = plot_dir
+        self._plot_dir = plot_dir
 
         self._n_qc = 16
 
@@ -134,8 +133,15 @@ class hERGQC:
 
         self._debug = True
 
-    def set_trace(self, before, after, qc_vals_before,
-                  qc_vals_after, n_sweeps):
+    @property
+    def plot_dir(self):
+        return self._plot_dir
+
+    @plot_dir.setter
+    def plot_dir(self, path):
+        self._plot_dir = path
+
+    def set_trace(self, before, after, qc_vals_before, qc_vals_after, n_sweeps):
         self._before = before
         self._qc_vals_before = qc_vals_before
         self._after = after
@@ -154,7 +160,7 @@ class hERGQC:
         @param before is the before-drug current trace
         @param after is the post-drug current trace
         @param qc_vals_before is an array of values for each pre-drug sweep where each row is (Rseal, Cm, Rseries)
-        @param qc_vals_before is an array of values for each post-drug sweep where each row is (Rseal, Cm, Rseries)
+        @param qc_vals_after is an array of values for each post-drug sweep where each row is (Rseal, Cm, Rseries)
         @n_sweeps is the number of sweeps to be considered
         """
 
@@ -241,7 +247,7 @@ class hERGQC:
             QC['qc6.1.subtracted'].append(qc6_1)
             QC['qc6.2.subtracted'].append(qc6_2)
 
-        if self._debug:
+        if self.plot_dir and self._debug:
             fig = plt.figure(figsize=(8, 5))
             ax = fig.subplots()
             ax.plot(times, (before - after).T, label='subtracted')
