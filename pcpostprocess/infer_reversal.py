@@ -66,9 +66,9 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
 
         # Now plot current vs voltage
         ax.plot(voltages, current, 'x', markersize=2, alpha=.5, color='red')
-        ax.axvline(roots[-1], linestyle='--', color='grey', label=r'$E_\mathrm{obs}$')
+        ax.axvline(roots[-1], linestyle='-', color='grey', label=r'$E_\mathrm{obs}$')
         if known_Erev:
-            ax.axvline(known_Erev, linestyle='--', color='orange',
+            ax.axvline(known_Erev, linestyle='--', color='grey',
                        label="$E_\mathrm{Nernst}$")
             ax.axhline(0, linestyle='--', lw=0.3, color='black')
         ax.plot(*fitted_poly.linspace())
