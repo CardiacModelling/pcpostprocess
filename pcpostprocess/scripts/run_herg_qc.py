@@ -661,7 +661,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                              voltages, plot=True,
                                              output_path=os.path.join(reversal_plot_dir,
                                                                       f"{well}_{savename}_sweep{sweep}_subtracted"),
-                                             known_Erev=args.Erev)
+                                             known_Erev=args.Erev,
+                                             figsize=args.figsize)
 
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
