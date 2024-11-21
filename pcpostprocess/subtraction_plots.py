@@ -26,8 +26,8 @@ def setup_subtraction_grid(fig, nsweeps):
     # Long axis for protocol on the bottom (full width)
     long_protocol_ax = fig.add_subplot(gs[5, :])
 
-    for ax, cap in zip(list(protocol_axs) + list(before_axs)\
-                       + list(after_axs) + list(corrected_axs)\
+    for ax, cap in zip(list(protocol_axs) + list(before_axs)
+                       + list(after_axs) + list(corrected_axs)
                        + [subtracted_ax] + [long_protocol_ax],
                        'abcdefghijklm'):
         ax.spines[['top', 'right']].set_visible(False)
@@ -41,9 +41,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
     nsweeps = before_currents.shape[0]
     sweeps = list(range(nsweeps))
-
-    before_currents = before_currents
-    after_currents = after_currents
 
     axs = setup_subtraction_grid(fig, nsweeps)
     protocol_axs, before_axs, after_axs, corrected_axs, \
