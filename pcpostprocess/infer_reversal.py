@@ -72,6 +72,8 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
                        label="$E_mathrm{Nernst}$")
             ax.axhline(0, linestyle='--', lw=0.3, color='black')
         ax.plot(*fitted_poly.linspace())
+
+        ax.set_xlim([-110.0, -70.0])
         ax.legend()
 
         if output_path is not None:
