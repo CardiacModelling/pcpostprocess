@@ -56,7 +56,7 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
         if ax is None and output_path is not None:
 
             created_fig = True
-            fig = plt.figure(figsize=figsize, contrained_layout=True)
+            fig = plt.figure(figsize=figsize, constrained_layout=True)
             ax = fig.subplots()
 
         ax.set_xlabel('$V$ (mV)')
