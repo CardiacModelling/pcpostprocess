@@ -59,7 +59,7 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
             fig = plt.figure(figsize=figsize, constrained_layout=True)
             ax = fig.subplots()
 
-        ax.set_xlabel('$V$ (mV)')
+        ax.set_xlabel('$V_\mathrm{cmd}$ (mV)')
         ax.set_ylabel('$I_\mathrm{Kr}$ (pA)')
 
         ax.spines[['top', 'right']].set_visible(False)
