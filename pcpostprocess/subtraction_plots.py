@@ -48,7 +48,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
     for ax in protocol_axs:
         ax.plot(times*1e-3, voltages, color='black')
-        ax.set_xlabel('time (s)')
+        # ax.set_xlabel('time (s)')
         ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
 
     all_leak_params_before = []
@@ -89,7 +89,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
         if ax.get_legend():
             ax.get_legend().remove()
-        ax.set_xlabel('time (s)')
+        # ax.set_xlabel('time (s)')
         ax.set_ylabel(r'pre-drug trace')
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         # ax.tick_params(axis='y', rotation=90)
@@ -102,7 +102,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         # ax.legend()
         if ax.get_legend():
             ax.get_legend().remove()
-        ax.set_xlabel('$t$ (s)')
+        # ax.set_xlabel('$t$ (s)')
         ax.set_ylabel(r'post-drug trace')
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         # ax.tick_params(axis='y', rotation=90)
@@ -136,10 +136,10 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
 
     ax.set_ylabel(r'$I_\mathrm{post}')
-    ax.set_xlabel('$t$ (s)')
+    # ax.set_xlabel('$t$ (s)')
 
     long_protocol_ax.plot(times*1e-3, voltages, color='black')
-    long_protocol_ax.set_xlabel('time (s)')
+    long_protocol_ax.set_xlabel(r'$t$ (s)')
     long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
     long_protocol_ax.tick_params(axis='y', rotation=90)
 
