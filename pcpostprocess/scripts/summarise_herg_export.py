@@ -307,7 +307,7 @@ def do_chronological_plots(df, normalise=False):
 
     def label_func(p, s):
         p = p[1:-1]
-        return r'$' + str(p) + r'^{(' + str(s) + r')}$'
+        return r'$' + str(p) + r'^{(' + str(s + 1) + r')}$'
 
     ax.spines[['top', 'right']].set_visible(False)
 
