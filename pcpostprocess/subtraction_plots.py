@@ -135,7 +135,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         #  Cycle to next colour
         ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
 
-    ax.set_ylabel(r'$I_\mathrm{post}')
+    ax.set_ylabel(r'$I_\mathrm{post}$')
     # ax.set_xlabel('$t$ (s)')
 
     long_protocol_ax.plot(times*1e-3, voltages, color='black')
