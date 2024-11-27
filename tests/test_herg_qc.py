@@ -1,12 +1,17 @@
 import copy
 import logging
 import os
+import string
 import unittest
 
 import numpy as np
 from syncropatch_export.trace import Trace
 
 from pcpostprocess.hergQC import NOISE_LEN, hERGQC
+
+
+def all_passed(result):
+    return all([x for x, _ in result])
 
 
 class TestHergQC(unittest.TestCase):
@@ -32,6 +37,13 @@ class TestHergQC(unittest.TestCase):
 
         self.voltage = trace_before.get_voltage()
         self.times = trace_after.get_times()
+        self.n_sweeps = 2
+
+        self.all_wells = [
+            row + str(i).zfill(2)
+            for row in string.ascii_uppercase[:16]
+            for i in range(1, 25)
+        ]
 
         sampling_rate = int(1.0 / (self.times[1] - self.times[0]))  # in kHz
 
@@ -58,8 +70,6 @@ class TestHergQC(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(self.times)))
 
     def test_qc1(self):
-        def passed(result):
-            return all([x for x, _ in result])
 
         hergqc = copy.deepcopy(self.hergqc)
         plot_dir = os.path.join(hergqc.plot_dir, "test_qc1")
@@ -102,185 +112,73 @@ class TestHergQC(unittest.TestCase):
 
         for (rseal, cm, rseries), expected in test_matrix:
             self.assertEqual(
-                passed(hergqc.qc1(rseal, cm, rseries)),
+                all_passed(hergqc.qc1(rseal, cm, rseries)),
                 expected,
                 f"QC1: {rseal}, {cm}, {rseries}",
             )
 
         # Test on data
-        test_wells_before = {
-            'A01': True, 'A02': True, 'A03': True, 'A04': True, 'A05': True,
-            'A06': True, 'A07': True, 'A08': True, 'A09': True, 'A10': False,
-            'A11': True, 'A12': False, 'A13': False, 'A14': True, 'A15': True,
-            'A16': False, 'A17': True, 'A18': True, 'A19': False, 'A20': False,
-            'A21': True, 'A22': True, 'A23': True, 'A24': False, 'B01': True,
-            'B02': True, 'B03': True, 'B04': True, 'B05': False, 'B06': True,
-            'B07': False, 'B08': True, 'B09': True, 'B10': True, 'B11': False,
-            'B12': False, 'B13': False, 'B14': True, 'B15': False, 'B16': True,
-            'B17': True, 'B18': True, 'B19': False, 'B20': True, 'B21': False,
-            'B22': True, 'B23': False, 'B24': True, 'C01': True, 'C02': False,
-            'C03': True, 'C04': False, 'C05': True, 'C06': True, 'C07': False,
-            'C08': True, 'C09': False, 'C10': True, 'C11': False, 'C12': False,
-            'C13': True, 'C14': False, 'C15': True, 'C16': True, 'C17': True,
-            'C18': False, 'C19': False, 'C20': False, 'C21': True, 'C22': True,
-            'C23': False, 'C24': True, 'D01': True, 'D02': False, 'D03': False,
-            'D04': True, 'D05': False, 'D06': True, 'D07': True, 'D08': True,
-            'D09': False, 'D10': False, 'D11': True, 'D12': True, 'D13': True,
-            'D14': False, 'D15': False, 'D16': False, 'D17': True, 'D18': True,
-            'D19': False, 'D20': True, 'D21': False, 'D22': True, 'D23': True,
-            'D24': True, 'E01': True, 'E02': True, 'E03': True, 'E04': False,
-            'E05': True, 'E06': False, 'E07': False, 'E08': True, 'E09': True,
-            'E10': False, 'E11': False, 'E12': True, 'E13': True, 'E14': False,
-            'E15': False, 'E16': False, 'E17': False, 'E18': True, 'E19': False,
-            'E20': True, 'E21': True, 'E22': False, 'E23': False, 'E24': True,
-            'F01': False, 'F02': True, 'F03': False, 'F04': False, 'F05': False,
-            'F06': True, 'F07': False, 'F08': True, 'F09': False, 'F10': True,
-            'F11': True, 'F12': False, 'F13': False, 'F14': False, 'F15': False,
-            'F16': True, 'F17': True, 'F18': False, 'F19': False, 'F20': False,
-            'F21': False, 'F22': True, 'F23': True, 'F24': False, 'G01': True,
-            'G02': True, 'G03': True, 'G04': True, 'G05': True, 'G06': False,
-            'G07': True, 'G08': True, 'G09': False, 'G10': True, 'G11': True,
-            'G12': False, 'G13': False, 'G14': False, 'G15': True, 'G16': False,
-            'G17': False, 'G18': True, 'G19': True, 'G20': False, 'G21': False,
-            'G22': True, 'G23': False, 'G24': False, 'H01': False, 'H02': False,
-            'H03': False, 'H04': True, 'H05': True, 'H06': False, 'H07': False,
-            'H08': False, 'H09': True, 'H10': False, 'H11': False, 'H12': True,
-            'H13': False, 'H14': False, 'H15': False, 'H16': False, 'H17': True,
-            'H18': True, 'H19': False, 'H20': True, 'H21': False, 'H22': True,
-            'H23': False, 'H24': False, 'I01': False, 'I02': True, 'I03': True,
-            'I04': False, 'I05': False, 'I06': False, 'I07': False, 'I08': False,
-            'I09': True, 'I10': False, 'I11': False, 'I12': False, 'I13': True,
-            'I14': True, 'I15': True, 'I16': False, 'I17': False, 'I18': True,
-            'I19': True, 'I20': True, 'I21': False, 'I22': True, 'I23': True,
-            'I24': True, 'J01': True, 'J02': True, 'J03': True, 'J04': True,
-            'J05': True, 'J06': True, 'J07': False, 'J08': True, 'J09': True,
-            'J10': False, 'J11': True, 'J12': True, 'J13': True, 'J14': True,
-            'J15': True, 'J16': False, 'J17': False, 'J18': True, 'J19': False,
-            'J20': True, 'J21': False, 'J22': True, 'J23': True, 'J24': False,
-            'K01': True, 'K02': False, 'K03': False, 'K04': True, 'K05': True,
-            'K06': False, 'K07': False, 'K08': True, 'K09': True, 'K10': True,
-            'K11': False, 'K12': False, 'K13': True, 'K14': True, 'K15': True,
-            'K16': False, 'K17': False, 'K18': True, 'K19': True, 'K20': False,
-            'K21': True, 'K22': False, 'K23': True, 'K24': False, 'L01': False,
-            'L02': False, 'L03': True, 'L04': False, 'L05': False, 'L06': True,
-            'L07': True, 'L08': False, 'L09': True, 'L10': False, 'L11': False,
-            'L12': True, 'L13': False, 'L14': True, 'L15': True, 'L16': False,
-            'L17': False, 'L18': False, 'L19': True, 'L20': True, 'L21': True,
-            'L22': True, 'L23': True, 'L24': False, 'M01': False, 'M02': True,
-            'M03': True, 'M04': False, 'M05': True, 'M06': False, 'M07': True,
-            'M08': True, 'M09': False, 'M10': True, 'M11': True, 'M12': False,
-            'M13': True, 'M14': False, 'M15': False, 'M16': False, 'M17': True,
-            'M18': True, 'M19': False, 'M20': False, 'M21': False, 'M22': True,
-            'M23': True, 'M24': True, 'N01': True, 'N02': True, 'N03': False,
-            'N04': False, 'N05': True, 'N06': False, 'N07': True, 'N08': False,
-            'N09': True, 'N10': True, 'N11': False, 'N12': True, 'N13': False,
-            'N14': False, 'N15': True, 'N16': False, 'N17': True, 'N18': False,
-            'N19': True, 'N20': True, 'N21': False, 'N22': True, 'N23': True,
-            'N24': False, 'O01': False, 'O02': False, 'O03': False, 'O04': True,
-            'O05': False, 'O06': True, 'O07': False, 'O08': True, 'O09': True,
-            'O10': False, 'O11': False, 'O12': True, 'O13': True, 'O14': True,
-            'O15': True, 'O16': True, 'O17': False, 'O18': True, 'O19': False,
-            'O20': True, 'O21': True, 'O22': False, 'O23': True, 'O24': False,
-            'P01': False, 'P02': True, 'P03': False, 'P04': True, 'P05': True,
-            'P06': False, 'P07': False, 'P08': False, 'P09': False, 'P10': True,
-            'P11': True, 'P12': False, 'P13': False, 'P14': False, 'P15': False,
-            'P16': False, 'P17': False, 'P18': False, 'P19': True, 'P20': True,
-            'P21': False, 'P22': False, 'P23': True, 'P24': False
-        }
+        failed_wells_before = [
+            'A10', 'A12', 'A13', 'A16', 'A19', 'A20', 'A24', 'B05', 'B07', 'B11',
+            'B12', 'B13', 'B15', 'B19', 'B21', 'B23', 'C02', 'C04', 'C07', 'C09',
+            'C11', 'C12', 'C14', 'C18', 'C19', 'C20', 'C23', 'D02', 'D03', 'D05',
+            'D09', 'D10', 'D14', 'D15', 'D16', 'D19', 'D21', 'E04', 'E06', 'E07',
+            'E10', 'E11', 'E14', 'E15', 'E16', 'E17', 'E19', 'E22', 'E23', 'F01',
+            'F03', 'F04', 'F05', 'F07', 'F09', 'F12', 'F13', 'F14', 'F15', 'F18',
+            'F19', 'F20', 'F21', 'F24', 'G06', 'G09', 'G12', 'G13', 'G14', 'G16',
+            'G17', 'G20', 'G21', 'G23', 'G24', 'H01', 'H02', 'H03', 'H06', 'H07',
+            'H08', 'H10', 'H11', 'H13', 'H14', 'H15', 'H16', 'H19', 'H21', 'H23',
+            'H24', 'I01', 'I04', 'I05', 'I06', 'I07', 'I08', 'I10', 'I11', 'I12',
+            'I16', 'I17', 'I21', 'J07', 'J10', 'J16', 'J17', 'J19', 'J21', 'J24',
+            'K02', 'K03', 'K06', 'K07', 'K11', 'K12', 'K16', 'K17', 'K20', 'K22',
+            'K24', 'L01', 'L02', 'L04', 'L05', 'L08', 'L10', 'L11', 'L13', 'L16',
+            'L17', 'L18', 'L24', 'M01', 'M04', 'M06', 'M09', 'M12', 'M14', 'M15',
+            'M16', 'M19', 'M20', 'M21', 'N03', 'N04', 'N06', 'N08', 'N11', 'N13',
+            'N14', 'N16', 'N18', 'N21', 'N24', 'O01', 'O02', 'O03', 'O05', 'O07',
+            'O10', 'O11', 'O17', 'O19', 'O22', 'O24', 'P01', 'P03', 'P06', 'P07',
+            'P08', 'P09', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17', 'P18', 'P21',
+            'P22', 'P24'
+        ]
 
-        for well in test_wells_before:
+        for well in self.all_wells:
             qc_vals_before = np.array(self.qc_vals_before[well])[0, :]
+            ex_pass_before = well not in failed_wells_before
             self.assertEqual(
-                passed(hergqc.qc1(*qc_vals_before)),
-                test_wells_before[well],
+                all_passed(hergqc.qc1(*qc_vals_before)),
+                ex_pass_before,
                 f"QC1: {well} (before) {qc_vals_before}",
             )
 
-        test_wells_after = {
-            'A01': True, 'A02': True, 'A03': True, 'A04': True, 'A05': True,
-            'A06': False, 'A07': True, 'A08': False, 'A09': True, 'A10': False,
-            'A11': True, 'A12': False, 'A13': False, 'A14': True, 'A15': True,
-            'A16': False, 'A17': True, 'A18': True, 'A19': False, 'A20': False,
-            'A21': True, 'A22': True, 'A23': True, 'A24': False, 'B01': True,
-            'B02': False, 'B03': True, 'B04': True, 'B05': False, 'B06': True,
-            'B07': False, 'B08': True, 'B09': True, 'B10': True, 'B11': False,
-            'B12': False, 'B13': False, 'B14': True, 'B15': False, 'B16': True,
-            'B17': True, 'B18': True, 'B19': False, 'B20': True, 'B21': False,
-            'B22': True, 'B23': False, 'B24': True, 'C01': False, 'C02': False,
-            'C03': True, 'C04': False, 'C05': True, 'C06': True, 'C07': False,
-            'C08': True, 'C09': False, 'C10': True, 'C11': False, 'C12': False,
-            'C13': True, 'C14': False, 'C15': True, 'C16': True, 'C17': True,
-            'C18': False, 'C19': True, 'C20': False, 'C21': True, 'C22': False,
-            'C23': False, 'C24': True, 'D01': True, 'D02': True, 'D03': False,
-            'D04': True, 'D05': False, 'D06': True, 'D07': True, 'D08': True,
-            'D09': False, 'D10': False, 'D11': True, 'D12': True, 'D13': True,
-            'D14': False, 'D15': False, 'D16': True, 'D17': True, 'D18': True,
-            'D19': False, 'D20': True, 'D21': False, 'D22': True, 'D23': True,
-            'D24': True, 'E01': False, 'E02': True, 'E03': False, 'E04': False,
-            'E05': True, 'E06': False, 'E07': False, 'E08': True, 'E09': False,
-            'E10': False, 'E11': False, 'E12': True, 'E13': True, 'E14': False,
-            'E15': False, 'E16': False, 'E17': False, 'E18': True, 'E19': False,
-            'E20': False, 'E21': True, 'E22': False, 'E23': False, 'E24': False,
-            'F01': False, 'F02': True, 'F03': False, 'F04': False, 'F05': True,
-            'F06': True, 'F07': False, 'F08': True, 'F09': False, 'F10': True,
-            'F11': True, 'F12': False, 'F13': False, 'F14': False, 'F15': False,
-            'F16': False, 'F17': True, 'F18': False, 'F19': False, 'F20': False,
-            'F21': False, 'F22': True, 'F23': True, 'F24': False, 'G01': True,
-            'G02': True, 'G03': True, 'G04': True, 'G05': True, 'G06': False,
-            'G07': True, 'G08': False, 'G09': False, 'G10': True, 'G11': True,
-            'G12': False, 'G13': False, 'G14': False, 'G15': False, 'G16': False,
-            'G17': False, 'G18': True, 'G19': True, 'G20': False, 'G21': False,
-            'G22': True, 'G23': False, 'G24': False, 'H01': False, 'H02': False,
-            'H03': False, 'H04': False, 'H05': True, 'H06': False, 'H07': False,
-            'H08': False, 'H09': False, 'H10': False, 'H11': False, 'H12': True,
-            'H13': False, 'H14': False, 'H15': False, 'H16': False, 'H17': False,
-            'H18': False, 'H19': False, 'H20': False, 'H21': False, 'H22': True,
-            'H23': False, 'H24': False, 'I01': False, 'I02': True, 'I03': True,
-            'I04': False, 'I05': False, 'I06': False, 'I07': False, 'I08': False,
-            'I09': True, 'I10': False, 'I11': True, 'I12': False, 'I13': True,
-            'I14': True, 'I15': True, 'I16': False, 'I17': False, 'I18': True,
-            'I19': True, 'I20': False, 'I21': False, 'I22': True, 'I23': True,
-            'I24': True, 'J01': True, 'J02': True, 'J03': False, 'J04': True,
-            'J05': True, 'J06': True, 'J07': False, 'J08': True, 'J09': True,
-            'J10': False, 'J11': True, 'J12': True, 'J13': True, 'J14': False,
-            'J15': True, 'J16': False, 'J17': False, 'J18': True, 'J19': False,
-            'J20': True, 'J21': False, 'J22': True, 'J23': False, 'J24': False,
-            'K01': True, 'K02': False, 'K03': False, 'K04': True, 'K05': True,
-            'K06': False, 'K07': False, 'K08': True, 'K09': True, 'K10': True,
-            'K11': True, 'K12': True, 'K13': True, 'K14': False, 'K15': True,
-            'K16': False, 'K17': True, 'K18': True, 'K19': True, 'K20': False,
-            'K21': True, 'K22': False, 'K23': False, 'K24': False, 'L01': False,
-            'L02': False, 'L03': False, 'L04': False, 'L05': False, 'L06': True,
-            'L07': True, 'L08': False, 'L09': True, 'L10': False, 'L11': False,
-            'L12': False, 'L13': False, 'L14': True, 'L15': True, 'L16': False,
-            'L17': False, 'L18': False, 'L19': True, 'L20': True, 'L21': True,
-            'L22': True, 'L23': True, 'L24': False, 'M01': False, 'M02': False,
-            'M03': True, 'M04': False, 'M05': False, 'M06': False, 'M07': True,
-            'M08': False, 'M09': False, 'M10': True, 'M11': True, 'M12': False,
-            'M13': False, 'M14': False, 'M15': False, 'M16': True, 'M17': True,
-            'M18': True, 'M19': False, 'M20': False, 'M21': False, 'M22': True,
-            'M23': True, 'M24': True, 'N01': True, 'N02': True, 'N03': True,
-            'N04': False, 'N05': True, 'N06': False, 'N07': True, 'N08': False,
-            'N09': True, 'N10': True, 'N11': False, 'N12': True, 'N13': False,
-            'N14': False, 'N15': True, 'N16': False, 'N17': True, 'N18': False,
-            'N19': False, 'N20': True, 'N21': False, 'N22': True, 'N23': True,
-            'N24': False, 'O01': False, 'O02': False, 'O03': False, 'O04': True,
-            'O05': False, 'O06': True, 'O07': False, 'O08': False, 'O09': True,
-            'O10': False, 'O11': False, 'O12': True, 'O13': True, 'O14': False,
-            'O15': False, 'O16': True, 'O17': False, 'O18': True, 'O19': False,
-            'O20': True, 'O21': True, 'O22': False, 'O23': True, 'O24': False,
-            'P01': False, 'P02': True, 'P03': False, 'P04': True, 'P05': True,
-            'P06': False, 'P07': False, 'P08': False, 'P09': False, 'P10': True,
-            'P11': False, 'P12': False, 'P13': False, 'P14': False, 'P15': False,
-            'P16': False, 'P17': False, 'P18': False, 'P19': False, 'P20': True,
-            'P21': False, 'P22': False, 'P23': True, 'P24': True
-        }
+        failed_wells_after = [
+            'A06', 'A08', 'A10', 'A12', 'A13', 'A16', 'A19', 'A20', 'A24', 'B02',
+            'B05', 'B07', 'B11', 'B12', 'B13', 'B15', 'B19', 'B21', 'B23', 'C01',
+            'C02', 'C04', 'C07', 'C09', 'C11', 'C12', 'C14', 'C18', 'C20', 'C22',
+            'C23', 'D03', 'D05', 'D09', 'D10', 'D14', 'D15', 'D19', 'D21', 'E01',
+            'E03', 'E04', 'E06', 'E07', 'E09', 'E10', 'E11', 'E14', 'E15', 'E16',
+            'E17', 'E19', 'E20', 'E22', 'E23', 'E24', 'F01', 'F03', 'F04', 'F07',
+            'F09', 'F12', 'F13', 'F14', 'F15', 'F16', 'F18', 'F19', 'F20', 'F21',
+            'F24', 'G06', 'G08', 'G09', 'G12', 'G13', 'G14', 'G15', 'G16', 'G17',
+            'G20', 'G21', 'G23', 'G24', 'H01', 'H02', 'H03', 'H04', 'H06', 'H07',
+            'H08', 'H09', 'H10', 'H11', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18',
+            'H19', 'H20', 'H21', 'H23', 'H24', 'I01', 'I04', 'I05', 'I06', 'I07',
+            'I08', 'I10', 'I12', 'I16', 'I17', 'I20', 'I21', 'J03', 'J07', 'J10',
+            'J14', 'J16', 'J17', 'J19', 'J21', 'J23', 'J24', 'K02', 'K03', 'K06',
+            'K07', 'K14', 'K16', 'K20', 'K22', 'K23', 'K24', 'L01', 'L02', 'L03',
+            'L04', 'L05', 'L08', 'L10', 'L11', 'L12', 'L13', 'L16', 'L17', 'L18',
+            'L24', 'M01', 'M02', 'M04', 'M05', 'M06', 'M08', 'M09', 'M12', 'M13',
+            'M14', 'M15', 'M19', 'M20', 'M21', 'N04', 'N06', 'N08', 'N11', 'N13',
+            'N14', 'N16', 'N18', 'N19', 'N21', 'N24', 'O01', 'O02', 'O03', 'O05',
+            'O07', 'O08', 'O10', 'O11', 'O14', 'O15', 'O17', 'O19', 'O22', 'O24',
+            'P01', 'P03', 'P06', 'P07', 'P08', 'P09', 'P11', 'P12', 'P13', 'P14',
+            'P15', 'P16', 'P17', 'P18', 'P19', 'P21', 'P22'
+        ]
 
-        for well in test_wells_after:
+        for well in self.all_wells:
             qc_vals_after = np.array(self.qc_vals_after[well])[0, :]
+            ex_pass_after = well not in failed_wells_after
             self.assertEqual(
-                passed(hergqc.qc1(*qc_vals_after)),
-                test_wells_after[well],
+                all_passed(hergqc.qc1(*qc_vals_after)),
+                ex_pass_after,
                 f"QC1: {well} (after) {qc_vals_after}",
             )
 
@@ -293,20 +191,50 @@ class TestHergQC(unittest.TestCase):
 
         # qc2 checks that raw and subtracted SNR are above a minimum threshold
         test_matrix = [
-            (10, True),  # snr = 8082
-            (1, True),  # snr = 74
-            (0.601, True),  # snr = 25.07
-            (0.6, False),  # snr = 24.98
-            (0.5, False),  # snr = 17
-            (0.1, False),  # snr = 0.5
+            (10, 8082.1, True),
+            (1, 74.0, True),
+            (0.601, 25.1, True),
+            (0.6, 25.0, False),
+            (0.5, 16.8, False),
+            (0.1, 0.5, False),
         ]
 
-        for i, expected in test_matrix:
+        for i, ex_snr, ex_pass in test_matrix:
             recording = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [i] * 500)
-            result = hergqc.qc2(recording)
-            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+            pass_, snr = hergqc.qc2(recording)
+            self.assertAlmostEqual(
+                snr, ex_snr, 1, f"QC2: ({i}) {snr} != {ex_snr}")
+            self.assertEqual(pass_, ex_pass, f"QC2: ({i}) {pass_} != {ex_pass}")
 
-        # TODO: Test on select data
+        # Test on data
+        failed_wells_raw = ["P16"]
+        failed_wells_subtracted = [
+            "B09", "C11", "H19", "H24", "K22", "O16", "P16"
+        ]
+
+        for well in self.all_wells:
+            before = np.array(self.trace_sweeps_before[well])
+            after = np.array(self.trace_sweeps_after[well])
+
+            raw = []
+            subtracted = []
+            for i in range(self.n_sweeps):
+                raw.append(hergqc.qc2(before[i]))
+                subtracted.append(hergqc.qc2(before[i] - after[i]))
+
+            ex_pass_raw = well not in failed_wells_raw
+            self.assertEqual(
+                all_passed(raw),
+                ex_pass_raw,
+                f"QC2: {well} (raw) {raw}",
+            )
+
+            ex_pass_subtracted = well not in failed_wells_subtracted
+            self.assertEqual(
+                all_passed(subtracted),
+                ex_pass_subtracted,
+                f"QC2: {well} (subtracted) {subtracted}",
+            )
 
     def test_qc3(self):
         hergqc = copy.deepcopy(self.hergqc)
@@ -331,7 +259,8 @@ class TestHergQC(unittest.TestCase):
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
         for i, expected in test_matrix:
-            recording2 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40 + i] * 500)
+            recording2 = np.asarray(
+                [0, 0.1] * (NOISE_LEN // 2) + [40 + i] * 500)
             result = hergqc.qc3(recording1, recording2)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
@@ -345,16 +274,14 @@ class TestHergQC(unittest.TestCase):
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
         for i, expected in test_matrix:
-            recording2 = np.asarray([0, 0.1 * i] * (NOISE_LEN // 2) + [40] * 500)
+            recording2 = np.asarray(
+                [0, 0.1 * i] * (NOISE_LEN // 2) + [40] * 500)
             result = hergqc.qc3(recording1, recording2)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 
     def test_qc4(self):
-        def passed(result):
-            return all([x for x, _ in result])
-
         hergqc = copy.deepcopy(self.hergqc)
         plot_dir = os.path.join(hergqc.plot_dir, "test_qc4")
         if not os.path.exists(plot_dir):
@@ -379,14 +306,14 @@ class TestHergQC(unittest.TestCase):
         for i, expected in test_matrix:
             rseals = [r_lo, i * r_lo]
             self.assertEqual(
-                passed(hergqc.qc4(rseals, cms, rseriess)),
+                all_passed(hergqc.qc4(rseals, cms, rseriess)),
                 expected,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
             rseals = [r_hi, i * r_hi]
             self.assertEqual(
-                passed(hergqc.qc4(rseals, cms, rseriess)),
+                all_passed(hergqc.qc4(rseals, cms, rseriess)),
                 expected,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
@@ -405,14 +332,14 @@ class TestHergQC(unittest.TestCase):
         for i, expected in test_matrix:
             cms = [c_lo, i * c_lo]
             self.assertEqual(
-                passed(hergqc.qc4(rseals, cms, rseriess)),
+                all_passed(hergqc.qc4(rseals, cms, rseriess)),
                 expected,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
             cms = [c_hi, i * c_hi]
             self.assertEqual(
-                passed(hergqc.qc4(rseals, cms, rseriess)),
+                all_passed(hergqc.qc4(rseals, cms, rseriess)),
                 expected,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
@@ -431,14 +358,14 @@ class TestHergQC(unittest.TestCase):
         for i, expected in test_matrix:
             rseriess = [r_lo, i * r_lo]
             self.assertEqual(
-                passed(hergqc.qc4(rseals, cms, rseriess)),
+                all_passed(hergqc.qc4(rseals, cms, rseriess)),
                 expected,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
             rseriess = [r_hi, i * r_hi]
             self.assertEqual(
-                passed(hergqc.qc4(rseals, cms, rseriess)),
+                all_passed(hergqc.qc4(rseals, cms, rseriess)),
                 expected,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
@@ -466,7 +393,8 @@ class TestHergQC(unittest.TestCase):
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
         for i, expected in test_matrix:
-            recording2 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
+            recording2 = np.asarray(
+                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
             result = hergqc.qc5(recording1, recording2)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
@@ -494,7 +422,8 @@ class TestHergQC(unittest.TestCase):
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
         for i, expected in test_matrix:
-            recording2 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
+            recording2 = np.asarray(
+                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
             result = hergqc.qc5_1(recording1, recording2)
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
@@ -520,7 +449,8 @@ class TestHergQC(unittest.TestCase):
             (100, True),  # valc - val = -10.1
         ]
         for i, expected in test_matrix:
-            recording = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [0.1 * i] * 500)
+            recording = np.asarray(
+                [0, 0.1] * (NOISE_LEN // 2) + [0.1 * i] * 500)
             result = hergqc.qc6(recording, win=[NOISE_LEN, -1])
             self.assertEqual(result[0], expected, f"({i}: {result[1]})")
 
@@ -560,7 +490,7 @@ class TestHergQC(unittest.TestCase):
                     after=after,
                     qc_vals_before=qc_vals_before,
                     qc_vals_after=qc_vals_after,
-                    n_sweeps=2,
+                    n_sweeps=self.n_sweeps,
                 )
 
                 logging.debug(well, QC.all_passed())
