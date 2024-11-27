@@ -1,6 +1,5 @@
 import logging
 import os
-
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
@@ -8,6 +7,7 @@ import numpy as np
 import scipy.stats
 
 NOISE_LEN = 200
+
 
 class QCDict:
 

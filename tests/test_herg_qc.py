@@ -1,13 +1,12 @@
+import copy
 import logging
 import os
-import copy
-import string
 import unittest
 
 import numpy as np
 from syncropatch_export.trace import Trace
 
-from pcpostprocess.hergQC import hERGQC, NOISE_LEN
+from pcpostprocess.hergQC import NOISE_LEN, hERGQC
 
 
 class TestHergQC(unittest.TestCase):
@@ -108,28 +107,182 @@ class TestHergQC(unittest.TestCase):
                 f"QC1: {rseal}, {cm}, {rseries}",
             )
 
-        # Test on select data
-        test_matrix = [
-            ("A01", True),
-            ("A02", True),
-            ("A03", True),
-            ("A04", True),
-            ("A05", True),
-            ("A10", False),
-            ("A12", False),
-            ("A13", False),
-            ("A16", False),
-            ("A19", False),
-        ]
+        # Test on data
+        test_wells_before = {
+            'A01': True, 'A02': True, 'A03': True, 'A04': True, 'A05': True,
+            'A06': True, 'A07': True, 'A08': True, 'A09': True, 'A10': False,
+            'A11': True, 'A12': False, 'A13': False, 'A14': True, 'A15': True,
+            'A16': False, 'A17': True, 'A18': True, 'A19': False, 'A20': False,
+            'A21': True, 'A22': True, 'A23': True, 'A24': False, 'B01': True,
+            'B02': True, 'B03': True, 'B04': True, 'B05': False, 'B06': True,
+            'B07': False, 'B08': True, 'B09': True, 'B10': True, 'B11': False,
+            'B12': False, 'B13': False, 'B14': True, 'B15': False, 'B16': True,
+            'B17': True, 'B18': True, 'B19': False, 'B20': True, 'B21': False,
+            'B22': True, 'B23': False, 'B24': True, 'C01': True, 'C02': False,
+            'C03': True, 'C04': False, 'C05': True, 'C06': True, 'C07': False,
+            'C08': True, 'C09': False, 'C10': True, 'C11': False, 'C12': False,
+            'C13': True, 'C14': False, 'C15': True, 'C16': True, 'C17': True,
+            'C18': False, 'C19': False, 'C20': False, 'C21': True, 'C22': True,
+            'C23': False, 'C24': True, 'D01': True, 'D02': False, 'D03': False,
+            'D04': True, 'D05': False, 'D06': True, 'D07': True, 'D08': True,
+            'D09': False, 'D10': False, 'D11': True, 'D12': True, 'D13': True,
+            'D14': False, 'D15': False, 'D16': False, 'D17': True, 'D18': True,
+            'D19': False, 'D20': True, 'D21': False, 'D22': True, 'D23': True,
+            'D24': True, 'E01': True, 'E02': True, 'E03': True, 'E04': False,
+            'E05': True, 'E06': False, 'E07': False, 'E08': True, 'E09': True,
+            'E10': False, 'E11': False, 'E12': True, 'E13': True, 'E14': False,
+            'E15': False, 'E16': False, 'E17': False, 'E18': True, 'E19': False,
+            'E20': True, 'E21': True, 'E22': False, 'E23': False, 'E24': True,
+            'F01': False, 'F02': True, 'F03': False, 'F04': False, 'F05': False,
+            'F06': True, 'F07': False, 'F08': True, 'F09': False, 'F10': True,
+            'F11': True, 'F12': False, 'F13': False, 'F14': False, 'F15': False,
+            'F16': True, 'F17': True, 'F18': False, 'F19': False, 'F20': False,
+            'F21': False, 'F22': True, 'F23': True, 'F24': False, 'G01': True,
+            'G02': True, 'G03': True, 'G04': True, 'G05': True, 'G06': False,
+            'G07': True, 'G08': True, 'G09': False, 'G10': True, 'G11': True,
+            'G12': False, 'G13': False, 'G14': False, 'G15': True, 'G16': False,
+            'G17': False, 'G18': True, 'G19': True, 'G20': False, 'G21': False,
+            'G22': True, 'G23': False, 'G24': False, 'H01': False, 'H02': False,
+            'H03': False, 'H04': True, 'H05': True, 'H06': False, 'H07': False,
+            'H08': False, 'H09': True, 'H10': False, 'H11': False, 'H12': True,
+            'H13': False, 'H14': False, 'H15': False, 'H16': False, 'H17': True,
+            'H18': True, 'H19': False, 'H20': True, 'H21': False, 'H22': True,
+            'H23': False, 'H24': False, 'I01': False, 'I02': True, 'I03': True,
+            'I04': False, 'I05': False, 'I06': False, 'I07': False, 'I08': False,
+            'I09': True, 'I10': False, 'I11': False, 'I12': False, 'I13': True,
+            'I14': True, 'I15': True, 'I16': False, 'I17': False, 'I18': True,
+            'I19': True, 'I20': True, 'I21': False, 'I22': True, 'I23': True,
+            'I24': True, 'J01': True, 'J02': True, 'J03': True, 'J04': True,
+            'J05': True, 'J06': True, 'J07': False, 'J08': True, 'J09': True,
+            'J10': False, 'J11': True, 'J12': True, 'J13': True, 'J14': True,
+            'J15': True, 'J16': False, 'J17': False, 'J18': True, 'J19': False,
+            'J20': True, 'J21': False, 'J22': True, 'J23': True, 'J24': False,
+            'K01': True, 'K02': False, 'K03': False, 'K04': True, 'K05': True,
+            'K06': False, 'K07': False, 'K08': True, 'K09': True, 'K10': True,
+            'K11': False, 'K12': False, 'K13': True, 'K14': True, 'K15': True,
+            'K16': False, 'K17': False, 'K18': True, 'K19': True, 'K20': False,
+            'K21': True, 'K22': False, 'K23': True, 'K24': False, 'L01': False,
+            'L02': False, 'L03': True, 'L04': False, 'L05': False, 'L06': True,
+            'L07': True, 'L08': False, 'L09': True, 'L10': False, 'L11': False,
+            'L12': True, 'L13': False, 'L14': True, 'L15': True, 'L16': False,
+            'L17': False, 'L18': False, 'L19': True, 'L20': True, 'L21': True,
+            'L22': True, 'L23': True, 'L24': False, 'M01': False, 'M02': True,
+            'M03': True, 'M04': False, 'M05': True, 'M06': False, 'M07': True,
+            'M08': True, 'M09': False, 'M10': True, 'M11': True, 'M12': False,
+            'M13': True, 'M14': False, 'M15': False, 'M16': False, 'M17': True,
+            'M18': True, 'M19': False, 'M20': False, 'M21': False, 'M22': True,
+            'M23': True, 'M24': True, 'N01': True, 'N02': True, 'N03': False,
+            'N04': False, 'N05': True, 'N06': False, 'N07': True, 'N08': False,
+            'N09': True, 'N10': True, 'N11': False, 'N12': True, 'N13': False,
+            'N14': False, 'N15': True, 'N16': False, 'N17': True, 'N18': False,
+            'N19': True, 'N20': True, 'N21': False, 'N22': True, 'N23': True,
+            'N24': False, 'O01': False, 'O02': False, 'O03': False, 'O04': True,
+            'O05': False, 'O06': True, 'O07': False, 'O08': True, 'O09': True,
+            'O10': False, 'O11': False, 'O12': True, 'O13': True, 'O14': True,
+            'O15': True, 'O16': True, 'O17': False, 'O18': True, 'O19': False,
+            'O20': True, 'O21': True, 'O22': False, 'O23': True, 'O24': False,
+            'P01': False, 'P02': True, 'P03': False, 'P04': True, 'P05': True,
+            'P06': False, 'P07': False, 'P08': False, 'P09': False, 'P10': True,
+            'P11': True, 'P12': False, 'P13': False, 'P14': False, 'P15': False,
+            'P16': False, 'P17': False, 'P18': False, 'P19': True, 'P20': True,
+            'P21': False, 'P22': False, 'P23': True, 'P24': False
+        }
 
-        for well, expected in test_matrix:
-            with self.subTest(well):
-                qc_vals_before = np.array(self.qc_vals_before[well])[0, :]
-                self.assertEqual(
-                    passed(hergqc.qc1(*qc_vals_before)),
-                    expected,
-                    f"QC1: {well} (before) {qc_vals_before}",
-                )
+        for well in test_wells_before:
+            qc_vals_before = np.array(self.qc_vals_before[well])[0, :]
+            self.assertEqual(
+                passed(hergqc.qc1(*qc_vals_before)),
+                test_wells_before[well],
+                f"QC1: {well} (before) {qc_vals_before}",
+            )
+
+        test_wells_after = {
+            'A01': True, 'A02': True, 'A03': True, 'A04': True, 'A05': True,
+            'A06': False, 'A07': True, 'A08': False, 'A09': True, 'A10': False,
+            'A11': True, 'A12': False, 'A13': False, 'A14': True, 'A15': True,
+            'A16': False, 'A17': True, 'A18': True, 'A19': False, 'A20': False,
+            'A21': True, 'A22': True, 'A23': True, 'A24': False, 'B01': True,
+            'B02': False, 'B03': True, 'B04': True, 'B05': False, 'B06': True,
+            'B07': False, 'B08': True, 'B09': True, 'B10': True, 'B11': False,
+            'B12': False, 'B13': False, 'B14': True, 'B15': False, 'B16': True,
+            'B17': True, 'B18': True, 'B19': False, 'B20': True, 'B21': False,
+            'B22': True, 'B23': False, 'B24': True, 'C01': False, 'C02': False,
+            'C03': True, 'C04': False, 'C05': True, 'C06': True, 'C07': False,
+            'C08': True, 'C09': False, 'C10': True, 'C11': False, 'C12': False,
+            'C13': True, 'C14': False, 'C15': True, 'C16': True, 'C17': True,
+            'C18': False, 'C19': True, 'C20': False, 'C21': True, 'C22': False,
+            'C23': False, 'C24': True, 'D01': True, 'D02': True, 'D03': False,
+            'D04': True, 'D05': False, 'D06': True, 'D07': True, 'D08': True,
+            'D09': False, 'D10': False, 'D11': True, 'D12': True, 'D13': True,
+            'D14': False, 'D15': False, 'D16': True, 'D17': True, 'D18': True,
+            'D19': False, 'D20': True, 'D21': False, 'D22': True, 'D23': True,
+            'D24': True, 'E01': False, 'E02': True, 'E03': False, 'E04': False,
+            'E05': True, 'E06': False, 'E07': False, 'E08': True, 'E09': False,
+            'E10': False, 'E11': False, 'E12': True, 'E13': True, 'E14': False,
+            'E15': False, 'E16': False, 'E17': False, 'E18': True, 'E19': False,
+            'E20': False, 'E21': True, 'E22': False, 'E23': False, 'E24': False,
+            'F01': False, 'F02': True, 'F03': False, 'F04': False, 'F05': True,
+            'F06': True, 'F07': False, 'F08': True, 'F09': False, 'F10': True,
+            'F11': True, 'F12': False, 'F13': False, 'F14': False, 'F15': False,
+            'F16': False, 'F17': True, 'F18': False, 'F19': False, 'F20': False,
+            'F21': False, 'F22': True, 'F23': True, 'F24': False, 'G01': True,
+            'G02': True, 'G03': True, 'G04': True, 'G05': True, 'G06': False,
+            'G07': True, 'G08': False, 'G09': False, 'G10': True, 'G11': True,
+            'G12': False, 'G13': False, 'G14': False, 'G15': False, 'G16': False,
+            'G17': False, 'G18': True, 'G19': True, 'G20': False, 'G21': False,
+            'G22': True, 'G23': False, 'G24': False, 'H01': False, 'H02': False,
+            'H03': False, 'H04': False, 'H05': True, 'H06': False, 'H07': False,
+            'H08': False, 'H09': False, 'H10': False, 'H11': False, 'H12': True,
+            'H13': False, 'H14': False, 'H15': False, 'H16': False, 'H17': False,
+            'H18': False, 'H19': False, 'H20': False, 'H21': False, 'H22': True,
+            'H23': False, 'H24': False, 'I01': False, 'I02': True, 'I03': True,
+            'I04': False, 'I05': False, 'I06': False, 'I07': False, 'I08': False,
+            'I09': True, 'I10': False, 'I11': True, 'I12': False, 'I13': True,
+            'I14': True, 'I15': True, 'I16': False, 'I17': False, 'I18': True,
+            'I19': True, 'I20': False, 'I21': False, 'I22': True, 'I23': True,
+            'I24': True, 'J01': True, 'J02': True, 'J03': False, 'J04': True,
+            'J05': True, 'J06': True, 'J07': False, 'J08': True, 'J09': True,
+            'J10': False, 'J11': True, 'J12': True, 'J13': True, 'J14': False,
+            'J15': True, 'J16': False, 'J17': False, 'J18': True, 'J19': False,
+            'J20': True, 'J21': False, 'J22': True, 'J23': False, 'J24': False,
+            'K01': True, 'K02': False, 'K03': False, 'K04': True, 'K05': True,
+            'K06': False, 'K07': False, 'K08': True, 'K09': True, 'K10': True,
+            'K11': True, 'K12': True, 'K13': True, 'K14': False, 'K15': True,
+            'K16': False, 'K17': True, 'K18': True, 'K19': True, 'K20': False,
+            'K21': True, 'K22': False, 'K23': False, 'K24': False, 'L01': False,
+            'L02': False, 'L03': False, 'L04': False, 'L05': False, 'L06': True,
+            'L07': True, 'L08': False, 'L09': True, 'L10': False, 'L11': False,
+            'L12': False, 'L13': False, 'L14': True, 'L15': True, 'L16': False,
+            'L17': False, 'L18': False, 'L19': True, 'L20': True, 'L21': True,
+            'L22': True, 'L23': True, 'L24': False, 'M01': False, 'M02': False,
+            'M03': True, 'M04': False, 'M05': False, 'M06': False, 'M07': True,
+            'M08': False, 'M09': False, 'M10': True, 'M11': True, 'M12': False,
+            'M13': False, 'M14': False, 'M15': False, 'M16': True, 'M17': True,
+            'M18': True, 'M19': False, 'M20': False, 'M21': False, 'M22': True,
+            'M23': True, 'M24': True, 'N01': True, 'N02': True, 'N03': True,
+            'N04': False, 'N05': True, 'N06': False, 'N07': True, 'N08': False,
+            'N09': True, 'N10': True, 'N11': False, 'N12': True, 'N13': False,
+            'N14': False, 'N15': True, 'N16': False, 'N17': True, 'N18': False,
+            'N19': False, 'N20': True, 'N21': False, 'N22': True, 'N23': True,
+            'N24': False, 'O01': False, 'O02': False, 'O03': False, 'O04': True,
+            'O05': False, 'O06': True, 'O07': False, 'O08': False, 'O09': True,
+            'O10': False, 'O11': False, 'O12': True, 'O13': True, 'O14': False,
+            'O15': False, 'O16': True, 'O17': False, 'O18': True, 'O19': False,
+            'O20': True, 'O21': True, 'O22': False, 'O23': True, 'O24': False,
+            'P01': False, 'P02': True, 'P03': False, 'P04': True, 'P05': True,
+            'P06': False, 'P07': False, 'P08': False, 'P09': False, 'P10': True,
+            'P11': False, 'P12': False, 'P13': False, 'P14': False, 'P15': False,
+            'P16': False, 'P17': False, 'P18': False, 'P19': False, 'P20': True,
+            'P21': False, 'P22': False, 'P23': True, 'P24': True
+        }
+
+        for well in test_wells_after:
+            qc_vals_after = np.array(self.qc_vals_after[well])[0, :]
+            self.assertEqual(
+                passed(hergqc.qc1(*qc_vals_after)),
+                test_wells_after[well],
+                f"QC1: {well} (after) {qc_vals_after}",
+            )
 
     def test_qc2(self):
         hergqc = copy.deepcopy(self.hergqc)
