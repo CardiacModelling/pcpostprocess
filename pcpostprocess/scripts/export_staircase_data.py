@@ -22,6 +22,8 @@ from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak
 from pcpostprocess.subtraction_plots import do_subtraction_plot
+from scipy.stats import pearsonr
+import scipy
 
 pool_kws = {'maxtasksperchild': 1}
 
@@ -167,7 +169,7 @@ def main():
     qc_dfs = []
     # Do QC which requires both repeats
     passed_qc_dict = {}
-    for time_strs, (readname, savename) in zip(times_list, export_config.D2S_QC.items()):
+    for time_strs, readname, savename in zip(times_list, readnames, savenames):
         for well in wells:
             passed, qc_df = run_qc(readname, savename, well, time_strs,
                                    args)
@@ -191,40 +193,47 @@ def main():
 
     chrono_dict = {times[0]: prot for prot, times in zip(savenames, times_list)}
 
-    with open(os.path.join(args.output_dir, 'chrono.txt'), 'w') as fout:
+    with open(os.path.join(args.savedir, 'chrono.txt'), 'w') as fout:
         for key in sorted(chrono_dict):
             val = chrono_dict[key]
             #  Output order of protocols
             fout.write(val)
             fout.write('\n')
-
-    for time_strs, (readname, savename) in zip(times_list, export_config.D2S_QC.items()):
+    extract_dfs = []
+    for time_strs, readname, savename in zip(times_list, readnames, savenames):
         for well in wells:
-            qc_df = extract_protocol(readname, savename, well, time_strs,
-                                     args)
-            qc_dfs.append(qc_df)
+            extract_df = extract_protocol(readname, savename, well, time_strs, args)
+            extract_dfs.append(extract_df)
 
-    qc_styled_df = create_qc_table(qc_df)
+    extract_df = pd.concat(extract_dfs, ignore_index=True)
+    extract_df.to_csv(os.path.join(args.savedir, 'extract_df.csv'))
+
+    extract_df.set_index(['protocol', 'well', 'sweep'])
+    qc_df = qc_df.set_index(['protocol', 'well', 'sweep'])
+
+    combo_df = qc_df.join(extract_df).reset_index()
+    print(combo_df.shape, qc_df.shape, extract_df.shape)
+
+    qc_styled_df = create_qc_table(combo_df)
     logging.info(qc_styled_df)
 
-    qc_styled_df.to_excel(os.path.join(args.output_dir, 'qc_table.xlsx'))
-    qc_styled_df.to_latex(os.path.join(args.output_dir, 'qc_table.tex'))
+    qc_styled_df.to_excel(os.path.join(args.savedir, 'qc_table.xlsx'))
+    qc_styled_df.to_latex(os.path.join(args.savedir, 'qc_table.tex'))
 
     # Save in csv format
-    qc_df.to_csv(os.path.join(args.savedir, 'QC-%s.csv' % args.saveID))
+    combo_df.to_csv(os.path.join(args.savedir, 'QC-%s.csv' % args.saveID))
 
     # Write data to JSON file
-    qc_df.to_json(os.path.join(args.savedir, 'QC-%s.json' % args.saveID),
-                  orient='records')
+    combo_df.to_json(os.path.join(args.savedir, 'QC-%s.json' % args.saveID), orient='records')
 
     #  Load only QC vals. TODO use a new variabile name to avoid confusion
-    qc_vals_df = qc_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']].copy()
+    qc_vals_df = combo_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']].copy()
     qc_vals_df['drug'] = 'before'
-    qc_vals_df.to_csv(os.path.join(args.output_dir, 'qc_vals_df.csv'))
+    qc_vals_df.to_csv(os.path.join(args.savedir, 'qc_vals_df.csv'))
 
-    qc_df.to_csv(os.path.join(args.output_dir, 'subtraction_qc.csv'))
+    combo_df.to_csv(os.path.join(args.savedir, 'subtraction_qc.csv'))
 
-    with open(os.path.join(args.output_dir, 'passed_wells.txt'), 'w') as fout:
+    with open(os.path.join(args.savedir, 'passed_wells.txt'), 'w') as fout:
         for well, passed in passed_qc_dict.items():
             if passed:
                 fout.write(well)
@@ -322,7 +331,7 @@ def run_qc(readname, savename, well, time_strs, args):
 
     sampling_rate = before_trace.sampling_rate
 
-    savedir = args.output_dir
+    savedir = args.savedir
     if not os.path.exists(savedir):
         os.makedirs(savedir)
 
@@ -340,11 +349,11 @@ def run_qc(readname, savename, well, time_strs, args):
 
     selected_wells = []
 
-    hergqc = hERGQC(sampling_rate=sampling_rate,
-                    # plot_dir=plot_dir,
-                    voltage=before_voltage)
-
     plot_dir = os.path.join(savedir, "debug", f"debug_{well}_{savename}")
+
+    hergqc = hERGQC(sampling_rate=sampling_rate,
+                    plot_dir=plot_dir,
+                    voltage=before_voltage)
 
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
@@ -384,7 +393,7 @@ def run_qc(readname, savename, well, time_strs, args):
     ramp_bounds = [np.argmax(times > tstart), np.argmax(times > tend)]
 
     assert after_trace.NofSamples == before_trace.NofSamples
-
+    IV_check = []
     for sweep in range(nsweeps):
         before_raw = np.array(raw_before_all[well])[sweep, :]
         after_raw = np.array(raw_after_all[well])[sweep, :]
@@ -406,6 +415,10 @@ def run_qc(readname, savename, well, time_strs, args):
         before_currents_corrected[sweep, :] = before_raw - before_leak
         after_currents_corrected[sweep, :] = after_raw - after_leak
 
+        corrb, _ = pearsonr(before_currents_corrected[sweep, :], voltage)
+        corra, _ = pearsonr(after_currents_corrected[sweep, :], voltage)
+        IV_check += [corrb, corra]
+
         before_currents[sweep, :] = before_raw
         after_currents[sweep, :] = after_raw
 
@@ -424,7 +437,7 @@ def run_qc(readname, savename, well, time_strs, args):
                                np.array(qc_after[well])[0, :], nsweeps)
 
     QC = list(QC)
-    df_rows = [[well] + list(QC)]
+    df_rows = [[well] + list(QC)+[str(IV_check)]]
 
     selected = np.all(QC) and not no_cell
     if selected:
@@ -447,8 +460,8 @@ def run_qc(readname, savename, well, time_strs, args):
     column_labels = ['well', 'qc1.rseal', 'qc1.cm', 'qc1.rseries', 'qc2.raw',
                      'qc2.subtracted', 'qc3.raw', 'qc3.E4031', 'qc3.subtracted',
                      'qc4.rseal', 'qc4.cm', 'qc4.rseries', 'qc5.staircase',
-                     'qc5.1.staircase', 'qc6.subtracted', 'qc6.1.subtracted',
-                     'qc6.2.subtracted']
+                     'qc5.1.staircase', 'qc5.2.staircase', 'qc6.subtracted', 'qc6.1.subtracted',
+                     'qc6.2.subtracted', 'Pearson corr']
 
     df = pd.DataFrame(np.array(df_rows), columns=column_labels)
 
@@ -469,7 +482,7 @@ def run_qc(readname, savename, well, time_strs, args):
 
 def extract_protocol(readname, savename, well, time_strs, args):
     logging.info(f"extracting {savename}")
-    savedir = args.output_dir
+    savedir = args.savedir
     saveID = args.saveID
 
     traces_dir = os.path.join(savedir, 'traces')
@@ -646,6 +659,38 @@ def extract_protocol(readname, savename, well, time_strs, args):
 
         row_dict['QC.Erev'] = E_rev < -50 and E_rev > -120
 
+        # Calculate time constants
+        hergqc = hERGQC(sampling_rate=before_trace.sampling_rate,
+                            plot_dir=plot_dir,
+                            n_sweeps=before_trace.NofSweeps)
+
+        times = before_trace.get_times()
+        voltage = before_trace.get_voltage()
+        voltage_protocol = before_trace.get_voltage_protocol()
+
+        voltage_steps = [tstart \
+                            for tstart, tend, vstart, vend in
+                            voltage_protocol.get_all_sections() if vend == vstart]
+
+        current = hergqc.filter_capacitive_spikes(before_corrected - after_corrected,
+                                                    times, voltage_steps)
+        param, leak = fit_linear_leak(current, voltage, times,
+                                        *ramp_bounds)
+        subtracted_trace = current - leak
+        t_step = times[1] - times[0]
+        row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
+        res = \
+            get_time_constant_of_first_decay(subtracted_trace,
+                                                times, desc, args=args,
+                                                output_path=os.path.join(args.savedir,
+                                                                        'debug', '-120mV time constant',
+                                                                        f"{savename}-{well}-sweep{sweep}-time-constant-fit.png"))
+
+        row_dict['-120mV decay time constant 1'] = res[0][0]
+        row_dict['-120mV decay time constant 2'] = res[0][1]
+        row_dict['-120mV decay time constant 3'] = res[1]
+        row_dict['-120mV peak current'] = res[2]
+
         if args.output_traces:
             out_fname = os.path.join(traces_dir,
                                      f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
@@ -700,6 +745,170 @@ def extract_protocol(readname, savename, well, time_strs, args):
 
     return extract_df
 
+def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_path):
+
+    if output_path:
+        if not os.path.exists(os.path.dirname(output_path)):
+            os.makedirs(os.path.dirname(output_path))
+
+    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2]==40][0]
+
+    tstart, tend, vstart, vend = protocol_desc[first_120mV_step_index + 1, :]
+    assert(vstart == vend)
+    assert(vstart==-120.0)
+
+    indices = np.argwhere((times >= tstart) & (times <= tend))
+
+    # find peak current
+    peak_current = np.min(trace[indices])
+    peak_index = np.argmax(np.abs(trace[indices]))
+    peak_time = times[indices[peak_index]][0]
+
+    indices = np.argwhere((times >= peak_time) & (times <= tend - 50))
+
+    def out_of_bounds_penalty(x,scale = 1e2):
+        penalty = 0
+        for it in range(len(x)):
+            penalty+=abs(min(x[it],bounds[it][0])-bounds[it][0])+abs(max(x[it],bounds[it][1])-bounds[it][1])
+        return -penalty*scale
+    
+    def fit_func(x, args=None):
+        # Pass 'args=single' when we want to use a single exponential.
+        # Otherwise use 2 exponentials
+        if args:
+            single = args == 'single'
+        else:
+            single = False
+
+        penalty = out_of_bounds_penalty(x)
+        if not single:
+            a, b, c, d = x
+            if d < b:
+                b, d = d, b
+            prediction = c * np.exp((-1.0/d) * (times[indices] - peak_time)) + a * np.exp((-1.0/b) * (times[indices] - peak_time)) + penalty
+        else:
+            a, b = x
+            prediction = a * np.exp((-1.0/b) * (times[indices] - peak_time)) + penalty
+
+        return np.sum((prediction - trace[indices])**2)
+
+    max_trace = float(np.abs(trace).max())
+    bounds = [
+        (-max_trace*2, max_trace),
+        (1e-12, 1e4),
+        (-max_trace*2, max_trace),
+        (1e-12, 1e4),
+    ]
+
+    # Repeat optimisation with different starting guesses
+    x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
+
+    x0s = [[a, b, c, d] if d < b else [a, d, c, b] for (a, b, c, d) in x0s]
+
+    best_res = None
+    for x0 in x0s:
+        try:
+            res = scipy.optimize.minimize(fit_func, x0=x0,
+                                      bounds=bounds)
+        except:
+            continue
+        if best_res is None:
+            best_res = res
+        elif res.fun < best_res.fun and res.success and res.fun != 0:
+            best_res = res
+    res1 = best_res
+
+    # Re-run with single exponential
+    bounds = [
+        (-max_trace*2, max_trace),
+        (1e-12, 1e4),
+    ]
+
+    # Repeat optimisation with different starting guesses
+    x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
+
+    best_res = None
+    for x0 in x0s:
+        try:
+            res = scipy.optimize.minimize(fit_func, x0=x0,
+                                      bounds=bounds, args=('single',))
+        except:
+            continue
+        if best_res is None:
+            best_res = res
+        elif res.fun < best_res.fun and res.success and res.fun != 0:
+            best_res = res
+    res2 = best_res
+
+    if not res2:
+        logging.warning('finding 120mv decay timeconstant failed:' + str(res))
+
+    if output_path and res:
+        fig = plt.figure(figsize=args.figsize, constrained_layout=True)
+        axs = fig.subplots(2)
+
+        for ax in axs:
+            ax.spines[['top', 'right']].set_visible(False)
+            ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
+            ax.set_xlabel(r'$t$ (ms)')
+
+        protocol_ax, fit_ax = axs
+        protocol_ax.set_title('a', fontweight='bold')
+        fit_ax.set_title('b', fontweight='bold')
+        fit_ax.plot(peak_time, peak_current, marker='x', color='red')
+
+        a, b, c, d = res1.x
+
+        if d < b:
+            b, d = d, b
+
+        e, f = res2.x
+
+        fit_ax.plot(times[indices], trace[indices], color='grey',
+                    alpha=.5)
+        fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))\
+                    + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
+                    color='red', linestyle='--')
+
+        res_string = r'$\tau_{1} = ' f"{d:.1f}" r'\mathrm{ms}'\
+            r'\; \tau_{2} = ' f"{b:.1f}" r'\mathrm{ms}$'
+
+        fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
+
+        protocol_ax.plot(times, trace)
+        protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
+
+        fig.savefig(output_path)
+        fit_ax.set_yscale('symlog')
+
+        dirname, filename = os.path.split(output_path)
+        filename = 'log10_' + filename
+        fig.savefig(os.path.join(dirname, filename))
+
+        fit_ax.cla()
+
+        dirname, filename = os.path.split(output_path)
+        filename = 'single_exp_' + filename
+        output_path = os.path.join(dirname, filename)
+
+        fit_ax.plot(times[indices], trace[indices], color='grey',
+                    alpha=.5)
+        fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
+                    color='red', linestyle='--')
+
+        res_string = r'$\tau = ' f"{f:.1f}" r'\mathrm{ms}$'
+
+        fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
+        fig.savefig(output_path)
+
+        dirname, filename = os.path.split(output_path)
+        filename = 'log10_' + filename
+        fit_ax.set_yscale('symlog')
+        fig.savefig(os.path.join(dirname, filename))
+
+        plt.close(fig)
+
+    return (d, b), f, peak_current if res else (np.nan, np.nan), np.nan, peak_current
 
 if __name__ == '__main__':
     main()

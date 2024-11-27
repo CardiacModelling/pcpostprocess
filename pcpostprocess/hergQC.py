@@ -154,6 +154,7 @@ class hERGQC(object):
                        self.qc5_win)
 
         qc5_1 = self.qc5_1(before[0, :], after[0, :], label='1')
+        qc5_2 = self.qc5_2(before[0, :], after[0, :], label='2')
 
         # Ensure thats the windows are correct by checking the voltage trace
         assert np.all(
@@ -201,7 +202,7 @@ class hERGQC(object):
 
         # Make a flat list of all QC criteria (pass/fail bool)
         QC = np.hstack([qc1, [qc2_1, qc2_2, qc3_1, qc3_2, qc3_3],
-                        qc4, [qc5, qc5_1, qc6, qc6_1, qc6_2]]).flatten()
+                        qc4, [qc5, qc5_1, qc5_2, qc6, qc6_1, qc6_2]]).flatten()
 
         passed = np.all(QC)
         return passed, QC
@@ -336,21 +337,51 @@ class hERGQC(object):
         else:
             i, f = 0, -1
 
-        if self.plot_dir and self._debug:
-            if win:
-                plt.axvspan(win[0], win[1], color='grey', alpha=.1)
-            fig = plt.figure()
-            ax = fig.subplots()
-            ax.plot(recording1, label='recording1')
-            ax.plot(recording2, label='recording2')
-            fig.savefig(os.path.join(self.plot_dir, f"qc5_{label}"))
-            plt.close(fig)
-
         rmsd0_diff = np.sqrt(np.mean(recording1[i:f] ** 2)) \
             - np.sqrt(np.mean(recording2[i:f] ** 2))
 
         rmsd0_diffc = self.rmsd0_diffc *\
             np.sqrt(np.mean(recording1[i:f] ** 2))
+
+        if self.plot_dir and self._debug:
+            if win:
+                plt.axvspan(win[0], win[1], color='grey', alpha=.1)
+            fig = plt.figure()
+            ax = fig.subplots()
+            ax.plot(recording1, label='recording1: '+str(rmsd0_diff))
+            ax.plot(recording2, label='recording2: '+str(rmsd0_diffc))
+            fig.savefig(os.path.join(self.plot_dir, f"qc5_{label}"))
+            plt.close(fig)
+
+        if (rmsd0_diff < rmsd0_diffc) or not (np.isfinite(rmsd0_diff)
+                                              and np.isfinite(rmsd0_diffc)):
+            self.logger.debug(f"rmsd0_diff: {rmsd0_diff}, rmsd0c: {rmsd0_diffc}")
+            return False
+        return True
+    
+    def qc5_2(self, recording1, recording2, win=None, label=''):
+        # Check RMSD_0 drops after E-4031 application
+        # Require RMSD_0 (after E-4031 / before) diff > 50% of RMSD_0 before
+        if win is not None:
+            i, f = win
+        else:
+            i, f = 0, -1
+
+        rmsd0_diff = np.sqrt(np.mean(recording1[i:f] ** 2)) \
+            - np.sqrt(np.mean(recording2[i:f] ** 2))
+
+        rmsd0_diffc = 0.75 *\
+            np.sqrt(np.mean(recording1[i:f] ** 2))
+
+        if self.plot_dir and self._debug:
+            if win:
+                plt.axvspan(win[0], win[1], color='grey', alpha=.1)
+            fig = plt.figure()
+            ax = fig.subplots()
+            ax.plot(recording1, label='recording1: '+str(rmsd0_diff))
+            ax.plot(recording2, label='recording2: '+str(rmsd0_diffc))
+            fig.savefig(os.path.join(self.plot_dir, f"qc5_{label}"))
+            plt.close(fig)
 
         if (rmsd0_diff < rmsd0_diffc) or not (np.isfinite(rmsd0_diff)
                                               and np.isfinite(rmsd0_diffc)):
