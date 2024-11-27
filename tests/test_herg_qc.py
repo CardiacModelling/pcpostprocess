@@ -56,8 +56,7 @@ class TestHergQC(unittest.TestCase):
         ]
 
         plot_dir = "test_output"
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
+        os.makedirs(plot_dir, exist_ok=True)
 
         self.hergqc = hERGQC(
             sampling_rate=sampling_rate,
@@ -65,17 +64,19 @@ class TestHergQC(unittest.TestCase):
             voltage=self.voltage,
         )
 
+    def clone_herg_qc(self, plot_dir):
+        hergqc = copy.deepcopy(self.hergqc)
+        plot_dir = os.path.join(hergqc.plot_dir, plot_dir)
+        os.makedirs(plot_dir, exist_ok=True)
+        hergqc.plot_dir = plot_dir
+        return hergqc
+
     def test_qc_inputs(self):
         self.assertTrue(np.all(np.isfinite(self.voltage)))
         self.assertTrue(np.all(np.isfinite(self.times)))
 
     def test_qc1(self):
-
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_qc1")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_qc1")
 
         # qc1 checks that rseal, cm, rseries are within range
         rseal_lo, rseal_hi = 1e8, 1e12
@@ -183,27 +184,25 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc2(self):
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_qc2")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_qc2")
 
         # qc2 checks that raw and subtracted SNR are above a minimum threshold
         test_matrix = [
-            (10, 8082.1, True),
-            (1, 74.0, True),
-            (0.601, 25.1, True),
-            (0.6, 25.0, False),
-            (0.5, 16.8, False),
-            (0.1, 0.5, False),
+            (10, True, 8082.1),
+            (1, True, 74.0),
+            (0.601, True, 25.1),
+            (0.6, False, 25.0),
+            (0.599, False, 24.9),
+            (0.5, False, 16.8),
+            (0.1, False, 0.5),
         ]
 
-        for i, ex_snr, ex_pass in test_matrix:
+        for i, ex_pass, ex_snr in test_matrix:
             recording = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [i] * 500)
             pass_, snr = hergqc.qc2(recording)
             self.assertAlmostEqual(
-                snr, ex_snr, 1, f"QC2: ({i}) {snr} != {ex_snr}")
+                snr, ex_snr, 1, f"QC2: ({i}) {snr} != {ex_snr}"
+            )
             self.assertEqual(pass_, ex_pass, f"QC2: ({i}) {pass_} != {ex_pass}")
 
         # Test on data
@@ -237,56 +236,115 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc3(self):
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_qc3")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_qc3")
 
         # qc3 checks that rmsd of two sweeps are similar
 
         # Test with same noise, different signal
         test_matrix = [
-            (-10, False),
-            (-9, False),
-            (-8, False),  # rmsdc - rmsd = -0.6761186497920804
-            (-7, True),  # rmsdc - rmsd = 0.25355095037585507
-            (0, True),  # rmsdc - rmsd = 6.761238263598085
-            (8, True),  # rmsdc - rmsd = 0.6761272774054383
-            (9, False),  # rmsdc - rmsd = -0.08451158778363332
-            (10, False),
+            (-10, False, -2.5),
+            (-9, False, -1.6),
+            (-8, False, -0.7),
+            (-7, True, 0.3),
+            (0, True, 6.8),
+            (8, True, 0.68),
+            (9, False, -0.08),
+            (10, False, -0.8),
         ]
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
-        for i, expected in test_matrix:
+        for i, ex_pass, ex_rmsd_diff in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [40 + i] * 500)
-            result = hergqc.qc3(recording1, recording2)
-            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+                [0, 0.1] * (NOISE_LEN // 2) + [40 + i] * 500
+            )
+            pass_, rmsd_diff = hergqc.qc3(recording1, recording2)
+            self.assertAlmostEqual(
+                rmsd_diff,
+                ex_rmsd_diff,
+                1,
+                f"QC3: ({i}) {rmsd_diff} != {ex_rmsd_diff}",
+            )
+            self.assertEqual(pass_, ex_pass, f"QC3: ({i}) {pass_} != {ex_pass}")
 
         # Test with same signal, different noise
-        # TODO: Find failing example
         test_matrix = [
-            (10, True),
-            (100, True),
-            (1000, True),
+            (-100, True, 11.3),
+            (-10, True, 6.3),
+            (-1, True, 6.7),
+            (0, True, 6.7),
+            (1, True, 6.8),
+            (10, True, 6.4),
+            (100, True, 11.4),
         ]
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
-        for i, expected in test_matrix:
+        for i, ex_pass, ex_rmsd_diff in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1 * i] * (NOISE_LEN // 2) + [40] * 500)
-            result = hergqc.qc3(recording1, recording2)
-            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+                [0, 0.1 * i] * (NOISE_LEN // 2) + [40] * 500
+            )
+            pass_, rmsd_diff = hergqc.qc3(recording1, recording2)
+            self.assertAlmostEqual(
+                rmsd_diff,
+                ex_rmsd_diff,
+                1,
+                f"QC3: ({i}) {rmsd_diff} != {ex_rmsd_diff}",
+            )
+            self.assertEqual(pass_, ex_pass, f"QC3: ({i}) {pass_} != {ex_pass}")
 
-        # TODO: Test on select data
+        # Test on data
+        failed_wells_raw = [
+            'A21', 'B05', 'B10', 'C19', 'E09', 'E19', 'F22', 'F23', 'I06', 'K23',
+            'L09', 'M05', 'M06', 'M10', 'N12', 'N17', 'O13', 'O15', 'P11'
+        ]
+
+        failed_wells_E4031 = ['A05', 'A07', 'C19', 'E19', 'J16']
+
+        failed_wells_subtracted = [
+            'A05', 'A20', 'A21', 'A24', 'B05', 'B07', 'B10', 'B15', 'B21', 'B23',
+            'C04', 'C12', 'C14', 'C17', 'C18', 'C19', 'C20', 'D21', 'E04', 'E09',
+            'E10', 'E15', 'E16', 'E17', 'E18', 'E19', 'E23', 'F04', 'F06', 'F07',
+            'F12', 'F20', 'F21', 'G08', 'G09', 'G10', 'G12', 'G13', 'G16', 'G20',
+            'G23', 'G24', 'H03', 'H07', 'H15', 'H19', 'H21', 'H24', 'I04', 'I05',
+            'I12', 'I17', 'I21', 'J07', 'J16', 'J19', 'K02', 'K06', 'K22', 'K23',
+            'L01', 'L05', 'L08', 'L09', 'L10', 'L11', 'L13', 'L24', 'M01', 'M02',
+            'M04', 'M05', 'M06', 'M10', 'M12', 'M21', 'N04', 'N06', 'N08', 'N11',
+            'N12', 'N17', 'N20', 'N24', 'O01', 'O03', 'O07', 'O10', 'O13', 'O15',
+            'O19', 'O22', 'P01', 'P03', 'P06', 'P08', 'P12', 'P15', 'P17', 'P18'
+        ]
+
+        for well in self.all_wells:
+            before = np.array(self.trace_sweeps_before[well])
+            after = np.array(self.trace_sweeps_after[well])
+
+            pass_raw, rmsd_diff_raw = hergqc.qc3(before[0, :], before[1, :])
+            ex_pass_raw = well not in failed_wells_raw
+            self.assertEqual(
+                pass_raw,
+                ex_pass_raw,
+                f"QC3: {well} (raw) {rmsd_diff_raw}",
+            )
+
+            pass_E4031, rmsd_diff_E4031 = hergqc.qc3(after[0, :], after[1, :])
+            ex_pass_E4031 = well not in failed_wells_E4031
+            self.assertEqual(
+                pass_E4031,
+                ex_pass_E4031,
+                f"QC3: {well} (E4031) {rmsd_diff_E4031}",
+            )
+
+            pass_subtracted, rmsd_diff_subtracted = hergqc.qc3(
+                before[0, :] - after[0, :],
+                before[1, :] - after[1, :],
+            )
+            ex_pass_subtracted = well not in failed_wells_subtracted
+            self.assertEqual(
+                pass_subtracted,
+                ex_pass_subtracted,
+                f"QC3: {well} (subtracted) {rmsd_diff_subtracted}",
+            )
 
     def test_qc4(self):
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_qc4")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_qc4")
 
         # qc4 checks that rseal, cm, rseries are similar before/after E-4031 change
         r_lo, r_hi = 1e6, 3e7
@@ -373,11 +431,7 @@ class TestHergQC(unittest.TestCase):
         # TODO: Test on select data
 
     def test_qc5(self):
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_qc5")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_qc5")
 
         # qc5 checks that the maximum current during the second half of the
         # staircase changes by at least 75% of the raw trace after E-4031 addition
@@ -401,11 +455,7 @@ class TestHergQC(unittest.TestCase):
         # TODO: Test on select data
 
     def test_qc5_1(self):
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_qc5_1")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_qc5_1")
 
         # qc5_1 checks that the RMSD to zero of staircase protocol changes
         # by at least 50% of the raw trace after E-4031 addition.
@@ -430,11 +480,7 @@ class TestHergQC(unittest.TestCase):
         # TODO: Test on select data
 
     def test_qc6(self):
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_qc6")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_qc6")
 
         # qc6 checks that the first step up to +40 mV, before the staircase, in
         # the subtracted trace is bigger than -2 x estimated noise level.
@@ -458,12 +504,7 @@ class TestHergQC(unittest.TestCase):
 
     def test_run_qc(self):
         # Spot check a few wells; could check all, but it's time consuming.
-
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, "test_run_qc")
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-        hergqc.plot_dir = plot_dir
+        hergqc = self.clone_herg_qc("test_run_qc")
 
         test_matrix = [
             ("A01", True),
