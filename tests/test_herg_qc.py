@@ -111,10 +111,10 @@ class TestHergQC(unittest.TestCase):
             [(0, 0, 0), False],
         ]
 
-        for (rseal, cm, rseries), expected in test_matrix:
+        for (rseal, cm, rseries), ex_pass in test_matrix:
             self.assertEqual(
                 all_passed(hergqc.qc1(rseal, cm, rseries)),
-                expected,
+                ex_pass,
                 f"QC1: {rseal}, {cm}, {rseries}",
             )
 
@@ -353,16 +353,16 @@ class TestHergQC(unittest.TestCase):
         ]
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
-        for i, ex_pass, ex_rmsd_diff in test_matrix:
+        for i, ex_pass, ex_d_rmsd in test_matrix:
             recording2 = np.asarray(
                 [0, 0.1] * (NOISE_LEN // 2) + [40 + i] * 500
             )
-            pass_, rmsd_diff = hergqc.qc3(recording1, recording2)
+            pass_, d_rmsd = hergqc.qc3(recording1, recording2)
             self.assertAlmostEqual(
-                rmsd_diff,
-                ex_rmsd_diff,
+                d_rmsd,
+                ex_d_rmsd,
                 1,
-                f"QC3: ({i}) {rmsd_diff} != {ex_rmsd_diff}",
+                f"QC3: ({i}) {d_rmsd} != {ex_d_rmsd}",
             )
             self.assertEqual(pass_, ex_pass, f"QC3: ({i}) {pass_} != {ex_pass}")
 
@@ -378,16 +378,16 @@ class TestHergQC(unittest.TestCase):
         ]
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
-        for i, ex_pass, ex_rmsd_diff in test_matrix:
+        for i, ex_pass, ex_d_rmsd in test_matrix:
             recording2 = np.asarray(
                 [0, 0.1 * i] * (NOISE_LEN // 2) + [40] * 500
             )
-            pass_, rmsd_diff = hergqc.qc3(recording1, recording2)
+            pass_, d_rmsd = hergqc.qc3(recording1, recording2)
             self.assertAlmostEqual(
-                rmsd_diff,
-                ex_rmsd_diff,
+                d_rmsd,
+                ex_d_rmsd,
                 1,
-                f"QC3: ({i}) {rmsd_diff} != {ex_rmsd_diff}",
+                f"QC3: ({i}) {d_rmsd} != {ex_d_rmsd}",
             )
             self.assertEqual(pass_, ex_pass, f"QC3: ({i}) {pass_} != {ex_pass}")
 
@@ -416,23 +416,23 @@ class TestHergQC(unittest.TestCase):
             before = np.array(self.trace_sweeps_before[well])
             after = np.array(self.trace_sweeps_after[well])
 
-            pass_raw, rmsd_diff_raw = hergqc.qc3(before[0, :], before[1, :])
+            pass_raw, d_rmsd_raw = hergqc.qc3(before[0, :], before[1, :])
             ex_pass_raw = well not in failed_wells_raw
             self.assertEqual(
                 pass_raw,
                 ex_pass_raw,
-                f"QC3: {well} (raw) {rmsd_diff_raw}",
+                f"QC3: {well} (raw) {d_rmsd_raw}",
             )
 
-            pass_E4031, rmsd_diff_E4031 = hergqc.qc3(after[0, :], after[1, :])
+            pass_E4031, d_rmsd_E4031 = hergqc.qc3(after[0, :], after[1, :])
             ex_pass_E4031 = well not in failed_wells_E4031
             self.assertEqual(
                 pass_E4031,
                 ex_pass_E4031,
-                f"QC3: {well} (E4031) {rmsd_diff_E4031}",
+                f"QC3: {well} (E4031) {d_rmsd_E4031}",
             )
 
-            pass_subtracted, rmsd_diff_subtracted = hergqc.qc3(
+            pass_subtracted, d_rmsd_subtracted = hergqc.qc3(
                 before[0, :] - after[0, :],
                 before[1, :] - after[1, :],
             )
@@ -440,7 +440,7 @@ class TestHergQC(unittest.TestCase):
             self.assertEqual(
                 pass_subtracted,
                 ex_pass_subtracted,
-                f"QC3: {well} (subtracted) {rmsd_diff_subtracted}",
+                f"QC3: {well} (subtracted) {d_rmsd_subtracted}",
             )
 
     def test_qc4(self):
@@ -461,18 +461,18 @@ class TestHergQC(unittest.TestCase):
             (5.0, False),
         ]
 
-        for i, expected in test_matrix:
+        for i, ex_pass in test_matrix:
             rseals = [r_lo, i * r_lo]
             self.assertEqual(
                 all_passed(hergqc.qc4(rseals, cms, rseriess)),
-                expected,
+                ex_pass,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
             rseals = [r_hi, i * r_hi]
             self.assertEqual(
                 all_passed(hergqc.qc4(rseals, cms, rseriess)),
-                expected,
+                ex_pass,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
@@ -487,18 +487,18 @@ class TestHergQC(unittest.TestCase):
             (5.0, False),
         ]
 
-        for i, expected in test_matrix:
+        for i, ex_pass in test_matrix:
             cms = [c_lo, i * c_lo]
             self.assertEqual(
                 all_passed(hergqc.qc4(rseals, cms, rseriess)),
-                expected,
+                ex_pass,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
             cms = [c_hi, i * c_hi]
             self.assertEqual(
                 all_passed(hergqc.qc4(rseals, cms, rseriess)),
-                expected,
+                ex_pass,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
@@ -513,18 +513,18 @@ class TestHergQC(unittest.TestCase):
             (5.0, False),
         ]
 
-        for i, expected in test_matrix:
+        for i, ex_pass in test_matrix:
             rseriess = [r_lo, i * r_lo]
             self.assertEqual(
                 all_passed(hergqc.qc4(rseals, cms, rseriess)),
-                expected,
+                ex_pass,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
             rseriess = [r_hi, i * r_hi]
             self.assertEqual(
                 all_passed(hergqc.qc4(rseals, cms, rseriess)),
-                expected,
+                ex_pass,
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
@@ -609,23 +609,71 @@ class TestHergQC(unittest.TestCase):
         # qc5 checks that the maximum current during the second half of the
         # staircase changes by at least 75% of the raw trace after E-4031 addition
         test_matrix = [
-            (-1.0, True),
-            (0.1, True),
-            (0.2, True),  # max_diffc - max_diff = -0.5
-            (0.25, True),  # max_diffc - max_diff = 0.0
-            (0.3, False),  # max_diffc - max_diff = 0.5
-            (0.5, False),
-            (1.0, False),
+            (-1.0, True, -12.5),
+            (0.1, True, -1.5),
+            (0.2, True, -0.5),
+            (0.24, True, -0.1),
+            (0.25, True, 0),
+            (0.26, False, 0.1),
+            (0.3, False, 0.5),
+            (0.5, False, 2.5),
+            (1.0, False, 7.5),
         ]
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
-        for i, expected in test_matrix:
+        for i, ex_pass, ex_d_max_diff in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
-            result = hergqc.qc5(recording1, recording2)
-            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500
+            )
+            pass_, d_max_diff = hergqc.qc5(recording1, recording2)
+            self.assertAlmostEqual(
+                d_max_diff,
+                ex_d_max_diff,
+                1,
+                f"QC5: ({i}) {d_max_diff} != {ex_d_max_diff}",
+            )
+            self.assertEqual(pass_, ex_pass, f"QC5: ({i}) {pass_} != {ex_pass}")
 
-        # TODO: Test on select data
+        # Test on data
+        failed_wells = [
+            'A10', 'A12', 'A13', 'A15', 'A19', 'A20', 'A24', 'B05', 'B07', 'B09',
+            'B11', 'B12', 'B13', 'B15', 'B18', 'B19', 'B21', 'B23', 'C02', 'C04',
+            'C05', 'C07', 'C08', 'C09', 'C11', 'C12', 'C14', 'C17', 'C18', 'C19',
+            'C20', 'C21', 'C22', 'C24', 'D02', 'D05', 'D09', 'D10', 'D11', 'D12',
+            'D14', 'D17', 'D18', 'D19', 'D21', 'E04', 'E10', 'E11', 'E13', 'E14',
+            'E15', 'E16', 'E17', 'E18', 'E19', 'E22', 'E23', 'F01', 'F03', 'F04',
+            'F06', 'F07', 'F09', 'F10', 'F12', 'F13', 'F14', 'F15', 'F16', 'F18',
+            'F19', 'F20', 'F21', 'F22', 'F24', 'G03', 'G06', 'G08', 'G09', 'G12',
+            'G13', 'G14', 'G15', 'G16', 'G18', 'G19', 'G20', 'G23', 'G24', 'H01',
+            'H02', 'H03', 'H04', 'H06', 'H07', 'H08', 'H10', 'H11', 'H14', 'H15',
+            'H16', 'H18', 'H19', 'H21', 'H23', 'H24', 'I01', 'I04', 'I05', 'I06',
+            'I07', 'I08', 'I10', 'I11', 'I12', 'I13', 'I14', 'I16', 'I17', 'I18',
+            'I21', 'J07', 'J10', 'J12', 'J15', 'J16', 'J17', 'J18', 'J19', 'J20',
+            'J21', 'J23', 'J24', 'K02', 'K03', 'K06', 'K07', 'K11', 'K12', 'K13',
+            'K14', 'K16', 'K18', 'K20', 'K22', 'K23', 'K24', 'L01', 'L02', 'L03',
+            'L04', 'L05', 'L07', 'L08', 'L10', 'L11', 'L12', 'L13', 'L16', 'L17',
+            'L18', 'L24', 'M01', 'M02', 'M03', 'M04', 'M06', 'M08', 'M09', 'M11',
+            'M12', 'M14', 'M15', 'M16', 'M17', 'M18', 'M19', 'M21', 'N04', 'N06',
+            'N07', 'N08', 'N11', 'N13', 'N14', 'N16', 'N18', 'N20', 'N21', 'N22',
+            'N24', 'O01', 'O02', 'O03', 'O07', 'O08', 'O10', 'O12', 'O15', 'O16',
+            'O17', 'O18', 'O19', 'O20', 'O21', 'O22', 'O24', 'P01', 'P03', 'P05',
+            'P06', 'P07', 'P08', 'P09', 'P10', 'P12', 'P13', 'P14', 'P15', 'P17',
+            'P18', 'P20', 'P21', 'P22', 'P24'
+        ]
+
+        for well in self.all_wells:
+            before = np.array(self.trace_sweeps_before[well])
+            after = np.array(self.trace_sweeps_after[well])
+
+            pass_, d_max_diff = hergqc.qc5(
+                before[0, :], after[0, :], hergqc.qc5_win
+            )
+            ex_pass = well not in failed_wells
+            self.assertEqual(
+                pass_,
+                ex_pass,
+                f"QC5: {well} {d_max_diff}",
+            )
 
     def test_qc5_1(self):
         hergqc = self.clone_herg_qc("test_qc5_1")
@@ -644,11 +692,11 @@ class TestHergQC(unittest.TestCase):
         ]
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
-        for i, expected in test_matrix:
+        for i, ex_pass in test_matrix:
             recording2 = np.asarray(
                 [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
             result = hergqc.qc5_1(recording1, recording2)
-            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+            self.assertEqual(result[0], ex_pass, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 
@@ -667,11 +715,11 @@ class TestHergQC(unittest.TestCase):
             (10, True),  # valc - val = -1.1
             (100, True),  # valc - val = -10.1
         ]
-        for i, expected in test_matrix:
+        for i, ex_pass in test_matrix:
             recording = np.asarray(
                 [0, 0.1] * (NOISE_LEN // 2) + [0.1 * i] * 500)
             result = hergqc.qc6(recording, win=[NOISE_LEN, -1])
-            self.assertEqual(result[0], expected, f"({i}: {result[1]})")
+            self.assertEqual(result[0], ex_pass, f"({i}: {result[1]})")
 
         # TODO: Test on select data
 
@@ -688,7 +736,7 @@ class TestHergQC(unittest.TestCase):
             ("D01", False),
         ]
 
-        for well, expected in test_matrix:
+        for well, ex_pass in test_matrix:
             with self.subTest(well):
                 # Take values from the first sweep only
                 before = np.array(self.trace_sweeps_before[well])
@@ -714,4 +762,4 @@ class TestHergQC(unittest.TestCase):
                     if not QC.qc_passed(label):
                         trace += f"{well} {label}: {result}\n"
 
-                self.assertEqual(QC.all_passed(), expected, trace)
+                self.assertEqual(QC.all_passed(), ex_pass, trace)
