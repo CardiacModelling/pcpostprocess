@@ -681,24 +681,75 @@ class TestHergQC(unittest.TestCase):
         # qc5_1 checks that the RMSD to zero of staircase protocol changes
         # by at least 50% of the raw trace after E-4031 addition.
         test_matrix = [
-            (-1.0, False),  # rmsd0_diffc - rmsd0_diff = 4.2
-            (-0.5, False),  # rmsd0_diffc - rmsd0_diff = 0.0001
-            (-0.4, True),  # rmsd0_diffc - rmsd0_diff = -0.8
-            (-0.1, True),  # rmsd0_diffc - rmsd0_diff = -3.4
-            (0.1, True),  # rmsd0_diffc - rmsd0_diff = -3.4
-            (0.4, True),  # rmsd0_diffc - rmsd0_diff = -0.8
-            (0.5, False),  # rmsd0_diffc - rmsd0_diff = 0.0001
-            (1.0, False),  # rmsd0_diffc - rmsd0_diff = 4.2
+            (-1.0, False, 4.22),
+            (-0.5, False, 0),
+            (-0.412, True, -0.74),
+            (-0.4, True, -0.84),
+            (-0.1, True, -3.38),
+            (0.1, True, -3.38),
+            (0.4, True, -0.84),
+            (0.412, True, -0.74),
+            (0.5, False, 0),
+            (1.0, False, 4.22),
         ]
 
         recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
-        for i, ex_pass in test_matrix:
+        for i, ex_pass, ex_d_max_diff in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500)
-            result = hergqc.qc5_1(recording1, recording2)
-            self.assertEqual(result[0], ex_pass, f"({i}: {result[1]})")
+                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500
+            )
+            pass_, d_max_diff = hergqc.qc5_1(recording1, recording2)
+            self.assertAlmostEqual(
+                d_max_diff,
+                ex_d_max_diff,
+                2,
+                f"QC5_1: ({i}) {d_max_diff} != {ex_d_max_diff}",
+            )
+            self.assertEqual(
+                pass_, ex_pass, f"QC5_1: ({i}) {pass_} != {ex_pass}"
+            )
 
-        # TODO: Test on select data
+        # Test on data
+        failed_wells = [
+            'A05', 'A10', 'A12', 'A13', 'A15', 'A19', 'A20', 'A24', 'B02', 'B05',
+            'B07', 'B09', 'B10', 'B12', 'B13', 'B14', 'B15', 'B18', 'B19', 'B21',
+            'B23', 'C02', 'C04', 'C05', 'C07', 'C08', 'C09', 'C11', 'C12', 'C14',
+            'C17', 'C18', 'C20', 'C21', 'C22', 'C24', 'D02', 'D04', 'D05', 'D09',
+            'D10', 'D11', 'D12', 'D13', 'D16', 'D17', 'D18', 'D19', 'D21', 'E04',
+            'E09', 'E10', 'E11', 'E13', 'E14', 'E15', 'E16', 'E17', 'E18', 'E19',
+            'E21', 'E22', 'E23', 'F01', 'F02', 'F03', 'F04', 'F05', 'F06', 'F07',
+            'F09', 'F10', 'F11', 'F12', 'F13', 'F14', 'F15', 'F16', 'F18', 'F19',
+            'F20', 'F21', 'F22', 'F24', 'G03', 'G06', 'G08', 'G09', 'G10', 'G12',
+            'G13', 'G14', 'G15', 'G16', 'G18', 'G19', 'G20', 'G23', 'G24', 'H01',
+            'H02', 'H03', 'H04', 'H06', 'H07', 'H08', 'H09', 'H10', 'H11', 'H13',
+            'H14', 'H15', 'H16', 'H17', 'H18', 'H19', 'H21', 'H23', 'H24', 'I01',
+            'I03', 'I04', 'I05', 'I06', 'I07', 'I08', 'I10', 'I12', 'I13', 'I14',
+            'I15', 'I16', 'I17', 'I18', 'I19', 'I20', 'I21', 'J06', 'J07', 'J08',
+            'J10', 'J12', 'J15', 'J16', 'J17', 'J18', 'J19', 'J20', 'J21', 'J23',
+            'J24', 'K01', 'K02', 'K03', 'K05', 'K06', 'K07', 'K10', 'K11', 'K13',
+            'K14', 'K16', 'K18', 'K20', 'K22', 'K23', 'K24', 'L01', 'L02', 'L03',
+            'L04', 'L05', 'L06', 'L07', 'L08', 'L10', 'L11', 'L12', 'L13', 'L16',
+            'L17', 'L18', 'L20', 'L24', 'M01', 'M02', 'M03', 'M04', 'M06', 'M07',
+            'M08', 'M09', 'M11', 'M12', 'M14', 'M16', 'M17', 'M18', 'M19', 'M21',
+            'N01', 'N03', 'N04', 'N06', 'N07', 'N08', 'N11', 'N13', 'N14', 'N16',
+            'N18', 'N20', 'N21', 'N22', 'N23', 'N24', 'O01', 'O02', 'O03', 'O04',
+            'O05', 'O06', 'O07', 'O08', 'O10', 'O11', 'O12', 'O15', 'O16', 'O17',
+            'O18', 'O19', 'O20', 'O21', 'O22', 'O24', 'P01', 'P03', 'P05', 'P06',
+            'P07', 'P08', 'P09', 'P10', 'P12', 'P13', 'P14', 'P15', 'P16', 'P17',
+            'P18', 'P20', 'P21', 'P22'
+        ]
+
+        for well in self.all_wells:
+            before = np.array(self.trace_sweeps_before[well])
+            after = np.array(self.trace_sweeps_after[well])
+
+            pass_, d_rmsd = hergqc.qc5_1(before[0, :], after[0, :], label='1')
+            ex_pass = well not in failed_wells
+            self.assertEqual(
+                pass_,
+                ex_pass,
+                f"QC5_1: {well} {d_rmsd}",
+            )
 
     def test_qc6(self):
         hergqc = self.clone_herg_qc("test_qc6")
