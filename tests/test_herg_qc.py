@@ -428,7 +428,79 @@ class TestHergQC(unittest.TestCase):
                 f"({i}: {rseals}, {cms}, {rseriess})",
             )
 
-        # TODO: Test on select data
+        # Test on data
+        failed_wells_rseals = [
+            'A04', 'A05', 'A07', 'A16', 'A21', 'A23', 'B02', 'B04', 'B11', 'B16',
+            'C10', 'C19', 'C22', 'C23', 'D03', 'D23', 'E01', 'E02', 'E03', 'E07',
+            'F23', 'H01', 'H09', 'H17', 'I06', 'I11', 'J11', 'K01', 'K09', 'K12',
+            'K14', 'K23', 'M05', 'M10', 'N02', 'N09', 'N17', 'O08', 'O14', 'P16',
+            'P24'
+        ]
+
+        failed_wells_cms = [
+            'A12', 'A13', 'A16', 'A19', 'A20', 'B07', 'B11', 'B13', 'B15', 'B19',
+            'B21', 'B23', 'C02', 'C04', 'C07', 'C11', 'C12', 'C14', 'C18', 'D03',
+            'D10', 'D14', 'E03', 'E04', 'E07', 'E09', 'E10', 'E15', 'E16', 'E17',
+            'E19', 'E22', 'E23', 'F01', 'F03', 'F04', 'F07', 'F12', 'F14', 'F15',
+            'F18', 'F19', 'F20', 'F21', 'F24', 'G06', 'G09', 'G12', 'G13', 'G16',
+            'G20', 'G23', 'G24', 'H01', 'H03', 'H06', 'H07', 'H09', 'H10', 'H15',
+            'H19', 'H21', 'H23', 'H24', 'I04', 'I05', 'I07', 'I10', 'I12', 'I16',
+            'I17', 'I21', 'J07', 'J16', 'J19', 'J21', 'K02', 'K16', 'K22', 'K23',
+            'L01', 'L02', 'L05', 'L08', 'L10', 'L11', 'L13', 'L16', 'L17', 'L18',
+            'M01', 'M04', 'M12', 'M15', 'M19', 'M21', 'N06', 'N08', 'N11', 'N14',
+            'N18', 'N19', 'N21', 'N24', 'O01', 'O03', 'O07', 'O10', 'O15', 'O17',
+            'O19', 'O22', 'O24', 'P01', 'P06', 'P07', 'P08', 'P12', 'P13', 'P14',
+            'P15', 'P16', 'P17', 'P18', 'P21', 'P22'
+        ]
+
+        failed_wells_rseriess = [
+            'A12', 'A13', 'A16', 'A19', 'A20', 'B07', 'B11', 'B13', 'B15', 'B19',
+            'B21', 'B23', 'C02', 'C04', 'C07', 'C11', 'C12', 'C14', 'C18', 'D03',
+            'D10', 'D14', 'E03', 'E04', 'E07', 'E09', 'E10', 'E15', 'E16', 'E17',
+            'E19', 'E22', 'E23', 'F01', 'F03', 'F04', 'F07', 'F12', 'F14', 'F15',
+            'F18', 'F19', 'F20', 'F21', 'F24', 'G06', 'G09', 'G12', 'G13', 'G16',
+            'G20', 'G23', 'G24', 'H01', 'H03', 'H06', 'H07', 'H09', 'H10', 'H15',
+            'H19', 'H21', 'H23', 'H24', 'I04', 'I05', 'I07', 'I10', 'I12', 'I16',
+            'I17', 'I21', 'J07', 'J16', 'J19', 'J21', 'K02', 'K16', 'K22', 'K23',
+            'L01', 'L02', 'L05', 'L08', 'L10', 'L11', 'L13', 'L16', 'L17', 'L18',
+            'M01', 'M04', 'M12', 'M15', 'M19', 'M21', 'N06', 'N08', 'N11', 'N14',
+            'N18', 'N19', 'N21', 'N24', 'O01', 'O03', 'O07', 'O10', 'O15', 'O17',
+            'O19', 'O22', 'O24', 'P01', 'P06', 'P07', 'P08', 'P12', 'P13', 'P14',
+            'P15', 'P16', 'P17', 'P18', 'P21', 'P22'
+        ]
+
+        for well in self.all_wells:
+            qc_vals_before = np.array(self.qc_vals_before[well])[0, :]
+            qc_vals_after = np.array(self.qc_vals_after[well])[0, :]
+
+            rseals = [qc_vals_before[0], qc_vals_after[0]]
+            cms = [qc_vals_before[1], qc_vals_after[1]]
+            rseriess = [qc_vals_before[2], qc_vals_after[2]]
+            result = hergqc.qc4(rseals, cms, rseriess)
+
+            pass_rseals, d_rseal = result[0]
+            ex_pass_rseals = well not in failed_wells_rseals
+            self.assertEqual(
+                pass_rseals,
+                ex_pass_rseals,
+                f"QC4: {well} (rseals) {d_rseal} {rseals}",
+            )
+
+            pass_cms, d_cm = result[1]
+            ex_pass_cms = well not in failed_wells_cms
+            self.assertEqual(
+                pass_cms,
+                ex_pass_cms,
+                f"QC4: {well} (cms) {d_cm} {cms}",
+            )
+
+            pass_rseriess, d_rseries = result[1]
+            ex_pass_rseriess = well not in failed_wells_rseriess
+            self.assertEqual(
+                pass_rseriess,
+                ex_pass_rseriess,
+                f"QC4: {well} (rseriess) {d_rseries} {rseriess}",
+            )
 
     def test_qc5(self):
         hergqc = self.clone_herg_qc("test_qc5")
