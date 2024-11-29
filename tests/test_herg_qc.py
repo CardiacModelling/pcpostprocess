@@ -63,6 +63,7 @@ class TestHergQC(unittest.TestCase):
             plot_dir=plot_dir,
             voltage=self.voltage,
         )
+        self.hergqc._debug = False  # Turn this on to output plots
 
     def clone_herg_qc(self, plot_dir):
         hergqc = copy.deepcopy(self.hergqc)
@@ -72,8 +73,19 @@ class TestHergQC(unittest.TestCase):
         return hergqc
 
     def test_qc_inputs(self):
-        self.assertTrue(np.all(np.isfinite(self.voltage)))
-        self.assertTrue(np.all(np.isfinite(self.times)))
+        times = self.times
+        voltage = self.hergqc.voltage
+        qc6_win = self.hergqc.qc6_win
+        qc6_1_win = self.hergqc.qc6_1_win
+        qc6_2_win = self.hergqc.qc6_2_win
+
+        self.assertTrue(np.all(np.isfinite(times)))
+        self.assertTrue(np.all(np.isfinite(voltage)))
+
+        # Ensure thats the windows are correct by checking the voltage trace
+        assert np.all(np.abs(voltage[qc6_win[0]: qc6_win[1]] - 40.0)) < 1e-8
+        assert np.all(np.abs(voltage[qc6_1_win[0]: qc6_1_win[1]] - 40.0)) < 1e-8
+        assert np.all(np.abs(voltage[qc6_2_win[0]: qc6_2_win[1]] - 40.0)) < 1e-8
 
     def test_qc1(self):
         hergqc = self.clone_herg_qc("test_qc1")
@@ -757,60 +769,184 @@ class TestHergQC(unittest.TestCase):
         # qc6 checks that the first step up to +40 mV, before the staircase, in
         # the subtracted trace is bigger than -2 x estimated noise level.
         test_matrix = [
-            (-100, False),  # valc - val = 9.9
-            (-10, False),  # valc - val = 0.9
-            (-2, False),  # valc - val = 0.1
-            (-1, True),  # valc - val = 0
-            (1, True),  # valc - val = -0.2
-            (2, True),  # valc - val = -0.3
-            (10, True),  # valc - val = -1.1
-            (100, True),  # valc - val = -10.1
+            (-100, False, 9.9),
+            (-10, False, 0.9),
+            (-1, True, 0),
+            (0, True, -0.1),
+            (1, True, -0.2),
+            (10, True, -1.1),
+            (100, True, -10.1),
         ]
-        for i, ex_pass in test_matrix:
+
+        for i, ex_pass, ex_d_val in test_matrix:
             recording = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [0.1 * i] * 500)
-            result = hergqc.qc6(recording, win=[NOISE_LEN, -1])
-            self.assertEqual(result[0], ex_pass, f"({i}: {result[1]})")
+                [0, 0.1] * (NOISE_LEN // 2) + [0.1 * i] * 500
+            )
+            pass_, d_val = hergqc.qc6(recording, win=[NOISE_LEN, -1])
+            self.assertAlmostEqual(
+                d_val,
+                ex_d_val,
+                1,
+                f"QC6: ({i}) {d_val} != {ex_d_val}",
+            )
+            self.assertEqual(pass_, ex_pass, f"QC6: ({i}) {pass_} != {ex_pass}")
 
-        # TODO: Test on select data
-
-    def test_run_qc(self):
-        # Spot check a few wells; could check all, but it's time consuming.
-        hergqc = self.clone_herg_qc("test_run_qc")
-
-        test_matrix = [
-            ("A01", True),
-            ("A02", True),
-            ("A03", True),
-            ("A04", False),
-            ("A05", False),
-            ("D01", False),
+        # Test on data
+        failed_wells_0 = [
+            'A05', 'A07', 'A11', 'A12', 'A13', 'A20', 'A22', 'A24', 'B02', 'B05',
+            'B07', 'B09', 'B10', 'B15', 'B23', 'C02', 'C04', 'C14', 'C18', 'C22',
+            'D01', 'D12', 'E04', 'E09', 'E10', 'E15', 'E16', 'E17', 'E19', 'E21',
+            'F02', 'F03', 'F07', 'F10', 'F18', 'F20', 'F21', 'F22', 'G06', 'G08',
+            'G10', 'G15', 'G16', 'G20', 'G23', 'H01', 'H09', 'H11', 'H15', 'H17',
+            'H19', 'H21', 'H23', 'H24', 'I04', 'I06', 'I10', 'I12', 'I15', 'I21',
+            'J07', 'J09', 'J16', 'J21', 'K01', 'K02', 'K03', 'K09', 'K13', 'K14',
+            'K18', 'K22', 'K23', 'L01', 'L02', 'L05', 'L07', 'L08', 'L10', 'L11',
+            'L13', 'L17', 'L18', 'L21', 'L23', 'L24', 'M01', 'M04', 'M06', 'M07',
+            'M11', 'M12', 'M17', 'N06', 'N11', 'N14', 'N20', 'N24', 'O01', 'O07',
+            'O08', 'O16', 'O17', 'O19', 'O22', 'O24', 'P01', 'P06', 'P08', 'P12',
+            'P14', 'P15', 'P17', 'P18', 'P21'
         ]
 
-        for well, ex_pass in test_matrix:
-            with self.subTest(well):
-                # Take values from the first sweep only
-                before = np.array(self.trace_sweeps_before[well])
-                after = np.array(self.trace_sweeps_after[well])
+        failed_wells_1 = [
+            'A05', 'A07', 'A11', 'A12', 'A13', 'A20', 'A22', 'A24', 'B02', 'B05',
+            'B07', 'B10', 'B15', 'C02', 'C04', 'C14', 'C18', 'C22', 'D01', 'D12',
+            'E04', 'E09', 'E10', 'E14', 'E15', 'E16', 'E19', 'E21', 'F02', 'F03',
+            'F07', 'F10', 'F12', 'F18', 'F20', 'F21', 'F22', 'G06', 'G08', 'G09',
+            'G10', 'G15', 'G16', 'G20', 'G23', 'H01', 'H09', 'H11', 'H15', 'H17',
+            'H19', 'H21', 'H23', 'H24', 'I04', 'I06', 'I10', 'I12', 'I15', 'I21',
+            'J07', 'J16', 'J21', 'K01', 'K02', 'K09', 'K13', 'K14', 'K23', 'L01',
+            'L02', 'L05', 'L07', 'L08', 'L10', 'L11', 'L13', 'L17', 'L18', 'L21',
+            'L24', 'M01', 'M04', 'M06', 'M07', 'M11', 'M12', 'M17', 'N06', 'N11',
+            'N14', 'N20', 'N24', 'O01', 'O06', 'O07', 'O08', 'O17', 'O19', 'O22',
+            'O24', 'P01', 'P06', 'P08', 'P12', 'P14', 'P15', 'P17', 'P18', 'P21'
+        ]
 
-                qc_vals_before = np.array(self.qc_vals_before[well])[0, :]
-                qc_vals_after = np.array(self.qc_vals_after[well])[0, :]
+        failed_wells_2 = [
+            'A05', 'A07', 'A10', 'A11', 'A12', 'A13', 'A20', 'A22', 'A24', 'B02',
+            'B05', 'B07', 'B10', 'B15', 'C02', 'C04', 'C14', 'C22', 'D01', 'D12',
+            'E04', 'E09', 'E10', 'E14', 'E15', 'E16', 'E21', 'F02', 'F03', 'F07',
+            'F10', 'F12', 'F18', 'F20', 'F21', 'F22', 'G06', 'G08', 'G09', 'G10',
+            'G15', 'G16', 'G20', 'G23', 'H01', 'H07', 'H09', 'H11', 'H15', 'H17',
+            'H19', 'H21', 'H23', 'H24', 'I06', 'I10', 'I12', 'I15', 'I21', 'J07',
+            'J16', 'J21', 'K01', 'K02', 'K09', 'K13', 'K14', 'K23', 'L01', 'L02',
+            'L08', 'L10', 'L11', 'L13', 'L17', 'L18', 'L21', 'L24', 'M01', 'M04',
+            'M06', 'M07', 'M11', 'M12', 'M17', 'N06', 'N11', 'N14', 'N24', 'O01',
+            'O06', 'O07', 'O08', 'O17', 'O19', 'O24', 'P01', 'P06', 'P08', 'P12',
+            'P14', 'P15', 'P17', 'P18', 'P21'
+        ]
 
-                QC = hergqc.run_qc(
-                    voltage_steps=self.voltage_steps,
-                    times=self.times,
-                    before=before,
-                    after=after,
-                    qc_vals_before=qc_vals_before,
-                    qc_vals_after=qc_vals_after,
-                    n_sweeps=self.n_sweeps,
+        for well in self.all_wells:
+            before = np.array(self.trace_sweeps_before[well])
+            after = np.array(self.trace_sweeps_after[well])
+
+            subtracted_0 = []
+            subtracted_1 = []
+            subtracted_2 = []
+
+            for i in range(before.shape[0]):
+                subtracted_0.append(
+                    hergqc.qc6(
+                        (before[i, :] - after[i, :]), hergqc.qc6_win, label="0"
+                    )
                 )
 
-                logging.debug(well, QC.all_passed())
+                subtracted_1.append(
+                    hergqc.qc6(
+                        (before[i, :] - after[i, :]),
+                        hergqc.qc6_1_win,
+                        label="1",
+                    )
+                )
 
-                trace = ""
-                for label, result in QC.items():
-                    if not QC.qc_passed(label):
-                        trace += f"{well} {label}: {result}\n"
+                subtracted_2.append(
+                    hergqc.qc6(
+                        (before[i, :] - after[i, :]),
+                        hergqc.qc6_2_win,
+                        label="2",
+                    )
+                )
 
-                self.assertEqual(QC.all_passed(), ex_pass, trace)
+            ex_pass_0 = well not in failed_wells_0
+            self.assertEqual(
+                all_passed(subtracted_0),
+                ex_pass_0,
+                f"QC6 (0): {well} {subtracted_0}",
+            )
+
+            ex_pass_1 = well not in failed_wells_1
+            self.assertEqual(
+                all_passed(subtracted_1),
+                ex_pass_1,
+                f"QC6 (1): {well} {subtracted_1}",
+            )
+
+            ex_pass_2 = well not in failed_wells_2
+            self.assertEqual(
+                all_passed(subtracted_2),
+                ex_pass_2,
+                f"QC6 (2): {well} {subtracted_2}",
+            )
+
+    def test_run_qc(self):
+        # Test all wells
+        hergqc = self.clone_herg_qc("test_run_qc")
+
+        failed_wells = [
+            'A04', 'A05', 'A06', 'A07', 'A08', 'A10', 'A11', 'A12', 'A13', 'A15',
+            'A16', 'A19', 'A20', 'A21', 'A22', 'A23', 'A24', 'B02', 'B04', 'B05',
+            'B07', 'B09', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B18',
+            'B19', 'B21', 'B23', 'C01', 'C02', 'C04', 'C05', 'C07', 'C08', 'C09',
+            'C10', 'C11', 'C12', 'C14', 'C17', 'C18', 'C19', 'C20', 'C21', 'C22',
+            'C23', 'C24', 'D01', 'D02', 'D03', 'D04', 'D05', 'D09', 'D10', 'D11',
+            'D12', 'D13', 'D14', 'D15', 'D16', 'D17', 'D18', 'D19', 'D21', 'D23',
+            'E01', 'E02', 'E03', 'E04', 'E06', 'E07', 'E09', 'E10', 'E11', 'E13',
+            'E14', 'E15', 'E16', 'E17', 'E18', 'E19', 'E20', 'E21', 'E22', 'E23',
+            'E24', 'F01', 'F02', 'F03', 'F04', 'F05', 'F06', 'F07', 'F09', 'F10',
+            'F11', 'F12', 'F13', 'F14', 'F15', 'F16', 'F18', 'F19', 'F20', 'F21',
+            'F22', 'F23', 'F24', 'G03', 'G06', 'G08', 'G09', 'G10', 'G12', 'G13',
+            'G14', 'G15', 'G16', 'G17', 'G18', 'G19', 'G20', 'G21', 'G23', 'G24',
+            'H01', 'H02', 'H03', 'H04', 'H06', 'H07', 'H08', 'H09', 'H10', 'H11',
+            'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19', 'H20', 'H21', 'H23',
+            'H24', 'I01', 'I03', 'I04', 'I05', 'I06', 'I07', 'I08', 'I10', 'I11',
+            'I12', 'I13', 'I14', 'I15', 'I16', 'I17', 'I18', 'I19', 'I20', 'I21',
+            'J03', 'J06', 'J07', 'J08', 'J09', 'J10', 'J11', 'J12', 'J14', 'J15',
+            'J16', 'J17', 'J18', 'J19', 'J20', 'J21', 'J23', 'J24', 'K01', 'K02',
+            'K03', 'K05', 'K06', 'K07', 'K09', 'K10', 'K11', 'K12', 'K13', 'K14',
+            'K16', 'K17', 'K18', 'K20', 'K22', 'K23', 'K24', 'L01', 'L02', 'L03',
+            'L04', 'L05', 'L06', 'L07', 'L08', 'L10', 'L11', 'L12', 'L13', 'L16',
+            'L17', 'L18', 'L20', 'L21', 'L23', 'L24', 'M01', 'M02', 'M03', 'M04',
+            'M05', 'M06', 'M07', 'M08', 'M09', 'M10', 'M11', 'M12', 'M13', 'M14',
+            'M15', 'M16', 'M17', 'M18', 'M19', 'M20', 'M21', 'N01', 'N02', 'N03',
+            'N04', 'N06', 'N07', 'N08', 'N09', 'N11', 'N13', 'N14', 'N16', 'N17',
+            'N18', 'N19', 'N20', 'N21', 'N22', 'N23', 'N24', 'O01', 'O02', 'O03',
+            'O04', 'O05', 'O06', 'O07', 'O08', 'O10', 'O11', 'O12', 'O13', 'O14',
+            'O15', 'O16', 'O17', 'O18', 'O19', 'O20', 'O21', 'O22', 'O24', 'P01',
+            'P03', 'P05', 'P06', 'P07', 'P08', 'P09', 'P10', 'P11', 'P12', 'P13',
+            'P14', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20', 'P21', 'P22', 'P24'
+        ]
+
+        for well in self.all_wells:
+            before = np.array(self.trace_sweeps_before[well])
+            after = np.array(self.trace_sweeps_after[well])
+
+            # Take values from the first sweep only
+            qc_vals_before = np.array(self.qc_vals_before[well])[0, :]
+            qc_vals_after = np.array(self.qc_vals_after[well])[0, :]
+
+            QC = hergqc.run_qc(
+                voltage_steps=self.voltage_steps,
+                times=self.times,
+                before=before,
+                after=after,
+                qc_vals_before=qc_vals_before,
+                qc_vals_after=qc_vals_after,
+                n_sweeps=self.n_sweeps,
+            )
+
+            trace = ""
+            for label, result in QC.items():
+                if not QC.qc_passed(label):
+                    trace += f"{well} {label}: {result}\n"
+
+            ex_pass = well not in failed_wells
+            self.assertEqual(QC.all_passed(), ex_pass, trace)
