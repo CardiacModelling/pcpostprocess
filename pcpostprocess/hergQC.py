@@ -1,6 +1,6 @@
 import logging
 import os
-from collections import OrderedDict
+from collections import OrderedDict, UserDict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +9,7 @@ import scipy.stats
 NOISE_LEN = 200
 
 
-class QCDict:
+class QCDict(UserDict):
     """
     Stores the results from QC checks.
 
@@ -40,36 +40,16 @@ class QCDict:
     ]
 
     def __init__(self):
-        self._dict = OrderedDict(
-            [(label, [(False, None)]) for label in QCDict.labels]
-        )
-
-    def __str__(self):
-        return self._dict.__str__()
-
-    def __repr__(self):
-        return self._dict.__repr__()
-
-    def __getitem__(self, key):
-        return self._dict.__getitem__(key)
+        super().__init__([(label, [(False, None)]) for label in QCDict.labels])
 
     def __setitem__(self, key, value):
         if key not in QCDict.labels:
             raise KeyError(f"Invalid QC key: {key}")
-        self._dict.__setitem__(key, value)
-
-    def keys(self):
-        return self._dict.keys()
-
-    def items(self):
-        return self._dict.items()
-
-    def values(self):
-        return self._dict.values()
+        super().__setitem__(key, value)
 
     def qc_passed(self, label):
         """Return whether a single QC passed."""
-        return all([x for x, _ in self._dict[label]])
+        return all([x for x, _ in self[label]])
 
     def passed_list(self):
         """Return a list of booleans indicating whether each QC passed."""
@@ -250,9 +230,12 @@ class hERGQC:
         QC['qc6.1.subtracted'] = []
         QC['qc6.2.subtracted'] = []
         for i in range(before.shape[0]):
-            qc6 = self.qc6((before[i, :] - after[i, :]), self.qc6_win, label="0")
-            qc6_1 = self.qc6((before[i, :] - after[i, :]), self.qc6_1_win, label="1")
-            qc6_2 = self.qc6((before[i, :] - after[i, :]), self.qc6_2_win, label="2")
+            qc6 = self.qc6((before[i, :] - after[i, :]),
+                           self.qc6_win, label="0")
+            qc6_1 = self.qc6((before[i, :] - after[i, :]),
+                             self.qc6_1_win, label="1")
+            qc6_2 = self.qc6((before[i, :] - after[i, :]),
+                             self.qc6_2_win, label="2")
 
             QC['qc6.subtracted'].append(qc6)
             QC['qc6.1.subtracted'].append(qc6_1)
@@ -463,7 +446,8 @@ class hERGQC:
 
         if (rmsd0_diff < rmsd0_diffc) or not (np.isfinite(rmsd0_diff)
                                               and np.isfinite(rmsd0_diffc)):
-            self.logger.debug(f"rmsd0_diff: {rmsd0_diff}, rmsd0c: {rmsd0_diffc}")
+            self.logger.debug(
+                f"rmsd0_diff: {rmsd0_diff}, rmsd0c: {rmsd0_diffc}")
             result = False
         else:
             result = True

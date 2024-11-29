@@ -64,7 +64,7 @@ class TestHergQC(unittest.TestCase):
         )
         self.hergqc._debug = False  # Turn this on to output plots
 
-    def clone_herg_qc(self, plot_dir):
+    def clone_hergqc(self, plot_dir):
         hergqc = copy.deepcopy(self.hergqc)
         plot_dir = os.path.join(hergqc.plot_dir, plot_dir)
         os.makedirs(plot_dir, exist_ok=True)
@@ -81,15 +81,15 @@ class TestHergQC(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(times)))
         self.assertTrue(np.all(np.isfinite(voltage)))
 
-        # Ensure thats the windows are correct by checking the voltage trace
+        # Ensures that the windows are correct by checking the voltage trace
         assert np.all(np.abs(voltage[qc6_win[0]: qc6_win[1]] - 40.0)) < 1e-8
         assert np.all(np.abs(voltage[qc6_1_win[0]: qc6_1_win[1]] - 40.0)) < 1e-8
         assert np.all(np.abs(voltage[qc6_2_win[0]: qc6_2_win[1]] - 40.0)) < 1e-8
 
     def test_qc1(self):
-        hergqc = self.clone_herg_qc("test_qc1")
-
         # qc1 checks that rseal, cm, rseries are within range
+        hergqc = self.clone_hergqc("test_qc1")
+
         rseal_lo, rseal_hi = 1e8, 1e12
         rseal_mid = (rseal_lo + rseal_hi) / 2
         rseal_tol = 0.1
@@ -295,9 +295,9 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc2(self):
-        hergqc = self.clone_herg_qc("test_qc2")
-
         # qc2 checks that raw and subtracted SNR are above a minimum threshold
+        hergqc = self.clone_hergqc("test_qc2")
+
         test_matrix = [
             (10, True, 8082.1),
             (1, True, 74.0),
@@ -347,9 +347,8 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc3(self):
-        hergqc = self.clone_herg_qc("test_qc3")
-
         # qc3 checks that rmsd of two sweeps are similar
+        hergqc = self.clone_hergqc("test_qc3")
 
         # Test with same noise, different signal
         test_matrix = [
@@ -455,9 +454,9 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc4(self):
-        hergqc = self.clone_herg_qc("test_qc4")
-
         # qc4 checks that rseal, cm, rseries are similar before/after E-4031 change
+        hergqc = self.clone_hergqc("test_qc4")
+
         r_lo, r_hi = 1e6, 3e7
         c_lo, c_hi = 1e-12, 1e-10
 
@@ -615,10 +614,10 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc5(self):
-        hergqc = self.clone_herg_qc("test_qc5")
-
         # qc5 checks that the maximum current during the second half of the
         # staircase changes by at least 75% of the raw trace after E-4031 addition
+        hergqc = self.clone_hergqc("test_qc5")
+
         test_matrix = [
             (-1.0, True, -12.5),
             (0.1, True, -1.5),
@@ -687,10 +686,10 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc5_1(self):
-        hergqc = self.clone_herg_qc("test_qc5_1")
-
         # qc5_1 checks that the RMSD to zero of staircase protocol changes
         # by at least 50% of the raw trace after E-4031 addition.
+        hergqc = self.clone_hergqc("test_qc5_1")
+
         test_matrix = [
             (-1.0, False, 4.22),
             (-0.5, False, 0),
@@ -763,10 +762,10 @@ class TestHergQC(unittest.TestCase):
             )
 
     def test_qc6(self):
-        hergqc = self.clone_herg_qc("test_qc6")
-
         # qc6 checks that the first step up to +40 mV, before the staircase, in
         # the subtracted trace is bigger than -2 x estimated noise level.
+        hergqc = self.clone_hergqc("test_qc6")
+
         test_matrix = [
             (-100, False, 9.9),
             (-10, False, 0.9),
@@ -888,7 +887,7 @@ class TestHergQC(unittest.TestCase):
 
     def test_run_qc(self):
         # Test all wells
-        hergqc = self.clone_herg_qc("test_run_qc")
+        hergqc = self.clone_hergqc("test_run_qc")
 
         failed_wells = [
             'A04', 'A05', 'A06', 'A07', 'A08', 'A10', 'A11', 'A12', 'A13', 'A15',
