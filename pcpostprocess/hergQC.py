@@ -10,6 +10,15 @@ NOISE_LEN = 200
 
 
 class QCDict:
+    """
+    Stores the results from QC checks.
+
+    Each entry is a label -> [(bool, value),...] mapping.
+    The bool in each tuple indicates whether the QC passed,
+    and the value is the result that was checked (e.g. the SNR value).
+    The list can contain multiple tuples if the QC checks multiple values, as
+    QC1 does, or if the checks are run multiple times e.g. once per sweep.
+    """
 
     labels = [
         "qc1.rseal",
@@ -31,7 +40,9 @@ class QCDict:
     ]
 
     def __init__(self):
-        self._dict = OrderedDict([(label, [(False, None)]) for label in QCDict.labels])
+        self._dict = OrderedDict(
+            [(label, [(False, None)]) for label in QCDict.labels]
+        )
 
     def __str__(self):
         return self._dict.__str__()
