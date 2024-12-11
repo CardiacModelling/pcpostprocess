@@ -2,7 +2,11 @@ import numpy as np
 from matplotlib.gridspec import GridSpec
 import pandas as pd
 from .leak_correct import fit_linear_leak
-
+import os
+import string
+import matplotlib.pyplot as plt
+from syncropatch_export.trace import Trace
+from scipy.stats import pearsonr
 
 def setup_subtraction_grid(fig, nsweeps):
     # Use 5 x 2 grid when there are 2 sweeps
@@ -125,17 +129,17 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
         corrected_after_currents = after_currents[i, :] - after_leak_currents[i, :]
-        corrb, _ = pearsonr(corrected_before_currents,voltages)
+        corrb, _ = pearsonr(corrected_before_currents, voltages)
         ax.plot(times*1e-3, corrected_before_currents,
                 label=f"leak-corrected pre-drug trace, sweep {sweep}, PC={corrb:.2f}")
-        corra, _ = pearsonr(corrected_after_currents,voltages)
+        corra, _ = pearsonr(corrected_after_currents, voltages)
         ax.plot(times*1e-3, corrected_after_currents,
                 label=f"leak-corrected post-drug trace, sweep {sweep}, PC={corra:.2f}")
         ax.set_xlabel('time (s)')
         if first:
             ax.set_ylabel(r'leak-corrected traces')
             first = False
-        
+
         # sortedy = sorted(corrected_after_currents+corrected_before_currents)
         # ax.set_ylim(sortedy[60]*1.1, sortedy[-60]*1.1)
         ax.legend()
@@ -156,7 +160,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
         ax.plot(times*1e-3, subtracted_currents, label=f"sweep {sweep}", alpha=.5)
-        corrs, _ = pearsonr(subtracted_currents,voltages)
+        corrs, _ = pearsonr(subtracted_currents, voltages)
         sweep_list += [sweep]
         pcs += [corrs]
         #  Cycle to next colour
@@ -172,8 +176,9 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
     long_protocol_ax.tick_params(axis='y', rotation=90)
 
-    corr_dict = {'sweeps':sweeps,'pcs':pcs}
+    corr_dict = {'sweeps': sweeps,'pcs': pcs}
     return corr_dict
+
 
 def linear_reg(V, I_obs):
     # number of observations/points
@@ -193,13 +198,9 @@ def linear_reg(V, I_obs):
 
     # return intercept, gradient
     return b_0, b_1
-import os
-import string
-import matplotlib.pyplot as plt
-from syncropatch_export.trace import Trace
-from scipy.stats import pearsonr
 
-def regenerate_subtraction_plots(data_path='.',save_dir='.',processed_path=None,protocols_in=None,passed_only=False):
+
+def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=None, protocols_in=None, passed_only=False):
     '''
     Generate subtraction plots of all sweeps of all experiments in a directory
     '''
@@ -218,16 +219,16 @@ def regenerate_subtraction_plots(data_path='.',save_dir='.',processed_path=None,
         corr_list = []
         passed_list = []
 
-        if protocols_in == None:
-            protocols_in = ['staircaseramp','staircaseramp (2)','ProtocolChonStaircaseRamp','staircaseramp_2kHz_fixed_ramp','staircaseramp (2)_2kHz','staircase-ramp','Staircase_hERG']
+        if protocols_in is None:
+            protocols_in = ['staircaseramp', 'staircaseramp (2)', 'ProtocolChonStaircaseRamp', 'staircaseramp_2kHz_fixed_ramp', 'staircaseramp (2)_2kHz', 'staircase-ramp', 'Staircase_hERG']
         for exp in data_dir:
-            exp_files = os.listdir(os.path.join(data_path,exp))
+            exp_files = os.listdir(os.path.join(data_path, exp))
             exp_files = [x for x in exp_files if any([y in x for y in protocols_in])]
             if not exp_files:
                 continue
             protocols = set(['_'.join(x.split('_')[:-1]) for x in exp_files])
             if processed_path:
-                with open(processed_path+'/'+exp+'/passed_wells.txt','r') as file:
+                with open(processed_path+'/'+exp+'/passed_wells.txt', 'r') as file:
                     passed_wells = file.read()
                 passed_wells = [x for x in passed_wells.split('\n') if x]
                 if passed_only:
@@ -242,16 +243,16 @@ def regenerate_subtraction_plots(data_path='.',save_dir='.',processed_path=None,
                 if len(time_strs) == 2:
                     time_strs = [time_strs]
                 elif len(time_strs) == 4:
-                    time_strs = [[time_strs[0],time_strs[2]],[time_strs[1],time_strs[3]]]
-                for it,time_str in enumerate(time_strs):
-                    filepath_before = os.path.join(data_path,exp,
-                                    f"{prot}_{time_str[0]}")
+                    time_strs = [[time_strs[0], time_strs[2]],[time_strs[1], time_strs[3]]]
+                for it, time_str in enumerate(time_strs):
+                    filepath_before = os.path.join(data_path, exp,
+                                        f"{prot}_{time_str[0]}")
                     json_file_before = f"{prot}_{time_str[0]}"
-                    before_trace = Trace(filepath_before,json_file_before)
-                    filepath_after = os.path.join(data_path,exp,
-                                    f"{prot}_{time_str[1]}")
+                    before_trace = Trace(filepath_before, json_file_before)
+                    filepath_after = os.path.join(data_path, exp,
+                                        f"{prot}_{time_str[1]}")
                     json_file_after = f"{prot}_{time_str[1]}"
-                    after_trace = Trace(filepath_after,json_file_after)
+                    after_trace = Trace(filepath_after, json_file_after)
                     # traces = {z:[x for x in os.listdir(data_path+'/'+exp+'/traces') if x.endswith('.csv') and all([y in x for y in [z+'-','subtracted']])] for z in protocols}
                     times = before_trace.get_times()
                     voltages = before_trace.get_voltage()
@@ -285,9 +286,9 @@ def regenerate_subtraction_plots(data_path='.',save_dir='.',processed_path=None,
                                 #  f"{exp}-{prot}-{well}-sweep{it}-subtraction-{passed}"))
                         fig.clf()
         if passed_wells:
-            outdf=pd.DataFrame.from_dict({'exp':exp_list,'protocol':protocol_list,'well':well_list,'sweep':sweep_list,'pc':corr_list,'passed':passed_list})
+            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 'well': well_list, 'sweep': sweep_list, 'pc': corr_list, 'passed': passed_list})
         else:                
-            outdf=pd.DataFrame.from_dict({'exp':exp_list,'protocol':protocol_list,'well':well_list,'sweep':sweep_list,'pc':corr_list})
+            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 'well': well_list, 'sweep': sweep_list, 'pc': corr_list})
         outdf.to_csv(os.path.join(save_dir,'subtraction_results.csv'))
 
 
