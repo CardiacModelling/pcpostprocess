@@ -201,7 +201,7 @@ def linear_reg(V, I_obs):
     return b_0, b_1
 
 
-def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=None, 
+def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=None,
                                  protocols_in=None, passed_only=False):
     '''
     Generate subtraction plots of all sweeps of all experiments in a directory
@@ -222,7 +222,9 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
         passed_list = []
 
         if protocols_in is None:
-            protocols_in = ['staircaseramp', 'staircaseramp (2)', 'ProtocolChonStaircaseRamp', 'staircaseramp_2kHz_fixed_ramp', 'staircaseramp (2)_2kHz', 'staircase-ramp', 'Staircase_hERG']
+            protocols_in = ['staircaseramp', 'staircaseramp (2)', 'ProtocolChonStaircaseRamp',
+                            'staircaseramp_2kHz_fixed_ramp', 'staircaseramp (2)_2kHz',
+                            'staircase-ramp', 'Staircase_hERG']
         for exp in data_dir:
             exp_files = os.listdir(os.path.join(data_path, exp))
             exp_files = [x for x in exp_files if any([y in x for y in protocols_in])]
@@ -245,7 +247,7 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
                 if len(time_strs) == 2:
                     time_strs = [time_strs]
                 elif len(time_strs) == 4:
-                    time_strs = [[time_strs[0], time_strs[2]],[time_strs[1], time_strs[3]]]
+                    time_strs = [[time_strs[0], time_strs[2]], [time_strs[1], time_strs[3]]]
                 for it, time_str in enumerate(time_strs):
                     filepath_before = os.path.join(data_path, exp,
                                                    f"{prot}_{time_str[0]}")
@@ -255,8 +257,8 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
                                                   f"{prot}_{time_str[1]}")
                     json_file_after = f"{prot}_{time_str[1]}"
                     after_trace = Trace(filepath_after, json_file_after)
-                    # traces = {z:[x for x in os.listdir(data_path+'/'+exp+'/traces') 
-                    # if x.endswith('.csv') and all([y in x for y in [z+'-','subtracted']])] 
+                    # traces = {z:[x for x in os.listdir(data_path+'/'+exp+'/traces')
+                    # if x.endswith('.csv') and all([y in x for y in [z+'-','subtracted']])]
                     # for z in protocols}
                     times = before_trace.get_times()
                     voltages = before_trace.get_voltage()
@@ -290,10 +292,11 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
                         #  f"{exp}-{prot}-{well}-sweep{it}-subtraction-{passed}"))
                         fig.clf()
         if passed_wells:
-            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 
-                                            'well': well_list, 'sweep': sweep_list, 'pc': corr_list, 'passed': passed_list})
+            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list,
+                                            'well': well_list, 'sweep': sweep_list, 'pc': corr_list,
+                                            'passed': passed_list})
         else:                
-            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 
+            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list,
                                             'well': well_list, 'sweep': sweep_list, 'pc': corr_list})
         outdf.to_csv(os.path.join(save_dir, 'subtraction_results.csv'))
 
