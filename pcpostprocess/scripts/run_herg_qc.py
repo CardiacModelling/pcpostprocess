@@ -96,7 +96,7 @@ def main():
     spec.loader.exec_module(export_config)
 
     data_list = os.listdir(args.data_directory)
-    export_config.D2S_QC = {x: y for x, y in export_config.D2S_QC.items() if 
+    export_config.D2S_QC = {x: y for x, y in export_config.D2S_QC.items() if
                             any([x == '_'.join(z.split('_')[:-1]) for z in data_list])}
     export_config.savedir = args.output_dir
 

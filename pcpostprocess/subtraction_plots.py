@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from syncropatch_export.trace import Trace
 from scipy.stats import pearsonr
 
+
 def setup_subtraction_grid(fig, nsweeps):
     # Use 5 x 2 grid when there are 2 sweeps
     gs = GridSpec(6, nsweeps, figure=fig)
@@ -176,7 +177,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
     long_protocol_ax.tick_params(axis='y', rotation=90)
 
-    corr_dict = {'sweeps': sweeps,'pcs': pcs}
+    corr_dict = {'sweeps': sweeps, 'pcs': pcs}
     return corr_dict
 
 
@@ -200,18 +201,19 @@ def linear_reg(V, I_obs):
     return b_0, b_1
 
 
-def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=None, protocols_in=None, passed_only=False):
+def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=None, 
+                                 protocols_in=None, passed_only=False):
     '''
     Generate subtraction plots of all sweeps of all experiments in a directory
     '''
     data_dir = os.listdir(data_path)
-    passed_wells=None
-    passed=''
+    passed_wells = None
+    passed = ''
     if 'passed_wells.txt' in data_dir:
         return None
     else:
-        data_dir = [x for x in data_dir if os.path.isdir(os.path.join(data_path,x))]
-        fig = plt.figure(figsize=[15,24], layout='constrained')
+        data_dir = [x for x in data_dir if os.path.isdir(os.path.join(data_path, x))]
+        fig = plt.figure(figsize=[15, 24], layout='constrained')
         exp_list = []
         protocol_list = []
         well_list = []
@@ -246,14 +248,16 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
                     time_strs = [[time_strs[0], time_strs[2]],[time_strs[1], time_strs[3]]]
                 for it, time_str in enumerate(time_strs):
                     filepath_before = os.path.join(data_path, exp,
-                                        f"{prot}_{time_str[0]}")
+                                                   f"{prot}_{time_str[0]}")
                     json_file_before = f"{prot}_{time_str[0]}"
                     before_trace = Trace(filepath_before, json_file_before)
                     filepath_after = os.path.join(data_path, exp,
-                                        f"{prot}_{time_str[1]}")
+                                                  f"{prot}_{time_str[1]}")
                     json_file_after = f"{prot}_{time_str[1]}"
                     after_trace = Trace(filepath_after, json_file_after)
-                    # traces = {z:[x for x in os.listdir(data_path+'/'+exp+'/traces') if x.endswith('.csv') and all([y in x for y in [z+'-','subtracted']])] for z in protocols}
+                    # traces = {z:[x for x in os.listdir(data_path+'/'+exp+'/traces') 
+                    # if x.endswith('.csv') and all([y in x for y in [z+'-','subtracted']])] 
+                    # for z in protocols}
                     times = before_trace.get_times()
                     voltages = before_trace.get_voltage()
                     voltage_protocol = before_trace.get_voltage_protocol()
@@ -270,7 +274,7 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
                         before_current = before_current_all[well]
                         after_current = after_current_all[well]
                         sweep_dict = do_subtraction_plot(fig, times, sweeps, before_current, after_current,
-                            voltages, ramp_bounds, well=None, protocol=None)
+                                                         voltages, ramp_bounds, well=None, protocol=None)
                         exp_list += [exp]*len(sweep_dict['sweeps'])
                         protocol_list += [prot]*len(sweep_dict['sweeps'])
                         well_list += [well]*len(sweep_dict['sweeps'])
@@ -283,13 +287,15 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
                                 passed = 'failed'
                             passed_list += [passed]*len(sweep_dict['sweeps'])
                         # fig.savefig(os.path.join(save_dir,
-                                #  f"{exp}-{prot}-{well}-sweep{it}-subtraction-{passed}"))
+                        #  f"{exp}-{prot}-{well}-sweep{it}-subtraction-{passed}"))
                         fig.clf()
         if passed_wells:
-            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 'well': well_list, 'sweep': sweep_list, 'pc': corr_list, 'passed': passed_list})
+            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 
+                                            'well': well_list, 'sweep': sweep_list, 'pc': corr_list, 'passed': passed_list})
         else:                
-            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 'well': well_list, 'sweep': sweep_list, 'pc': corr_list})
-        outdf.to_csv(os.path.join(save_dir,'subtraction_results.csv'))
+            outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list, 
+                                            'well': well_list, 'sweep': sweep_list, 'pc': corr_list})
+        outdf.to_csv(os.path.join(save_dir, 'subtraction_results.csv'))
 
 
 def detect_ramp_bounds(times, voltage_sections, ramp_no=0):
