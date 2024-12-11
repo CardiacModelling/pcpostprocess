@@ -1,12 +1,14 @@
-import numpy as np
-from matplotlib.gridspec import GridSpec
-import pandas as pd
-from .leak_correct import fit_linear_leak
 import os
 import string
+
 import matplotlib.pyplot as plt
-from syncropatch_export.trace import Trace
+import numpy as np
+import pandas as pd
+from matplotlib.gridspec import GridSpec
 from scipy.stats import pearsonr
+from syncropatch_export.trace import Trace
+
+from .leak_correct import fit_linear_leak
 
 
 def setup_subtraction_grid(fig, nsweeps):
