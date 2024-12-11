@@ -295,7 +295,7 @@ def regenerate_subtraction_plots(data_path='.', save_dir='.', processed_path=Non
             outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list,
                                             'well': well_list, 'sweep': sweep_list, 'pc': corr_list,
                                             'passed': passed_list})
-        else:      
+        else:
             outdf = pd.DataFrame.from_dict({'exp': exp_list, 'protocol': protocol_list,
                                             'well': well_list, 'sweep': sweep_list, 'pc': corr_list})
         outdf.to_csv(os.path.join(save_dir, 'subtraction_results.csv'))
