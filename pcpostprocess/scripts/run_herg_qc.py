@@ -714,18 +714,22 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
 
             row_dict['QC6'] = hergqc.qc6(current,
                                          win=hergqc.qc6_win,
-                                         label='0')
+                                         label='0')[0]
 
             #  Assume there is only one sweep for all non-QC protocols
             rseal_before, cm_before, rseries_before = qc_before[well][0]
             rseal_after, cm_after, rseries_after = qc_after[well][0]
 
-            row_dict['QC1'] = all(list(hergqc.qc1(rseal_before, cm_before, rseries_before)) +
-                                  list(hergqc.qc1(rseal_after, cm_after, rseries_after)))
+            qc1_1 = hergqc.qc1(rseal_before, cm_before, rseries_before)
+            qc1_2 = hergqc.qc1(rseal_after, cm_after, rseries_after)
 
-            row_dict['QC4'] = all(hergqc.qc4([rseal_before, rseal_after],
-                                             [cm_before, cm_after],
-                                             [rseries_before, rseries_after]))
+            row_dict['QC1'] = all([x for x, _ in qc1_1 + qc1_2])
+
+            qc4 = hergqc.qc4([rseal_before, rseal_after],
+                             [cm_before, cm_after],
+                             [rseries_before, rseries_after])
+
+            row_dict['QC4'] = all([x for x, _ in qc4])
 
             if args.output_traces:
                 out_fname = os.path.join(traces_dir,
@@ -934,16 +938,19 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                          voltage_protocol.get_all_sections() if vend == vstart]
 
         # Run QC with raw currents
-        _, QC = hergqc.run_qc(voltage_steps, times,
-                              before_currents_corrected,
-                              after_currents_corrected,
-                              np.array(qc_before[well])[0, :],
-                              np.array(qc_after[well])[0, :], nsweeps)
+        QC = hergqc.run_qc(
+            voltage_steps,
+            times,
+            before_currents_corrected,
+            after_currents_corrected,
+            np.array(qc_before[well])[0, :],
+            np.array(qc_after[well])[0, :],
+            nsweeps,
+        )
 
-        QC = list(QC)
-        df_rows.append([well] + list(QC))
+        df_rows.append([well] + QC.passed_list())
 
-        selected = np.all(QC) and not no_cell
+        selected = QC.all_passed() and not no_cell
         if selected:
             selected_wells.append(well)
 
@@ -1104,7 +1111,7 @@ def qc3_bookend(readname, savename, time_strs, args):
             last_processed[well], times, voltage_steps
         ).flatten()
 
-        passed = hergqc.qc3(trace1, trace2)
+        passed = hergqc.qc3(trace1, trace2)[0]
 
         res_dict[well] = passed
 
