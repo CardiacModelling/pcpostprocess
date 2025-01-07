@@ -56,7 +56,7 @@ To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-This package has been tested on Ubuntu with Python 3.7, 3.8, 3.9, 3.10 and 3.11.
+This package has been tested on Ubuntu with Python 3.8, 3.9, 3.10, 3.11 and 3.12.
 
 ### Installation
 
