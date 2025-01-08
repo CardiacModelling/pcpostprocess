@@ -150,6 +150,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
 
     ax = subtracted_ax
+    ax.axhline(0, linestyle='--', color='lightgrey')
     sweep_list = []
     pcs = []
     for i, sweep in enumerate(sweeps):

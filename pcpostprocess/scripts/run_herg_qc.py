@@ -243,13 +243,14 @@ def main():
         times = sorted(res_dict[protocol])
         savename = combined_dict[protocol]
 
-        readnames.append(protocol)
 
         if len(times) == 2:
+            readnames.append(protocol)
             savenames.append(savename)
             times_list.append(times)
 
         elif len(times) == 4:
+            readnames.append(protocol)
             savenames.append(savename)
             times_list.append(times[::2])
 
@@ -263,6 +264,7 @@ def main():
     wells_to_export = wells if args.export_failed else overall_selection
 
     logging.info(f"exporting wells {wells}")
+    logging.info(f"overall selection {overall_selection}")
 
     no_protocols = len(res_dict)
 
@@ -1041,15 +1043,17 @@ def qc3_bookend(readname, savename, time_strs, args):
         save_fname = f"{well}_{savename}_before0.pdf"
 
         #  Plot subtraction
-        get_leak_corrected(first_before_current,
-                           voltage, times,
-                           *ramp_bounds,
-                           save_fname=save_fname,
-                           output_dir=output_directory)
+        # get_leak_corrected(first_before_current,
+        #                    voltage, times,
+        #                    *ramp_bounds,
+        #                    save_fname=save_fname,
+        #                    output_dir=output_directory)
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
-                                                       *ramp_bounds)
+                                                       *ramp_bounds,
+                                                       save_fname=save_fname,
+                                                       output_dir=output_directory)
 
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,
