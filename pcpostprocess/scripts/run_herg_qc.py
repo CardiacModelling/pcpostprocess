@@ -243,7 +243,6 @@ def main():
         times = sorted(res_dict[protocol])
         savename = combined_dict[protocol]
 
-
         if len(times) == 2:
             readnames.append(protocol)
             savenames.append(savename)
