@@ -650,20 +650,20 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             E_rev_before = infer_reversal_potential(before_corrected, times,
                                                     desc, voltages, plot=True,
                                                     output_path=os.path.join(reversal_plot_dir,
-                                                                             f"{well}_{savename}_sweep{sweep}_before"),
+                                                                             f"{well}_{savename}_sweep{sweep}_before.png"),
                                                     known_Erev=args.Erev)
 
             E_rev_after = infer_reversal_potential(after_corrected, times,
                                                    desc, voltages,
                                                    plot=True,
                                                    output_path=os.path.join(reversal_plot_dir,
-                                                                            f"{well}_{savename}_sweep{sweep}_after"),
+                                                                            f"{well}_{savename}_sweep{sweep}_after.png"),
                                                    known_Erev=args.Erev)
 
             E_rev = infer_reversal_potential(subtracted_trace, times, desc,
                                              voltages, plot=True,
                                              output_path=os.path.join(reversal_plot_dir,
-                                                                      f"{well}_{savename}_sweep{sweep}_subtracted"),
+                                                                      f"{well}_{savename}_sweep{sweep}_subtracted.png"),
                                              known_Erev=args.Erev)
 
             row_dict['R_leftover'] =\
