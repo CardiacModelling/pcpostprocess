@@ -28,7 +28,8 @@ class TestLeakCorrect(unittest.TestCase):
 
     def test_get_QC_dict(self):
         QC = self.test_trace.get_onboard_QC_values()
-        return leak_correct.get_QC_dict(QC)
+        d = leak_correct.get_QC_dict(QC)
+        self.assertIsInstance(d, dict)
 
     def test_plot_leak_fit(self):
         well = 'A01'
@@ -53,7 +54,8 @@ class TestLeakCorrect(unittest.TestCase):
         times = trace.get_times()
 
         current = currents[well][sweep, :]
-        return leak_correct.get_leak_corrected(current, voltage, times, *self.ramp_bounds)
+        x = leak_correct.get_leak_corrected(current, voltage, times, *self.ramp_bounds)
+        self.assertEqual(x.shape, (30784,))
 
 
 if __name__ == "__main__":
