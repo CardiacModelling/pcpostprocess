@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# If this is in a directory with a directory called "original_data" containing your data and an example export_config.py file called "export_config.py", it will copy export_config.py into each directory in original_data and change the EXPERIMENT_NAME to match the name of the directory. 
+
+for dir in original_data/*/
+do 
+	cp export_config.py $dir
+	dirname=${dir%*/}
+	strrep="s/EXPERIMENT_NAME/${dir#*/}" 
+	sed -i $strrep "${dir}${exportfile}"
+done

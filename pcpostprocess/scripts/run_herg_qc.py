@@ -107,6 +107,9 @@ def main():
     sys.modules['export_config'] = export_config
     spec.loader.exec_module(export_config)
 
+    data_list = os.listdir(args.data_directory)
+    export_config.D2S_QC = {x: y for x, y in export_config.D2S_QC.items() if
+                            any([x == '_'.join(z.split('_')[:-1]) for z in data_list])}
     export_config.savedir = args.output_dir
 
     args.saveID = export_config.saveID
@@ -257,13 +260,13 @@ def main():
         times = sorted(res_dict[protocol])
         savename = combined_dict[protocol]
 
-        readnames.append(protocol)
-
         if len(times) == 2:
+            readnames.append(protocol)
             savenames.append(savename)
             times_list.append(times)
 
         elif len(times) == 4:
+            readnames.append(protocol)
             savenames.append(savename)
             times_list.append(times[::2])
 
@@ -277,6 +280,7 @@ def main():
     wells_to_export = wells if args.export_failed else overall_selection
 
     logging.info(f"exporting wells {wells}")
+    logging.info(f"overall selection {overall_selection}")
 
     no_protocols = len(res_dict)
 
@@ -663,20 +667,20 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             E_rev_before = infer_reversal_potential(before_corrected, times,
                                                     desc, voltages, plot=True,
                                                     output_path=os.path.join(reversal_plot_dir,
-                                                                             f"{well}_{savename}_sweep{sweep}_before"),
+                                                                             f"{well}_{savename}_sweep{sweep}_before.png"),
                                                     known_Erev=args.Erev)
 
             E_rev_after = infer_reversal_potential(after_corrected, times,
                                                    desc, voltages,
                                                    plot=True,
                                                    output_path=os.path.join(reversal_plot_dir,
-                                                                            f"{well}_{savename}_sweep{sweep}_after"),
+                                                                            f"{well}_{savename}_sweep{sweep}_after.png"),
                                                    known_Erev=args.Erev)
 
             E_rev = infer_reversal_potential(subtracted_trace, times, desc,
                                              voltages, plot=True,
                                              output_path=os.path.join(reversal_plot_dir,
-                                                                      f"{well}_{savename}_sweep{sweep}_subtracted"),
+                                                                      f"{well}_{savename}_sweep{sweep}_subtracted.png"),
                                              known_Erev=args.Erev)
 
             row_dict['R_leftover'] =\
@@ -1062,15 +1066,17 @@ def qc3_bookend(readname, savename, time_strs, args):
         save_fname = f"{well}_{savename}_before0.pdf"
 
         #  Plot subtraction
-        get_leak_corrected(first_before_current,
-                           voltage, times,
-                           *ramp_bounds,
-                           save_fname=save_fname,
-                           output_dir=output_directory)
+        # get_leak_corrected(first_before_current,
+        #                    voltage, times,
+        #                    *ramp_bounds,
+        #                    save_fname=save_fname,
+        #                    output_dir=output_directory)
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
-                                                       *ramp_bounds)
+                                                       *ramp_bounds,
+                                                       save_fname=save_fname,
+                                                       output_dir=output_directory)
 
         before_traces_last[well] = get_leak_corrected(last_before_current,
                                                       voltage, times,
