@@ -1136,9 +1136,9 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         if not os.path.exists(os.path.dirname(output_path)):
             os.makedirs(os.path.dirname(output_path))
 
-    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2] == 40][0]
+    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2] == 40][0] + 1
 
-    tstart, tend, vstart, vend = protocol_desc[first_120mV_step_index + 1, :]
+    tstart, tend, vstart, vend = protocol_desc[first_120mV_step_index, :]
     assert (vstart == vend)
     assert (vstart == -120.0)
 
