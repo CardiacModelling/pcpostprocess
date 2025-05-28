@@ -41,10 +41,14 @@ jobs:
         python -m pip install -e .
         python -m pytest --cov --cov-config=.coveragerc
 
-    - name: Run export with test data
+    - name: Install TeX dependencies
       timeout-minutes: 15
       run: |
         sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
+
+    - name: Test running QC
+      timeout-minutes: 15
+      run: |
         pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF -w A01 A02 A03
 
     - uses: codecov/codecov-action@v4
