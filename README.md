@@ -48,10 +48,11 @@ python3 -m unittest
 
 Once the tests have completed, you can try out the program on the downloaded test data.
 
-To do this, type
+Instead of running on all wells (which takes about an hour to complete), we'll run on just two wells:
 ```
-pcpostprocess run_herg_qc ./tests/test_data/13112023_MW2_FF/
+pcpostprocess run_herg_qc ./tests/test_data/13112023_MW2_FF/ -w A02 A03
 ```
+
 This will create several quality control plots in the directory `output`, and take XXX to XXX minutes to complete.
 For every well, a ??? plot will be created, showing ???.
 
