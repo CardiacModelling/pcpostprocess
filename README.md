@@ -44,20 +44,7 @@ Then you can run the tests.
 python3 -m unittest
 ```
 
-### Running on test data
-
-Once the tests have completed, you can try out the program on the downloaded test data.
-
-Instead of running on all wells (which takes about an hour to complete), we'll run on just two wells:
-```
-pcpostprocess run_herg_qc ./tests/test_data/13112023_MW2_FF/ -w A02 A03
-```
-
-This will create several quality control plots in the directory `output`, and take XXX to XXX minutes to complete.
-For every well, a ??? plot will be created, showing ???.
-
-
-## Detailed usage
+## Usage
 
 ### Running QC and post-processing
 
@@ -126,3 +113,47 @@ options:
   --log_level LOG_LEVEL
 ```
 
+## Example: Running on test data
+
+Once the tests have completed, you can try out the program on the downloaded test data.
+
+Instead of running on all wells (which takes about an hour to complete), we'll run on just two wells:
+```
+pcpostprocess run_herg_qc ./tests/test_data/13112023_MW2_FF/ -w A02 A03
+```
+This should take around 5 minutes to run, and produce the following output
+output
+ |- hergqc
+     |- 13112023_MW2-staircaseramp_2-leak_fit-after
+     |- 13112023_MW2-staircaseramp_2-leak_fit-before
+     |- 13112023_MW2-staircaseramp-leak_fit-after
+     |- 13112023_MW2-staircaseramp-leak_fit-before
+     |- debug
+     |- leak_correction
+     |- output
+     |- reversal_plots
+     |- subtraction_plots
+     |- traces
+     |- A02-sweep0-after.png
+     |- A02-sweep0-before.png
+     |- A02-sweep1-after.png
+     |- A02-sweep1-before.png
+     |- A03-sweep0-after.png
+     |- A03-sweep0-before.png
+     |- A03-sweep1-after.png
+     |- A03-sweep1-before.png
+     |- chrono.txt
+     |- info.txt
+     |- passed_wells.txt
+     |- QC-13112023_MW2.csv
+     |- QC-13112023_MW2.json
+     |- qc_table.tex
+     |- qc_table.xlsx
+     |- qc_vals_df.csv
+     |- selected-13112023_MW2.txt
+     |- selected-13112023_MW2-staircaseramp.txt
+     |- selected-13112023_MW2-staircaseramp_2.txt
+     |- subtraction_qc.csv
+```
+
+Here ...
