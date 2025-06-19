@@ -27,7 +27,7 @@ Then install the package with `pip`.
 
 ```sh
 python3 -m pip install --upgrade pip
-python3 -m pip install -e .'[test]'
+python3 -m pip install -e .[test]
 ```
 
 To run the tests you must first download some test data.
