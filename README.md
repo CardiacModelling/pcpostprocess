@@ -27,7 +27,7 @@ Then install the package with `pip`.
 
 ```sh
 python3 -m pip install --upgrade pip
-python3 -m pip install -e .[test]
+python3 -m pip install -e .'[test]'
 ```
 
 To run the tests you must first download some test data.
@@ -44,7 +44,19 @@ Then you can run the tests.
 python3 -m unittest
 ```
 
-## Usage
+### Running on test data
+
+Once the tests have completed, you can try out the program on the downloaded test data.
+
+To do this, type
+```
+pcpostprocess run_herg_qc ./tests/test_data/13112023_MW2_FF/
+```
+This will create several quality control plots in the directory `output`, and take XXX to XXX minutes to complete.
+For every well, a ??? plot will be created, showing ???.
+
+
+## Detailed usage
 
 ### Running QC and post-processing
 
