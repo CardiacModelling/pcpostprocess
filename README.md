@@ -117,6 +117,26 @@ options:
 
 Once the tests have completed, you can try out the program on the downloaded test data.
 
+This data is organised as follows:
+
+```
+13112023_MW2_FF
+ |- StaircaseInStaircaseramp (2)_2kHz_15.01.51
+ |- StaircaseInStaircaseramp (2)_2kHz_15.12.17
+ |- staircaseramp (2)_2kHz_15.01.07
+ |- staircaseramp (2)_2kHz_15.06.53
+ |- staircaseramp (2)_2kHz_15.11.33
+ |- staircaseramp (2)_2kHz_15.17.19
+ |- export_config.py
+```
+
+To make sense of this data set, pcpostprocess requires the file `export_config.py` to be present.
+For the example data, this contains
+
+```
+
+
+
 Instead of running on all wells (which takes about an hour to complete), we'll run on just two wells:
 ```
 pcpostprocess run_herg_qc ./tests/test_data/13112023_MW2_FF/ -w A02 A03
