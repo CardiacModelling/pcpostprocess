@@ -134,7 +134,78 @@ To make sense of this data set, pcpostprocess requires the file `export_config.p
 For the example data, this contains
 
 ```
+#
+# Config for export
+#
 
+# Copy this config file to the main directory of data
+
+# E.g. path to the main directory of data
+# /run/media/cholei/Chon/Adam_Syncropatch_May_2019/20190314MPAN
+
+# Data output directory
+savedir = './data'
+
+# Save name for this set of data
+saveID = '13112023_MW2'
+
+# DataControl384 protocol output names to shorter names
+# For QC only
+D2S_QC = {
+    'staircaseramp (2)_2kHz': 'staircaseramp'
+}
+
+# For export only
+D2S = {
+    'staircaseramp (2)_2kHz': 'staircaseramp',
+    'staircaseramp1': 'staircaseramp1',
+    'staircaseramp2': 'staircaseramp2',
+    'StaircaseInStaircaseramp': 'sis',
+    'hhbrute3gstep': 'hhbrute3gstep',
+    'hhsobol3step': 'hhsobol3step',
+    'wangbrute3gstep': 'wangbrute3gstep',
+    'wangsobol3step': 'wangsobol3step',
+    'longAPs (2)': 'longap',
+    'StaircaseInStaircaserampInverse': 'sisi',
+    'squarewave': 'squarewave',
+    'maxdiff': 'maxdiff',
+#    'ManualPhasPlaneExploration': 'manualppx',
+    'random-t-optimised-v': 'rtov',
+    'random-v-optimised-t': 'rvot',
+    'SpaceFillingProtocol10': 'spacefill10',
+    'SpaceFillingProtocol19': 'spacefill19',
+    'SpaceFillingProtocol26': 'spacefill26',
+    'StaircaseInStaircaseramp': 'sis'
+}
+
+# I-V like protocols, their format so is, different need to be treated in
+# slightly different way
+IVProtocolList = [
+    ]
+
+# Protocols that have been run twice (most probably for stability check)
+# Note that not repeats within the same 'protocol'
+RepeatedProtocolList = [
+    'staircaseramp1',
+    'staircaseramp2',
+    'sis',
+    'hhbrute3gstep',
+    'hhsobol3step',
+    'wangbrute3gstep',
+    'wangsobol3step',
+    'longap',
+    'sisi',
+    'squarewave',
+    'maxdiff',
+    'manualppx',
+    'rvot',
+    'rtov',
+    'spacefill10',
+    'spacefill19',
+    'spacefill26',
+    'sis'
+]
+```
 
 
 Instead of running on all wells (which takes about an hour to complete), we'll run on just two wells:
