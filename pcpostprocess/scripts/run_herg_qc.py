@@ -1050,28 +1050,15 @@ def qc3_bookend(readname, savename, time_strs, args):
         save_fname = f"{well}_{savename}_before0.pdf"
 
         #  Plot subtraction
-        # get_leak_corrected(first_before_current,
-        #                    voltage, times,
-        #                    *ramp_bounds,
-        #                    save_fname=save_fname,
-        #                    output_dir=output_directory)
-
-        before_traces_first[well] = get_leak_corrected(first_before_current,
-                                                       voltage, times,
-                                                       *ramp_bounds,
-                                                       save_fname=save_fname,
-                                                       output_dir=output_directory)
-
-        before_traces_last[well] = get_leak_corrected(last_before_current,
-                                                      voltage, times,
-                                                      *ramp_bounds)
-
-        after_traces_first[well] = get_leak_corrected(first_after_current,
-                                                      voltage, times,
-                                                      *ramp_bounds)
-        after_traces_last[well] = get_leak_corrected(last_after_current,
-                                                     voltage, times,
-                                                     *ramp_bounds)
+        before_traces_first[well] = get_leak_corrected(
+            first_before_current, voltage, times, *ramp_bounds,
+            save_fname=save_fname,output_dir=output_directory)
+        before_traces_last[well] = get_leak_corrected(
+            last_before_current, voltage, times, *ramp_bounds)
+        after_traces_first[well] = get_leak_corrected(
+            first_after_current, voltage, times, *ramp_bounds)
+        after_traces_last[well] = get_leak_corrected(
+            last_after_current, voltage, times, *ramp_bounds)
 
         # Store subtracted traces
         first_processed[well] = before_traces_first[well] - after_traces_first[well]
@@ -1094,21 +1081,13 @@ def qc3_bookend(readname, savename, time_strs, args):
     ax = fig.subplots()
     for well in args.wells:
         trace1 = hergqc.filter_capacitive_spikes(
-            first_processed[well], times, voltage_steps
-        ).flatten()
-
+            first_processed[well], times, voltage_steps).flatten()
         trace2 = hergqc.filter_capacitive_spikes(
-            last_processed[well], times, voltage_steps
-        ).flatten()
-
+            last_processed[well], times, voltage_steps).flatten()
         passed = hergqc.qc3(trace1, trace2)[0]
-
         res_dict[well] = passed
-
-        save_fname = os.path.join(args.output_dir,
-                                  'debug',
-                                  f"debug_{well}_{savename}",
-                                  'qc3_bookend')
+        save_fname = os.path.join(
+            args.output_dir, 'debug', f"debug_{well}_{savename}", 'qc3_bookend')
 
         ax.plot(times, trace1)
         ax.plot(times, trace2)
