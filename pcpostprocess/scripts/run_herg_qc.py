@@ -632,26 +632,20 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['Cm'] = qc_vals[1]
             row_dict['Rseries'] = qc_vals[2]
 
-            before_params, before_leak = fit_linear_leak(before_current[sweep, :],
-                                                         voltages, times,
-                                                         *ramp_bounds,
-                                                         output_dir=out_dir,
-                                                         save_fname=f"{well}_sweep{sweep}.png"
-                                                         )
+            before_params, before_leak = fit_linear_leak(
+                before_current[sweep, :], voltages, times, *ramp_bounds,
+                output_dir=out_dir, save_fname=f"{well}_sweep{sweep}.png")
 
             before_leak_currents.append(before_leak)
 
-            out_dir = os.path.join(savedir,
-                                   f"{saveID}-{savename}-leak_fit-after")
+            out_dir = os.path.join(savedir, f"{saveID}-{savename}-leak_fit-after")
             # Convert linear regression parameters into conductance and reversal
             row_dict['gleak_before'] = before_params[1]
             row_dict['E_leak_before'] = -before_params[0] / before_params[1]
 
-            after_params, after_leak = fit_linear_leak(after_current[sweep, :],
-                                                       voltages, times,
-                                                       *ramp_bounds,
-                                                       save_fname=f"{well}_sweep{sweep}.png",
-                                                       output_dir=out_dir)
+            after_params, after_leak = fit_linear_leak(
+                after_current[sweep, :], voltages, times, *ramp_bounds,
+                save_fname=f"{well}_sweep{sweep}.png", output_dir=out_dir)
 
             after_leak_currents.append(after_leak)
 
@@ -664,24 +658,20 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             after_corrected = after_current[sweep, :] - after_leak
             before_corrected = before_current[sweep, :] - before_leak
 
-            E_rev_before = infer_reversal_potential(before_corrected, times,
-                                                    desc, voltages, plot=True,
-                                                    output_path=os.path.join(reversal_plot_dir,
-                                                                             f"{well}_{savename}_sweep{sweep}_before.png"),
-                                                    known_Erev=args.Erev)
+            E_rev_before = infer_reversal_potential(
+                before_corrected, times, desc, voltages, plot=True,
+                output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_before.png"),
+                known_Erev=args.Erev)
 
-            E_rev_after = infer_reversal_potential(after_corrected, times,
-                                                   desc, voltages,
-                                                   plot=True,
-                                                   output_path=os.path.join(reversal_plot_dir,
-                                                                            f"{well}_{savename}_sweep{sweep}_after.png"),
-                                                   known_Erev=args.Erev)
+            E_rev_after = infer_reversal_potential(
+                after_corrected, times, desc, voltages, plot=True,
+                output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_after.png"),
+                known_Erev=args.Erev)
 
-            E_rev = infer_reversal_potential(subtracted_trace, times, desc,
-                                             voltages, plot=True,
-                                             output_path=os.path.join(reversal_plot_dir,
-                                                                      f"{well}_{savename}_sweep{sweep}_subtracted.png"),
-                                             known_Erev=args.Erev)
+            E_rev = infer_reversal_potential(
+                subtracted_trace, times, desc, voltages, plot=True,
+                output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_subtracted.png"),
+                known_Erev=args.Erev)
 
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
@@ -736,8 +726,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['QC4'] = all([x for x, _ in qc4])
 
             if args.output_traces:
-                out_fname = os.path.join(traces_dir,
-                                         f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
+                out_fname = os.path.join(
+                    traces_dir, f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
 
                 np.savetxt(out_fname, subtracted_trace.flatten())
             rows.append(row_dict)
@@ -750,13 +740,11 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             t_step = times[1] - times[0]
             row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
             res = \
-                get_time_constant_of_first_decay(subtracted_trace, times, desc,
-                                                 args=args,
-                                                 output_path=os.path.join(args.output_dir,
-                                                                          'debug',
-                                                                          '-120mV time constant',
-                                                                          f"{savename}-{well}-sweep"
-                                                                          "{sweep}-time-constant-fit.pdf"))
+                get_time_constant_of_first_decay(
+                    subtracted_trace, times, desc, args=args,
+                    output_path=os.path.join(
+                        args.output_dir, 'debug', '-120mV time constant',
+                        f"{savename}-{well}-sweep{sweep}-time-constant-fit.pdf"))
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -793,8 +781,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                             voltages, ramp_bounds, well=well,
                             protocol=savename)
 
-        fig.savefig(os.path.join(subtraction_plots_dir,
-                                 f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
+        fig.savefig(os.path.join(
+            subtraction_plots_dir, f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
         fig.clf()
 
     plt.close(fig)
@@ -914,19 +902,15 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
             before_raw = np.array(raw_before_all[well])[sweep, :]
             after_raw = np.array(raw_after_all[well])[sweep, :]
 
-            before_params1, before_leak = fit_linear_leak(before_raw,
-                                                          voltage,
-                                                          times,
-                                                          *ramp_bounds,
-                                                          save_fname=f"{well}-sweep{sweep}-before.png",
-                                                          output_dir=savedir)
+            before_params1, before_leak = fit_linear_leak(
+                before_raw, voltage, times, *ramp_bounds,
+                save_fname=f"{well}-sweep{sweep}-before.png",
+                output_dir=savedir)
 
-            after_params1, after_leak = fit_linear_leak(after_raw,
-                                                        voltage,
-                                                        times,
-                                                        *ramp_bounds,
-                                                        save_fname=f"{well}-sweep{sweep}-after.png",
-                                                        output_dir=savedir)
+            after_params1, after_leak = fit_linear_leak(
+                after_raw, voltage, times, *ramp_bounds,
+                save_fname=f"{well}-sweep{sweep}-after.png",
+                output_dir=savedir)
 
             before_currents_corrected[sweep, :] = before_raw - before_leak
             after_currents_corrected[sweep, :] = after_raw - after_leak
