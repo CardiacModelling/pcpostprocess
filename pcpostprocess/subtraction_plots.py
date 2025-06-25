@@ -55,7 +55,8 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     first = True
     for ax in protocol_axs:
         ax.plot(times*1e-3, voltages, color='black')
-        # ax.set_xlabel('time (s)')
+        ax.set_xticklabels([])
+
         if first:
             ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
             first = False
@@ -95,17 +96,13 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, before_currents[i, :], label=f"pre-drug raw, sweep {sweep}")
         ax.plot(times*1e-3, before_leak_currents[i, :],
                 label=r'$I_\mathrm{L}$.' f"g={b1:1E}, E={-b0/b1:.1e}")
-        # sortedy = sorted(before_currents[i, :])
-        # ax.set_ylim(sortedy[30]*1.1, sortedy[-30]*1.1)
+        ax.set_xticklabels([])
 
-        # if ax.get_legend():
-        #     ax.get_legend().remove()
-        # ax.set_xlabel('time (s)')
         if first:
             ax.set_ylabel(r'pre-drug trace')
             first = False
         else:
-            ax.legend()
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         # ax.tick_params(axis='y', rotation=90)
 
@@ -115,16 +112,12 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, after_currents[i, :], label=f"post-drug raw, sweep {sweep}")
         ax.plot(times*1e-3, after_leak_currents[i, :],
                 label=r"$I_\mathrm{L}$." f"g={b1:1E}, E={-b0/b1:.1e}")
-        # sortedy = sorted(after_currents[i, :])
-        # ax.set_ylim(sortedy[30]*1.1, sortedy[-30]*1.1)
-        # if ax.get_legend():
-        #     ax.get_legend().remove()
-        # ax.set_xlabel('$t$ (s)')
+        ax.set_xticklabels([])
         if first:
             ax.set_ylabel(r'post-drug trace')
             first = False
         else:
-            ax.legend()
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         # ax.tick_params(axis='y', rotation=90)
 
@@ -145,7 +138,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
         # sortedy = sorted(corrected_after_currents+corrected_before_currents)
         # ax.set_ylim(sortedy[60]*1.1, sortedy[-60]*1.1)
-        ax.legend()
+        ax.legend(bbox_to_anchor=(1.05, 1-0.5*i), loc='upper left')
         # ax.tick_params(axis='y', rotation=90)
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
 
@@ -172,13 +165,14 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     # sortedy = sorted(subtracted_currents)
     # ax.set_ylim(sortedy[30]*1.1, sortedy[-30]*1.1)
     ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{L}$ (mV)')
-    ax.legend()
-    # ax.set_xlabel('$t$ (s)')
+    ax.legend(bbox_to_anchor=(1.05, 0.8), loc='upper left')
+    ax.set_xticklabels([])
 
     long_protocol_ax.plot(times*1e-3, voltages, color='black')
     long_protocol_ax.set_xlabel('time (s)')
     long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
     long_protocol_ax.tick_params(axis='y', rotation=90)
+    fig.tight_layout()
 
     corr_dict = {'sweeps': sweeps, 'pcs': pcs}
     return corr_dict
