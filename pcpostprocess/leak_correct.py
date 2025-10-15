@@ -74,25 +74,24 @@ def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
 
 
 def get_leak_corrected(current, voltages, times, ramp_start_index,
-                       ramp_end_index, **kwargs):
+                       ramp_end_index, *args, **kwargs):
     """
-    Leak correct all data in a trace
+    Leak correct all data in a trace by subtracting a linear current derived
+    from a leak ramp.
 
-    @Params:
-    current: the observed currents taken from the entire sweep
+    @param current: the observed currents taken from the entire sweep
+    @param voltages: the voltages at each timepoint; has the same shape as current
+    @param ramp_start_index: the index of the observation where the leak ramp begins
+    @ramp_end_index: the index of the observation where the leak ramp ends
 
-    voltages: the voltages at each timepoint; has the same shape as current
+    Any extra arguments will be passed to ``fit_linear_leak``, allowing figure
+    creation.
 
-    ramp_start_index: the index of the observation where the leak ramp begins
-
-    ramp_end_index: the index of the observation where the leak ramp ends
-
-    @Returns: A leak correct trace with the same shape as current
-
+    @return: A leak correct trace with the same shape as current
     """
 
     (b0, b1), I_leak = fit_linear_leak(current, voltages, times, ramp_start_index,
-                                       ramp_end_index, **kwargs)
+                                       ramp_end_index, *args, **kwargs)
 
     return current - I_leak
 
@@ -102,25 +101,18 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
     """
     Fits linear leak to a leak ramp, returning
 
-    @params
-    current: the observed currents taken from the entire sweep
-
-    voltages: the voltages at each timepoint; has the same shape as current
-
-    ramp_start_index: the index of the observation where the leak ramp begins
-
-    ramp_end_index: the index of the observation where the leak ramp ends
-
-    save_fname: if set, a debugging figure will be made and stored with this name
-
-    output_dir: if ``save_fname`` is set, this directory will be used to store
+    @param current: the observed currents taken from the entire sweep
+    @param voltage: the voltages at each timepoint; has the same shape as current
+    @param ramp_start_index: the index of the observation where the leak ramp begins
+    @param ramp_end_index: the index of the observation where the leak ramp ends
+    @param save_fname: if set, a debugging figure will be made and stored with this name
+    @param output_dir: if ``save_fname`` is set, this directory will be used to store
     the figure, and created if it does not exist
+    @param figsize: if ``save_fname`` is set, the figure size.
 
-    figsize: if ``save_fname`` is set, the figure size.
-
-    @Returns: the linear regression parameters obtained from fitting the leak
-    ramp as a tuple (intercept, slope), and the linear leak current as a numpy
-    array.
+    @return: the linear regression parameters obtained from fitting the leak
+    ramp as a tuple ``(intercept, slope)``, and the linear leak current as a
+    numpy array.
     """
 
     # TODO: This should not be handled here
