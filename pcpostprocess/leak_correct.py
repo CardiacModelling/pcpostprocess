@@ -33,7 +33,7 @@ def linear_reg(V, I):
 
 def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
                             'Rseries': (1e6, 2.5e7)}):
-    '''
+    """
     Returns a filtered version of a QC dict from syncropatch_export, keeping only
     wells that pass the simple QC rules below.
 
@@ -47,7 +47,7 @@ def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
 
     @returns:
     A dictionary where the keys are wells and the values are sweeps that passed QC
-    '''
+    """
     # TODO decouple this code from syncropatch export
     # TODO don't use dict above: there's only ever 3 values so can have 3 args!
 
@@ -75,7 +75,8 @@ def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
 
 def get_leak_corrected(current, voltages, times, ramp_start_index,
                        ramp_end_index, **kwargs):
-    """Leak correct all data in a trace
+    """
+    Leak correct all data in a trace
 
     @Params:
     current: the observed currents taken from the entire sweep
