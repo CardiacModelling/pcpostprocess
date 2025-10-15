@@ -9,9 +9,9 @@ ignore =
     W504,
     # missing whitespace around arithmetic operator
     E226,
-    # Import sorting
-    I201
-    I100
+    # Allow I, l and O as variable names
+    E741,
+
 
 exclude=
     .git,
