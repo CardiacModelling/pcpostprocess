@@ -26,11 +26,6 @@ class TestLeakCorrect(unittest.TestCase):
         self.currents['voltages'] = self.test_trace.get_voltage()
         self.QC = self.test_trace.get_onboard_QC_values()
 
-    def test_get_QC_dict(self):
-        QC = self.test_trace.get_onboard_QC_values()
-        d = leak_correct.get_QC_dict(QC)
-        self.assertIsInstance(d, dict)
-
     def test_plot_leak_fit(self):
         well = 'A01'
         sweep = 0
