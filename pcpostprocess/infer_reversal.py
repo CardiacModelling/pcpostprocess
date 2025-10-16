@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.polynomial.polynomial as poly
 
+from .detect_ramp_bounds import detect_ramp_bounds
+
 
 def infer_reversal_potential(current, times, voltage_segments, voltages,
                              output_path=None, known_Erev=None,
