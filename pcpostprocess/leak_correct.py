@@ -61,7 +61,6 @@ def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
         if len(sweeps) == n_sweeps:
             ok = True
             for Rseal, Cm, Rseries in sweeps:
-                # TODO: Do we need that `if all(sweep)` line?
 
                 if not (bounds['Rseal'][0] < Rseal < bounds['Rseal'][1] and
                         bounds['Cm'][0] < Cm < bounds['Cm'][1] and
