@@ -13,14 +13,14 @@ class QCDict(UserDict):
     """
     Stores the results from QC checks.
 
-    Each entry is a label -> [(bool, value),...] mapping.
+    Each entry is a ``label -> [(bool, value),...]`` mapping.
     The bool in each tuple indicates whether the QC passed,
     and the value is the result that was checked (e.g. the SNR value).
     The list can contain multiple tuples if the QC checks multiple values, as
     QC1 does, or if the checks are run multiple times e.g. once per sweep.
     """
 
-    labels = [
+    labels = (
         "qc1.rseal",
         "qc1.cm",
         "qc1.rseries",
@@ -37,7 +37,7 @@ class QCDict(UserDict):
         "qc6.subtracted",
         "qc6.1.subtracted",
         "qc6.2.subtracted",
-    ]
+    )
 
     def __init__(self):
         super().__init__([(label, [(False, None)]) for label in QCDict.labels])
@@ -49,15 +49,15 @@ class QCDict(UserDict):
 
     def qc_passed(self, label):
         """Return whether a single QC passed."""
-        return all([x for x, _ in self[label]])
+        return all(x for x, _ in self[label])
 
     def passed_list(self):
         """Return a list of booleans indicating whether each QC passed."""
-        return [self.qc_passed(label) for label in QCDict.labels]
+        return [all(x[0] for x in tuples) for tuples in self.values()]
 
     def all_passed(self):
         """Return whether all QC passed."""
-        return all(self.passed_list())
+        return all(all(x[0] for x in tuples) for tuples in self.values())
 
 
 class hERGQC:
@@ -68,19 +68,24 @@ class hERGQC:
 
         self._plot_dir = plot_dir
 
-        self._n_qc = 16
+        self._n_qc = len(QCDict.labels)
 
         self.removal_time = removal_time
 
         self.voltage = np.array(voltage)
 
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
+        self._debug = True
+        if self._debug:
+            self.logger.setLevel(logging.DEBUG)
+        # https://github.com/CardiacModelling/pcpostprocess/issues/42
 
         self.sampling_rate = sampling_rate
 
         # Define all thresholds
 
+        # TODO: These should be args? Or perhaps this is good so that this QC
+        # class can be extended
         # qc1
         self.rsealc = [1e8, 1e12]  # in Ohm, converted from [0.1, 1000] GOhm
         self.cmc = [1e-12, 1e-10]  # in F, converted from [1, 100] pF
@@ -122,8 +127,6 @@ class hERGQC:
         self.qc6_1_win = self.qc6_1_win.astype(int)
         self.qc6_2_win = self.qc6_2_win.astype(int)
 
-        self._debug = True
-
     @property
     def plot_dir(self):
         return self._plot_dir
@@ -131,12 +134,6 @@ class hERGQC:
     @plot_dir.setter
     def plot_dir(self, path):
         self._plot_dir = path
-
-    def set_trace(self, before, after, qc_vals_before, qc_vals_after, n_sweeps):
-        self._before = before
-        self._qc_vals_before = qc_vals_before
-        self._after = after
-        self._qc_vals_after = qc_vals_after
 
     def set_debug(self, debug):
         self._debug = debug
