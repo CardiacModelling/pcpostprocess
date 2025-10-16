@@ -31,47 +31,6 @@ def linear_reg(V, I):
     return b_0, b_1
 
 
-def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
-                            'Rseries': (1e6, 2.5e7)}):
-    """
-    Returns a filtered version of a QC dict from syncropatch_export, keeping only
-    wells that pass the simple QC rules below.
-
-    1. The well must have ``n`` sweeps, where ``n`` is the largest number of
-       sweeps present in ``QC``.
-    2. The Rseal, Cm, and Rseries for each sweep must be within bounds
-
-    @params:
-    QC: QC trace attribute extracted from the JSON file
-    bounds: A dictionary of (lower, upper) for the QC variables Rseal, Cm, and Rseries.
-
-    @returns:
-    A dictionary where the keys are wells and the values are sweeps that passed QC
-    """
-    # TODO decouple this code from syncropatch export
-    # TODO don't use dict above: there's only ever 3 values so can have 3 args!
-
-    # Find the maximum number of sweeps in any well
-    n_sweeps = max(len(sweeps) for sweeps in QC.values())
-
-    # Check which wells have the right number of sweeps, provide all 3 values,
-    # and are in bounds
-    QC_dict = {}
-    for well, sweeps in QC.items():
-        if len(sweeps) == n_sweeps:
-            ok = True
-            for Rseal, Cm, Rseries in sweeps:
-
-                if not (bounds['Rseal'][0] < Rseal < bounds['Rseal'][1] and
-                        bounds['Cm'][0] < Cm < bounds['Cm'][1] and
-                        bounds['Rseries'][0] < Rseries < bounds['Rseries'][1]):
-                    ok = False
-                    break
-            if ok:
-                QC_dict[well] = list(sweeps)
-    return QC_dict
-
-
 def get_leak_corrected(current, voltages, times, ramp_start_index,
                        ramp_end_index, *args, **kwargs):
     """
