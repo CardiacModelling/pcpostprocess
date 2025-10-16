@@ -7,8 +7,8 @@ import numpy.polynomial.polynomial as poly
 
 
 def infer_reversal_potential(current, times, voltage_segments, voltages,
-                             ax=None, output_path=None, plot=None,
-                             known_Erev=None, figsize=(5, 3)):
+                             output_path=None, known_Erev=None,
+                             figsize=(5, 3)):
     """
     Infers a reversal potential in a time series, based on a reversal ramp.
 
@@ -22,20 +22,16 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
     @param voltage_segments: A list of tuples (tstart, tend, vstart, vend)
     describing voltage steps or ramps. It is assumed the final ramp is the
     reversal ramp.
-    @param voltages: The sampled voltages (WHY ORDER t,V,I NOT CONSISTENT?)
-    @param ax: An optional matplotlib axes to create a plot on
-    @param output_path: If ``ax is None``, this can specify a path to create a plot at
-    @param plot: A THIRD WAY TO ASK FOR A PLOT, WHAT IS THIS ARG FOR? SETTING
-    TRUE WITHOUT OTHER TWO = ERROR
+    @param voltages: The sampled voltages
+    @param output_path: An optional path to store a plot at
     @param known_Erev: A known reversal potential to include in the plot
     @param figsize: A size for the plot.
 
     @return: The inferred reversal potential
     """
 
-    # Find all ramps, then assume last one is the reversal ramp
-    rev_ramp = [line for line in voltage_segments if line[2] != line[3]][-1]
-    tstart, tend = rev_ramp[:2]
+    # Get ramp bounds, assuming final ramp is the reversal ramp
+    tstart, tend = detect_ramp_bounds(times, voltage_segments, -1)
 
     istart = np.argmax(times > tstart)
     iend = np.argmax(times > tend)
@@ -69,23 +65,13 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
     erev = roots[-1]
 
     # Optional plot
-
-    if output_path:
+    if output_path is not None:
         dirname = os.path.dirname(output_path)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-    if (ax or output_path) and plot is not False:
-        plot = True
-
-    if plot:
-        created_fig = False
-        if ax is None and output_path is not None:
-
-            created_fig = True
-            fig = plt.figure(figsize=figsize)
-            ax = fig.subplots()
-
+        fig = plt.figure(figsize=figsize)
+        ax = fig.subplots()
         ax.set_xlabel('$V$ (mV)')  # Assuming mV here
         ax.set_ylabel('$I$ (nA)')
 
@@ -99,11 +85,7 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
         ax.plot(*fitted_poly.linspace())
         ax.legend()
 
-        if output_path is not None:
-            fig = ax.figure
-            fig.savefig(output_path)
-
-        if created_fig:
-            plt.close(fig)
+        fig.savefig(output_path)
+        plt.close(fig)
 
     return erev
