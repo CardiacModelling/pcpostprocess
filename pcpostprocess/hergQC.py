@@ -21,11 +21,11 @@ class QCDict(UserDict):
     """
 
     labels = (
-        "qc1.rseal",
-        "qc1.cm",
-        "qc1.rseries",
-        "qc2.raw",
-        "qc2.subtracted",
+        "qc1.rseal",        # [before, after]
+        "qc1.cm",           # [before, after]
+        "qc1.rseries",      # [before, after]
+        "qc2.raw",          # [sweep[0], sweep[1], ...]
+        "qc2.subtracted",   # [sweep[0], sweep[1], ...]
         "qc3.raw",
         "qc3.E4031",
         "qc3.subtracted",
@@ -301,18 +301,10 @@ class hERGQC:
 
         return [(qc11, rseal), (qc12, cm), (qc13, rseries)]
 
-    def qc2(self, recording, method=3):
+    def qc2(self, recording):
         # Check SNR is good
-        if method == 1:
-            # Not sure if this is good...
-            snr = scipy.stats.signaltonoise(recording)
-        elif method == 2:
-            noise = np.std(recording[:NOISE_LEN])
-            snr = (np.max(recording) - np.min(recording) - 2 * noise) / noise
-        elif method == 3:
-            noise = np.std(recording[:NOISE_LEN])
-            snr = (np.std(recording) / noise) ** 2
-
+        noise = np.std(recording[:NOISE_LEN])
+        snr = (np.std(recording) / noise) ** 2
         if snr < self.snrc or not np.isfinite(snr):
             self.logger.debug(f"snr: {snr}")
             result = False
@@ -321,24 +313,14 @@ class hERGQC:
 
         return (result, snr)
 
-    def qc3(self, recording1, recording2, method=3):
+    def qc3(self, recording1, recording2):
         # Check 2 sweeps similar
-        if method == 1:
-            rmsdc = 2  # A/F * F
-        elif method == 2:
-            noise_1 = np.std(recording1[:NOISE_LEN])
-            peak_1 = (np.max(recording1) - noise_1)
-            noise_2 = np.std(recording2[:NOISE_LEN])
-            peak_2 = (np.max(recording2) - noise_2)
-            rmsdc = max(np.mean([peak_1, peak_2]) * 0.1,
-                        np.mean([noise_1, noise_2]) * 5)
-        elif method == 3:
-            noise_1 = np.std(recording1[:NOISE_LEN])
-            noise_2 = np.std(recording2[:NOISE_LEN])
-            rmsd0_1 = np.sqrt(np.mean((recording1) ** 2))
-            rmsd0_2 = np.sqrt(np.mean((recording2) ** 2))
-            rmsdc = max(np.mean([rmsd0_1, rmsd0_2]) * self.rmsd0c,
-                        np.mean([noise_1, noise_2]) * 6)
+        noise_1 = np.std(recording1[:NOISE_LEN])
+        noise_2 = np.std(recording2[:NOISE_LEN])
+        rmsd0_1 = np.sqrt(np.mean((recording1) ** 2))
+        rmsd0_2 = np.sqrt(np.mean((recording2) ** 2))
+        rmsdc = max(np.mean([rmsd0_1, rmsd0_2]) * self.rmsd0c,
+                    np.mean([noise_1, noise_2]) * 6)
         rmsd = np.sqrt(np.mean((recording1 - recording2) ** 2))
         if rmsd > rmsdc or not (np.isfinite(rmsd) and np.isfinite(rmsdc)):
             self.logger.debug(f"rmsd: {rmsd}, rmsdc: {rmsdc}")
@@ -497,6 +479,7 @@ class hERGQC:
             if i_end == 0:
                 break
             if len(current.shape) == 2:
+                # When would this happen? Is one dimension always 1 ?
                 current[:, i_start:i_end] = 0
             elif len(current.shape) == 1:
                 current[i_start:i_end] = 0
