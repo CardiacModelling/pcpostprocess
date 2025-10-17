@@ -44,7 +44,8 @@ setup(
         'matplotlib>=3.4',
         'pandas>=1.3',
         'regex>=2023.12.25',
-        'seaborn>=0.12.2'
+        'seaborn>=0.12.2',
+        'openpyxl>=3.1.2',      # Used via pandas
     ],
     extras_require={
         'test': [
