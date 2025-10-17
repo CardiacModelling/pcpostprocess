@@ -45,7 +45,8 @@ setup(
         'pandas>=1.3',
         'regex>=2023.12.25',
         'seaborn>=0.12.2',
-        'openpyxl>=3.1.2',      # Used via pandas
+        'openpyxl>=3.1.2',      # Used via pandas (to create excel doc)
+        'jinja2>=3.1.0',        # Used via pandas (to create latex doc)
     ],
     extras_require={
         'test': [
