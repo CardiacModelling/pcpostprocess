@@ -54,5 +54,5 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-      if: success() && matrix.python-version == 3.13
+      if: success() && matrix.python-version == 3.14
 
