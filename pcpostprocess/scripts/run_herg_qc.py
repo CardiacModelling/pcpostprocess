@@ -660,24 +660,20 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             after_corrected = after_current[sweep, :] - after_leak
             before_corrected = before_current[sweep, :] - before_leak
 
-            E_rev_before = infer_reversal_potential(before_corrected, times,
-                                                    desc, voltages, plot=True,
-                                                    output_path=os.path.join(reversal_plot_dir,
-                                                                             f"{well}_{savename}_sweep{sweep}_before"),
-                                                    known_Erev=args.Erev)
+            E_rev_before = infer_reversal_potential(
+                before_corrected, times, desc, voltages,
+                output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_before"),
+                known_Erev=args.Erev)
 
-            E_rev_after = infer_reversal_potential(after_corrected, times,
-                                                   desc, voltages,
-                                                   plot=True,
-                                                   output_path=os.path.join(reversal_plot_dir,
-                                                                            f"{well}_{savename}_sweep{sweep}_after"),
-                                                   known_Erev=args.Erev)
+            E_rev_after = infer_reversal_potential(
+                after_corrected, times, desc, voltages,
+                output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_after"),
+                known_Erev=args.Erev)
 
-            E_rev = infer_reversal_potential(subtracted_trace, times, desc,
-                                             voltages, plot=True,
-                                             output_path=os.path.join(reversal_plot_dir,
-                                                                      f"{well}_{savename}_sweep{sweep}_subtracted"),
-                                             known_Erev=args.Erev)
+            E_rev = infer_reversal_potential(
+                subtracted_trace, times, desc, voltages,
+                output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_subtracted"),
+                known_Erev=args.Erev)
 
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
