@@ -5,7 +5,7 @@ This repository contains a python package and scripts for handling time-series d
 The package has been tested with data from a SyncroPatch 384, but may be adapted to work with data in other formats.
 It can also be used to perform quality control (QC) as described in [Lei et al. (2019)](https://doi.org/10.1016%2Fj.bpj.2019.07.029).
 
-This package is tested on Ubuntu with Python 3.10, 3.11, 3.12, 3.13 and 3.13.
+This package is tested on Ubuntu with Python 3.10, 3.11, 3.12, 3.13 and 3.14.
 
 ## Getting Started
 
