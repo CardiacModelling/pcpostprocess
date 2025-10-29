@@ -53,6 +53,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
     all_leak_params_before = []
     all_leak_params_after = []
+
     for i in range(len(sweeps)):
         before_params, _ = fit_linear_leak(before_currents, voltages, times,
                                            *ramp_bounds)
@@ -119,7 +120,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         # ax.tick_params(axis='y', rotation=90)
         # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
 
-    ax = subtracted_ax
     for i, sweep in enumerate(sweeps):
         before_trace = before_currents[i, :].flatten()
         after_trace = after_currents[i, :].flatten()
@@ -130,13 +130,14 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
-        ax.plot(times*1e-3, subtracted_currents, label=f"sweep {sweep}", alpha=.5)
+
+        subtracted_ax.plot(times*1e-3, subtracted_currents, label=f"sweep {sweep}", alpha=.5)
 
         #  Cycle to next colour
-        ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
+        subtracted_ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
 
-    ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{L}$ (mV)')
-    ax.set_xlabel('$t$ (s)')
+    subtracted_ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{L}$ (mV)')
+    subtracted_ax.set_xlabel('$t$ (s)')
 
     long_protocol_ax.plot(times*1e-3, voltages, color='black')
     long_protocol_ax.set_xlabel('time (s)')
