@@ -11,11 +11,14 @@ from pcpostprocess.subtraction_plots import do_subtraction_plot
 
 class TestSubtractionPlots(unittest.TestCase):
     def setUp(self):
-        test_data_dir = os.path.join('tests', 'test_data', '13112023_MW2_FF',
-                                     "staircaseramp (2)_2kHz_15.01.07")
+        test_data_dir_before = os.path.join('tests', 'test_data', '13112023_MW2_FF',
+                                            "staircaseramp (2)_2kHz_15.01.07")
+
+        test_data_dir_after = os.path.join('tests', 'test_data', '13112023_MW2_FF',
+                                           "staircaseramp (2)_2kHz_15.11.33")
 
         json_file_before = "staircaseramp (2)_2kHz_15.01.07.json"
-        json_file_after = "staircaseramp (2)_2kHz_15.11.33"
+        json_file_after = "staircaseramp (2)_2kHz_15.11.33.json"
 
         self.output_dir = os.path.join('test_output', 'test_trace_class')
 
@@ -23,8 +26,8 @@ class TestSubtractionPlots(unittest.TestCase):
             os.makedirs(self.output_dir)
 
         # Use identical traces for purpose of the test
-        self.before_trace = Trace(test_data_dir, json_file_before)
-        self.after_trace = Trace(test_data_dir, json_file_after)
+        self.before_trace = Trace(test_data_dir_before, json_file_before)
+        self.after_trace = Trace(test_data_dir_after, json_file_after)
 
     def test_do_subtraction_plot(self):
         fig = plt.figure(figsize=(5, 9), layout='constrained')
