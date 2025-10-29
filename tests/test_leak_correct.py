@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import unittest
-import numpy as np
 
 from syncropatch_export.trace import Trace
 
