@@ -68,8 +68,8 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
                                    np.nan)
     after_leak_currents = np.full((nsweeps, voltages.shape[0]),
                                   np.nan)
-    for i, sweep in enumerate(sweeps):
 
+    for i, sweep in enumerate(sweeps):
         b0, b1 = all_leak_params_before[i]
         gleak = b1
         Eleak = -b0/b1
