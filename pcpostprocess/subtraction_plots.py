@@ -89,9 +89,10 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, before_leak_currents[i, :],
                 label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
         ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
-        ax.tick_params(axis='x', labelbottom=False)
         ax.legend()
+        ax.tick_params(axis='x', labelbottom=False)
 
+    before_axs[0].set_ylabel(r'Pre-drug trace', fontsize=16)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, after_axs)):
         b0, b1 = all_leak_params_before[i]
@@ -100,12 +101,12 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
         ax.plot(times*1e-3, after_currents[i, :], label="Post-drug raw")
         ax.plot(times*1e-3, after_leak_currents[i, :],
+                label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
+        ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
+        ax.legend()
+        ax.tick_params(axis='x', labelbottom=False)
+    after_axs[0].set_ylabel(r'Post-drug trace', fontsize=16)
 
-                label=r"$I_\mathrm{L}$." f"g={gleak:1E}, E={Eleak:.1e}")
-        if ax.get_legend():
-            ax.get_legend().remove()
-        ax.set_xlabel('$t$ (s)')
-        ax.set_ylabel(r'post-drug trace')
 
     for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
@@ -113,9 +114,11 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, corrected_before_currents,
                 label="Leak-corrected pre-drug trace")
         ax.plot(times*1e-3, corrected_after_currents,
-                label=f"leak-corrected post-drug trace, sweep {sweep}")
-        ax.set_xlabel(r'$t$ (s)')
-        ax.set_ylabel(r'leak-corrected traces')
+                label="Leak-corrected post-drug trace")
+        ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
+        ax.set_xlabel(r'Time (s)')
+        ax.legend()
+    corrected_axs[0].set_ylabel(r'Leak-corrected traces', fontsize=16)
 
     for i, sweep in enumerate(sweeps):
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
