@@ -20,15 +20,15 @@ def setup_subtraction_grid(fig, nsweeps):
     # Leak corrected traces
     corrected_axs = [fig.add_subplot(gs[3, i]) for i in range(nsweeps)]
 
-    # Subtracted traces on one axis
-    subtracted_ax = fig.add_subplot(gs[5, :])
-
     # Long axis for protocol on the bottom (full width)
     long_protocol_ax = fig.add_subplot(gs[4, :])
 
+    # Subtracted traces on one axis
+    subtracted_ax = fig.add_subplot(gs[5, :])
+
     for ax, cap in zip(list(protocol_axs) + list(before_axs)
                        + list(after_axs) + list(corrected_axs)
-                       + [subtracted_ax] + [long_protocol_ax],
+                       + [long_protocol_ax] + [subtracted_ax],
                        'abcdefghijklm'):
         ax.spines[['top', 'right']].set_visible(False)
         ax.set_title(cap, loc='left', fontweight='bold')
@@ -102,7 +102,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.tick_params(axis='x', labelbottom=False)
 
         # ax.set_xlabel('time (s)')
-    before_axs[0].set_ylabel(r'Pre-drug trace')
+    before_axs[0].set_ylabel(r'Pre-drug trace', fontsize=16)
     # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
     # ax.tick_params(axis='y', rotation=90)
 
@@ -119,7 +119,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.tick_params(axis='x', labelbottom=False)
 
         # ax.set_xlabel('$t$ (s)')
-    after_axs[0].set_ylabel(r'Post-drug trace')
+    after_axs[0].set_ylabel(r'Post-drug trace', fontsize=16)
     # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
     # ax.tick_params(axis='y', rotation=90)
 
@@ -131,9 +131,9 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, corrected_after_currents,
                 label="Leak-corrected post-drug trace")
         ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
-        ax.set_xlabel(r'$t$ (s)')
+        ax.set_xlabel(r'Time (s)')
         ax.legend()
-    corrected_axs[0].set_ylabel(r'Leak-corrected traces')
+    corrected_axs[0].set_ylabel(r'Leak-corrected traces', fontsize=16)
     # ax.tick_params(axis='y', rotation=90)
     # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
 
@@ -156,12 +156,12 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     subtracted_ax.legend()
     subtracted_ax.plot(range_of_zero, [0, 0], color='black',
                        linestyle=style_of_zero, alpha=alpha_of_zero)
-    subtracted_ax.set_ylabel('Final subtracted traces')
-    subtracted_ax.set_xlabel('Time (s)')
+    subtracted_ax.set_ylabel('Final subtracted traces', fontsize=16)
+    subtracted_ax.set_xlabel('Time (s)', fontsize=16)
 
     long_protocol_ax.plot(times*1e-3, voltages, color='black')
     # long_protocol_ax.set_xlabel('time (s)')
-    long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
+    long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)', fontsize=16)
     long_protocol_ax.tick_params(axis='x', labelbottom=False)
 
     fig.align_ylabels()
