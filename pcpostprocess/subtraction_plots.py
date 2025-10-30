@@ -54,32 +54,22 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     all_leak_params_before = []
     all_leak_params_after = []
 
-    for i in range(len(sweeps)):
-        before_params, _ = fit_linear_leak(before_currents, voltages, times,
-                                           *ramp_bounds)
-        all_leak_params_before.append(before_params)
-
-        after_params, _ = fit_linear_leak(after_currents, voltages, times,
-                                          *ramp_bounds)
-        all_leak_params_after.append(after_params)
-
     # Compute and store leak currents
     before_leak_currents = np.full((nsweeps, voltages.shape[0]),
                                    np.nan)
     after_leak_currents = np.full((nsweeps, voltages.shape[0]),
                                   np.nan)
 
-    for i, sweep in enumerate(sweeps):
-        b0, b1 = all_leak_params_before[i]
-        gleak = b1
-        Eleak = -b0/b1
-        before_leak_currents[i, :] = gleak * (voltages - Eleak)
+    for i in range(len(sweeps)):
+        before_params, before_leak_current = fit_linear_leak(before_currents, voltages, times,
+                                           *ramp_bounds)
+        before_leak_currents[i, :] = before_leak_current
+        all_leak_params_before.append(before_params)
 
-        b0, b1 = all_leak_params_after[i]
-        gleak = b1
-        Eleak = -b0/b1
-
-        after_leak_currents[i, :] = gleak * (voltages - Eleak)
+        after_params, after_leak_current = fit_linear_leak(after_currents, voltages, times,
+                                          *ramp_bounds)
+        all_leak_params_after.append(after_params)
+        after_leak_currents[i, :] = after_leak_current
 
     for i, (sweep, ax) in enumerate(zip(sweeps, before_axs)):
         b0, b1 = all_leak_params_before[i]
@@ -89,14 +79,9 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, before_currents[i, :], label=f"pre-drug raw, sweep {sweep}")
         ax.plot(times*1e-3, before_leak_currents[i, :],
                 label=r'$I_\mathrm{L}$.' f"g={gleak:1E}, E={Eleak:.1e}")
-        # ax.legend()
 
         if ax.get_legend():
             ax.get_legend().remove()
-        ax.set_xlabel('time (s)')
-        ax.set_ylabel(r'pre-drug trace')
-        # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        # ax.tick_params(axis='y', rotation=90)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, after_axs)):
         b0, b1 = all_leak_params_before[i]
@@ -106,13 +91,10 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, after_currents[i, :], label=f"post-drug raw, sweep {sweep}")
         ax.plot(times*1e-3, after_leak_currents[i, :],
                 label=r"$I_\mathrm{L}$." f"g={gleak:1E}, E={Eleak:.1e}")
-        # ax.legend()
         if ax.get_legend():
             ax.get_legend().remove()
         ax.set_xlabel('$t$ (s)')
         ax.set_ylabel(r'post-drug trace')
-        # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-        # ax.tick_params(axis='y', rotation=90)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
@@ -123,16 +105,13 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
                 label=f"leak-corrected post-drug trace, sweep {sweep}")
         ax.set_xlabel(r'$t$ (s)')
         ax.set_ylabel(r'leak-corrected traces')
-        # ax.tick_params(axis='y', rotation=90)
-        # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
 
     for i, sweep in enumerate(sweeps):
         before_trace = before_currents[i, :].flatten()
         after_trace = after_currents[i, :].flatten()
-        before_params, before_leak = fit_linear_leak(before_trace, voltages, times,
-                                                     *ramp_bounds)
-        after_params, after_leak = fit_linear_leak(after_trace, voltages, times,
-                                                   *ramp_bounds)
+
+        before_leak = before_leak_currents[i, :]
+        after_leak = after_leak_currents[i, :]
 
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
