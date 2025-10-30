@@ -517,7 +517,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     #  Find start of leak section
     desc = voltage_protocol.get_all_sections()
     ramp_bounds = detect_ramp_bounds(times, desc)
-    tstart, tend = ramp_bounds
 
     nsweeps_before = before_trace.NofSweeps = 2
     nsweeps_after = after_trace.NofSweeps = 2
