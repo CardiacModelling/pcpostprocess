@@ -107,7 +107,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.tick_params(axis='x', labelbottom=False)
     after_axs[0].set_ylabel(r'Post-drug trace', fontsize=16)
 
-
     for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
         corrected_after_currents = after_currents[i, :] - after_leak_currents[i, :]
