@@ -52,7 +52,8 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, voltages, color='black')
         ax.set_title(f'Well {well}, sweep {sweeps[i]}', fontweight='bold')
         ax.tick_params(axis='x', labelbottom=False)
-        # ax.set_xlabel('time (s)')
+        ax.legend()
+
     protocol_axs[0].set_ylabel(r'$V_\mathrm{cmd}$ (mV)', fontsize=16)
 
     all_leak_params_before = []
@@ -88,13 +89,9 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, before_leak_currents[i, :],
                 label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
         ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
-        ax.legend()
         ax.tick_params(axis='x', labelbottom=False)
+        ax.legend()
 
-        # ax.set_xlabel('time (s)')
-    before_axs[0].set_ylabel(r'Pre-drug trace', fontsize=16)
-    # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
-    # ax.tick_params(axis='y', rotation=90)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, after_axs)):
         b0, b1 = all_leak_params_before[i]
@@ -103,12 +100,12 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
 
         ax.plot(times*1e-3, after_currents[i, :], label="Post-drug raw")
         ax.plot(times*1e-3, after_leak_currents[i, :],
-                label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
-        ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
-        ax.legend()
-        ax.tick_params(axis='x', labelbottom=False)
 
-    after_axs[0].set_ylabel(r'Post-drug trace', fontsize=16)
+                label=r"$I_\mathrm{L}$." f"g={gleak:1E}, E={Eleak:.1e}")
+        if ax.get_legend():
+            ax.get_legend().remove()
+        ax.set_xlabel('$t$ (s)')
+        ax.set_ylabel(r'post-drug trace')
 
     for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
@@ -116,22 +113,15 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, corrected_before_currents,
                 label="Leak-corrected pre-drug trace")
         ax.plot(times*1e-3, corrected_after_currents,
-                label="Leak-corrected post-drug trace")
-        ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
-        ax.set_xlabel(r'Time (s)')
-        ax.legend()
-    corrected_axs[0].set_ylabel(r'Leak-corrected traces', fontsize=16)
-    # ax.tick_params(axis='y', rotation=90)
-    # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+                label=f"leak-corrected post-drug trace, sweep {sweep}")
+        ax.set_xlabel(r'$t$ (s)')
+        ax.set_ylabel(r'leak-corrected traces')
 
     for i, sweep in enumerate(sweeps):
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
 
         subtracted_ax.plot(times*1e-3, subtracted_currents, label=f"sweep {sweep}", alpha=.5)
-
-        #  Cycle to next colour
-        # subtracted_ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
 
     subtracted_ax.legend()
     subtracted_ax.plot(range_of_zero, [0, 0], color='black',
@@ -140,7 +130,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     subtracted_ax.set_xlabel('Time (s)', fontsize=16)
 
     long_protocol_ax.plot(times*1e-3, voltages, color='black')
-    # long_protocol_ax.set_xlabel('time (s)')
     long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)', fontsize=16)
     long_protocol_ax.tick_params(axis='x', labelbottom=False)
 
