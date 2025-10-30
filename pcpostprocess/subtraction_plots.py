@@ -55,11 +55,11 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     all_leak_params_after = []
 
     for i in range(len(sweeps)):
-        before_params, _ = fit_linear_leak(before_currents, voltages, times,
+        before_params, _ = fit_linear_leak(before_currents[i], voltages, times,
                                            *ramp_bounds)
         all_leak_params_before.append(before_params)
 
-        after_params, _ = fit_linear_leak(after_currents, voltages, times,
+        after_params, _ = fit_linear_leak(after_currents[i], voltages, times,
                                           *ramp_bounds)
         all_leak_params_after.append(after_params)
 
