@@ -30,7 +30,7 @@ class TestSubtractionPlots(unittest.TestCase):
         self.after_trace = Trace(test_data_dir_after, json_file_after)
 
     def test_do_subtraction_plot(self):
-        fig = plt.figure(figsize=(5, 9), layout='constrained')
+        fig = plt.figure(figsize=(16, 18), layout='constrained')
         times = self.before_trace.get_times()
 
         well = 'A01'

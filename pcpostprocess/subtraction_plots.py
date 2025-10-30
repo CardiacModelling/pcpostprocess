@@ -5,9 +5,9 @@ from .leak_correct import fit_linear_leak
 
 
 def setup_subtraction_grid(fig, nsweeps):
-    # Use 5 x 2 grid when there are 2 sweeps
-    gs = GridSpec(6, nsweeps, figure=fig)
-
+    # Use 6 x 2 grid when there are 2 sweeps
+    gs = GridSpec(6, nsweeps, figure=fig, height_ratios=[0.7, 2, 2, 2, 0.7, 3])
+    # gs.subplots(sharey='row')
     # plot protocol at the top
     protocol_axs = [fig.add_subplot(gs[0, i]) for i in range(nsweeps)]
 
@@ -21,10 +21,10 @@ def setup_subtraction_grid(fig, nsweeps):
     corrected_axs = [fig.add_subplot(gs[3, i]) for i in range(nsweeps)]
 
     # Subtracted traces on one axis
-    subtracted_ax = fig.add_subplot(gs[4, :])
+    subtracted_ax = fig.add_subplot(gs[5, :])
 
     # Long axis for protocol on the bottom (full width)
-    long_protocol_ax = fig.add_subplot(gs[5, :])
+    long_protocol_ax = fig.add_subplot(gs[4, :])
 
     for ax, cap in zip(list(protocol_axs) + list(before_axs)
                        + list(after_axs) + list(corrected_axs)
@@ -32,6 +32,8 @@ def setup_subtraction_grid(fig, nsweeps):
                        'abcdefghijklm'):
         ax.spines[['top', 'right']].set_visible(False)
         ax.set_title(cap, loc='left', fontweight='bold')
+        if cap != 'a':
+            ax.sharex(protocol_axs[0])
 
     return protocol_axs, before_axs, after_axs, corrected_axs, subtracted_ax, long_protocol_ax
 
@@ -46,13 +48,19 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     protocol_axs, before_axs, after_axs, corrected_axs, \
         subtracted_ax, long_protocol_ax = axs
 
-    for ax in protocol_axs:
+    for i, ax in enumerate(protocol_axs):
         ax.plot(times*1e-3, voltages, color='black')
-        ax.set_xlabel('time (s)')
-        ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
+        ax.set_title(f'Well {well}, sweep {sweeps[i]}', fontweight='bold')
+        ax.tick_params(axis='x', labelbottom=False)
+        # ax.set_xlabel('time (s)')
+    protocol_axs[0].set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
 
     all_leak_params_before = []
     all_leak_params_after = []
+
+    alpha_of_zero = 0.2
+    style_of_zero = '-'
+    range_of_zero = [times[0]*1e-3, times[-1]*1e-3]
 
     # Compute and store leak currents
     before_leak_currents = np.full((nsweeps, voltages.shape[0]),
@@ -76,35 +84,43 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         gleak = b1
         Eleak = -b0/b1
 
-        ax.plot(times*1e-3, before_currents[i, :], label=f"pre-drug raw, sweep {sweep}")
+        ax.plot(times*1e-3, before_currents[i, :], label=f"Pre-drug raw")
         ax.plot(times*1e-3, before_leak_currents[i, :],
-                label=r'$I_\mathrm{L}$.' f"g={gleak:1E}, E={Eleak:.1e}")
+                label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
+        ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
+        ax.legend()
+        ax.tick_params(axis='x', labelbottom=False)
 
-        if ax.get_legend():
-            ax.get_legend().remove()
+        # ax.set_xlabel('time (s)')
+    before_axs[0].set_ylabel(r'Pre-drug trace')
+    # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
+    # ax.tick_params(axis='y', rotation=90)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, after_axs)):
         b0, b1 = all_leak_params_before[i]
         gleak = b1
         Eleak = -b0/b1
 
-        ax.plot(times*1e-3, after_currents[i, :], label=f"post-drug raw, sweep {sweep}")
+        ax.plot(times*1e-3, after_currents[i, :], label=f"Post-drug raw")
         ax.plot(times*1e-3, after_leak_currents[i, :],
-                label=r"$I_\mathrm{L}$." f"g={gleak:1E}, E={Eleak:.1e}")
-        if ax.get_legend():
-            ax.get_legend().remove()
-        ax.set_xlabel('$t$ (s)')
-        ax.set_ylabel(r'post-drug trace')
+                label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
+        ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
+        ax.legend()
+        ax.tick_params(axis='x', labelbottom=False)
+
+    after_axs[0].set_ylabel(r'Post-drug trace')
 
     for i, (sweep, ax) in enumerate(zip(sweeps, corrected_axs)):
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
         corrected_after_currents = after_currents[i, :] - after_leak_currents[i, :]
         ax.plot(times*1e-3, corrected_before_currents,
-                label=f"leak-corrected pre-drug trace, sweep {sweep}")
+                label=f"Leak-corrected pre-drug trace")
         ax.plot(times*1e-3, corrected_after_currents,
-                label=f"leak-corrected post-drug trace, sweep {sweep}")
+                label=f"Leak-corrected post-drug trace")
+        ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
         ax.set_xlabel(r'$t$ (s)')
-        ax.set_ylabel(r'leak-corrected traces')
+        ax.legend()
+    corrected_axs[0].set_ylabel(r'Leak-corrected traces')
 
     for i, sweep in enumerate(sweeps):
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
@@ -113,13 +129,18 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         subtracted_ax.plot(times*1e-3, subtracted_currents, label=f"sweep {sweep}", alpha=.5)
 
         #  Cycle to next colour
-        subtracted_ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
+        # subtracted_ax.plot([np.nan], [np.nan], label=f"sweep {sweep}", alpha=.5)
 
-    subtracted_ax.set_ylabel(r'$I_\mathrm{obs} - I_\mathrm{L}$ (mV)')
-    subtracted_ax.set_xlabel('$t$ (s)')
+    subtracted_ax.legend()
+    subtracted_ax.plot(range_of_zero, [0, 0], color='black',
+                       linestyle=style_of_zero, alpha=alpha_of_zero)
+    subtracted_ax.set_ylabel('Final subtracted traces')
+    subtracted_ax.set_xlabel('Time (s)')
 
     long_protocol_ax.plot(times*1e-3, voltages, color='black')
-    long_protocol_ax.set_xlabel('time (s)')
+    # long_protocol_ax.set_xlabel('time (s)')
     long_protocol_ax.set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
-    long_protocol_ax.tick_params(axis='y', rotation=90)
+    long_protocol_ax.tick_params(axis='x', labelbottom=False)
+
+    fig.align_ylabels()
 
