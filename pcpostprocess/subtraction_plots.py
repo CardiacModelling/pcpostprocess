@@ -94,7 +94,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     before_axs[0].set_ylabel(r'Pre-drug trace', fontsize=16)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, after_axs)):
-        b0, b1 = all_leak_params_before[i]
+        b0, b1 = all_leak_params_after[i]
         gleak = b1
         Eleak = -b0/b1
 
