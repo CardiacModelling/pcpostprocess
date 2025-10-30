@@ -107,12 +107,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.set_ylabel(r'leak-corrected traces')
 
     for i, sweep in enumerate(sweeps):
-        before_trace = before_currents[i, :].flatten()
-        after_trace = after_currents[i, :].flatten()
-
-        before_leak = before_leak_currents[i, :]
-        after_leak = after_leak_currents[i, :]
-
         subtracted_currents = before_currents[i, :] - before_leak_currents[i, :] - \
             (after_currents[i, :] - after_leak_currents[i, :])
 
