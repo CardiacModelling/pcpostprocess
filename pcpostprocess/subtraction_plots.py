@@ -94,7 +94,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         gleak = b1
         Eleak = -b0/b1
 
-        ax.plot(times*1e-3, before_currents[i, :], label=f"Pre-drug raw")
+        ax.plot(times*1e-3, before_currents[i, :], label="Pre-drug raw")
         ax.plot(times*1e-3, before_leak_currents[i, :],
                 label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
         ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
@@ -111,7 +111,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         gleak = b1
         Eleak = -b0/b1
 
-        ax.plot(times*1e-3, after_currents[i, :], label=f"Post-drug raw")
+        ax.plot(times*1e-3, after_currents[i, :], label="Post-drug raw")
         ax.plot(times*1e-3, after_leak_currents[i, :],
                 label=f"Fitted leak g={gleak:7.5g}, E={Eleak:7.4g} mV")
         ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
@@ -127,9 +127,9 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         corrected_before_currents = before_currents[i, :] - before_leak_currents[i, :]
         corrected_after_currents = after_currents[i, :] - after_leak_currents[i, :]
         ax.plot(times*1e-3, corrected_before_currents,
-                label=f"Leak-corrected pre-drug trace")
+                label="Leak-corrected pre-drug trace")
         ax.plot(times*1e-3, corrected_after_currents,
-                label=f"Leak-corrected post-drug trace")
+                label="Leak-corrected post-drug trace")
         ax.plot(range_of_zero, [0, 0], color='black', linestyle=style_of_zero, alpha=alpha_of_zero)
         ax.set_xlabel(r'$t$ (s)')
         ax.legend()
