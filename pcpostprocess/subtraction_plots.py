@@ -71,18 +71,21 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
     for i, sweep in enumerate(sweeps):
 
         b0, b1 = all_leak_params_before[i]
-        gleak = b1
-        Eleak = -b1/b0
+        gleak = b0
+        Eleak = -b0/b1
         before_leak_currents[i, :] = gleak * (voltages - Eleak)
 
         b0, b1 = all_leak_params_after[i]
-        gleak = b1
-        Eleak = -b1/b0
+        gleak = b0
+        Eleak = -b0/b1
 
         after_leak_currents[i, :] = gleak * (voltages - Eleak)
 
     for i, (sweep, ax) in enumerate(zip(sweeps, before_axs)):
-        gleak, Eleak = all_leak_params_before[i]
+        b0, b1 = all_leak_params_before[i]
+
+        gleak = b0
+        Eleak = -b0/b1
         ax.plot(times*1e-3, before_currents[i, :], label=f"pre-drug raw, sweep {sweep}")
         ax.plot(times*1e-3, before_leak_currents[i, :],
                 label=r'$I_\mathrm{L}$.' f"g={gleak:1E}, E={Eleak:.1e}")
