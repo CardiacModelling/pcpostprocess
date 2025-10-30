@@ -52,7 +52,6 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.plot(times*1e-3, voltages, color='black')
         ax.set_title(f'Well {well}, sweep {sweeps[i]}', fontweight='bold')
         ax.tick_params(axis='x', labelbottom=False)
-        ax.legend()
 
     protocol_axs[0].set_ylabel(r'$V_\mathrm{cmd}$ (mV)', fontsize=16)
 
