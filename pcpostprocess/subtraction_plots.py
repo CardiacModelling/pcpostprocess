@@ -53,7 +53,7 @@ def do_subtraction_plot(fig, times, sweeps, before_currents, after_currents,
         ax.set_title(f'Well {well}, sweep {sweeps[i]}', fontweight='bold')
         ax.tick_params(axis='x', labelbottom=False)
         # ax.set_xlabel('time (s)')
-    protocol_axs[0].set_ylabel(r'$V_\mathrm{cmd}$ (mV)')
+    protocol_axs[0].set_ylabel(r'$V_\mathrm{cmd}$ (mV)', fontsize=16)
 
     all_leak_params_before = []
     all_leak_params_after = []
