@@ -14,8 +14,8 @@ import scipy
 import seaborn as sns
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
-from pcpostprocess.scripts.run_herg_qc import create_qc_table
 from pcpostprocess.directory_builder import setup_output_directory
+from pcpostprocess.scripts.run_herg_qc import create_qc_table
 
 matplotlib.use('Agg')
 
