@@ -24,6 +24,7 @@ from pcpostprocess.hergQC import hERGQC
 from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
+from pcpostprocess.directory_builder import setup_output_directory
 
 pool_kws = {'maxtasksperchild': 1}
 
@@ -45,7 +46,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('data_directory')
     parser.add_argument('-c', '--no_cpus', default=1, type=int)
-    parser.add_argument('--output_dir')
+    parser.add_argument('--output_dir', default="output")
     parser.add_argument('-w', '--wells', nargs='+')
     parser.add_argument('--protocols', nargs='+')
     parser.add_argument('--reversal_spread_threshold', type=float, default=10)
@@ -62,19 +63,8 @@ def main():
 
     logging.basicConfig(level=args.log_level)
 
-    if args.output_dir is None:
-        args.output_dir = os.path.join('output', 'hergqc')
-
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
-    with open(os.path.join(args.output_dir, 'info.txt'), 'w') as description_fout:
-        git_hash = get_git_revision_hash()
-        datetimestr = str(datetime.datetime.now())
-        description_fout.write(f"Date: {datetimestr}\n")
-        description_fout.write(f"Commit {git_hash}\n")
-        command = " ".join(sys.argv)
-        description_fout.write(f"Command: {command}\n")
+    global output_dir
+    output_dir = setup_output_directory("run_herg_qc")
 
     spec = importlib.util.spec_from_file_location(
         'export_config',
@@ -107,7 +97,7 @@ def main():
     sys.modules['export_config'] = export_config
     spec.loader.exec_module(export_config)
 
-    export_config.savedir = args.output_dir
+    export_config.savedir = output_dir
 
     args.saveID = export_config.saveID
     args.savedir = export_config.savedir
@@ -199,11 +189,11 @@ def main():
 
     qc_df['qc3.bookend'] = [qc3_bookend_dict[well] for well in qc_df.well]
 
-    savedir = args.output_dir
+    savedir = output_dir
     saveID = export_config.saveID
 
-    if not os.path.exists(os.path.join(args.output_dir, savedir)):
-        os.makedirs(os.path.join(args.output_dir, savedir))
+    if not os.path.exists(os.path.join(output_dir, savedir)):
+        os.makedirs(os.path.join(output_dir, savedir))
 
     #  qc_df will be updated and saved again, but it's useful to save them here for debugging
     # Write qc_df to file
@@ -344,7 +334,7 @@ def main():
 
     chrono_dict = {times[0]: prot for prot, times in zip(savenames, times_list)}
 
-    with open(os.path.join(args.output_dir, 'chrono.txt'), 'w') as fout:
+    with open(os.path.join(output_dir, 'chrono.txt'), 'w') as fout:
         for key in sorted(chrono_dict):
             val = chrono_dict[key]
             #  Output order of protocols
@@ -382,8 +372,8 @@ def main():
 
     qc_styled_df = create_qc_table(qc_df)
     logging.info(qc_styled_df)
-    qc_styled_df.to_excel(os.path.join(args.output_dir, 'qc_table.xlsx'))
-    qc_styled_df.to_latex(os.path.join(args.output_dir, 'qc_table.tex'))
+    qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
+    qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
 
     # Save in csv format
     qc_df.to_csv(os.path.join(savedir, 'QC-%s.csv' % saveID))
@@ -395,11 +385,11 @@ def main():
     #  Load only QC vals. TODO use a new variabile name to avoid confusion
     qc_vals_df = extract_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']].copy()
     qc_vals_df['drug'] = 'before'
-    qc_vals_df.to_csv(os.path.join(args.output_dir, 'qc_vals_df.csv'))
+    qc_vals_df.to_csv(os.path.join(output_dir, 'qc_vals_df.csv'))
 
-    extract_df.to_csv(os.path.join(args.output_dir, 'subtraction_qc.csv'))
+    extract_df.to_csv(os.path.join(output_dir, 'subtraction_qc.csv'))
 
-    with open(os.path.join(args.output_dir, 'passed_wells.txt'), 'w') as fout:
+    with open(os.path.join(output_dir, 'passed_wells.txt'), 'w') as fout:
         for well, passed in passed_qc_dict.items():
             if passed:
                 fout.write(well)
@@ -476,7 +466,7 @@ def create_qc_table(qc_df):
 
 def extract_protocol(readname, savename, time_strs, selected_wells, args):
     logging.info(f"extracting {savename}")
-    savedir = args.output_dir
+    savedir = output_dir
     saveID = args.saveID
 
     traces_dir = os.path.join(savedir, 'traces')
@@ -743,7 +733,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             res = \
                 get_time_constant_of_first_decay(subtracted_trace, times, desc,
                                                  args=args,
-                                                 output_path=os.path.join(args.output_dir,
+                                                 output_path=os.path.join(output_dir,
                                                                           'debug',
                                                                           '-120mV time constant',
                                                                           f"{savename}-{well}-sweep"
@@ -836,7 +826,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
     # Convert to s
     sampling_rate = before_trace.sampling_rate
 
-    savedir = args.output_dir
+    savedir = os.path.join(output_dir, "QC")
     if not os.path.exists(savedir):
         os.makedirs(savedir)
 
@@ -989,7 +979,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
 
 
 def qc3_bookend(readname, savename, time_strs, args):
-    plot_dir = os.path.join(args.output_dir, args.savedir,
+    plot_dir = os.path.join(output_dir, args.savedir,
                             f"{args.saveID}-{savename}-qc3-bookend")
 
     filepath_first_before = os.path.join(args.data_directory,
@@ -1053,7 +1043,7 @@ def qc3_bookend(readname, savename, time_strs, args):
         last_before_current = last_before_current_dict[well][-1, :]
         last_after_current = last_after_current_dict[well][-1, :]
 
-        output_directory = os.path.join(args.output_dir, "leak_correction")
+        output_directory = os.path.join(output_dir, "leak_correction")
         save_fname = f"{well}_{savename}_before0.pdf"
 
         #  Plot subtraction
@@ -1110,7 +1100,7 @@ def qc3_bookend(readname, savename, time_strs, args):
 
         res_dict[well] = passed
 
-        save_fname = os.path.join(args.output_dir,
+        save_fname = os.path.join(output_dir,
                                   'debug',
                                   f"debug_{well}_{savename}",
                                   'qc3_bookend')

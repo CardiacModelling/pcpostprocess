@@ -5,6 +5,7 @@ import unittest
 import matplotlib.pyplot as plt
 from syncropatch_export.trace import Trace
 
+from pcpostprocess import directory_builder
 from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
@@ -20,7 +21,8 @@ class TestSubtractionPlots(unittest.TestCase):
         json_file_before = "staircaseramp (2)_2kHz_15.01.07.json"
         json_file_after = "staircaseramp (2)_2kHz_15.11.33.json"
 
-        self.output_dir = os.path.join('test_output', 'test_trace_class')
+        self.output_dir = directory_builder.setup_output_directory("test_output",
+                                                                   self.__class__.__name__)
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)

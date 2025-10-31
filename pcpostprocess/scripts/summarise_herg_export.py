@@ -15,6 +15,7 @@ import seaborn as sns
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
 from pcpostprocess.scripts.run_herg_qc import create_qc_table
+from pcpostprocess.directory_builder import setup_output_directory
 
 matplotlib.use('Agg')
 
@@ -54,7 +55,7 @@ def main():
     parser.add_argument('data_dir', type=str, help="path to the directory containing the subtract_leak results")
     parser.add_argument('--cpus', '-c', default=1, type=int)
     parser.add_argument('--wells', '-w', nargs='+', default=None)
-    parser.add_argument('--output', '-o', default='output')
+    parser.add_argument('--output_dir', '-o', default='output')
     parser.add_argument('--protocols', type=str, default=[], nargs='+')
     parser.add_argument('-r', '--reversal', type=float, default=np.nan)
     # parser.add_argument('--selection_file', default=None, type=str)
@@ -76,9 +77,7 @@ def main():
     experiment_name = args.experiment_name
 
     global output_dir
-    output_dir = os.path.join(args.output)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    output_dir = setup_output_directory(args.output_dir, "summarise_herg_export")
 
     leak_parameters_df = pd.read_csv(os.path.join(args.data_dir, 'subtraction_qc.csv'))
 

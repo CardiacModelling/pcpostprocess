@@ -5,6 +5,7 @@ import unittest
 from syncropatch_export.trace import Trace
 
 from pcpostprocess import leak_correct
+from pcpostprocess import directory_builder
 from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 
 
@@ -14,10 +15,8 @@ class TestLeakCorrect(unittest.TestCase):
                                      "staircaseramp (2)_2kHz_15.01.07")
         json_file = "staircaseramp (2)_2kHz_15.01.07.json"
 
-        self.output_dir = os.path.join('test_output', 'test_trace_class')
-
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        self.output_dir = directory_builder.setup_output_directory("test_output",
+                                                        self.__class__.__name__)
 
         self.test_trace = Trace(test_data_dir, json_file)
 

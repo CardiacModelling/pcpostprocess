@@ -8,6 +8,7 @@ import numpy as np
 from syncropatch_export.trace import Trace
 
 from pcpostprocess.hergQC import NOISE_LEN, hERGQC
+from pcpostprocess import directory_builder
 
 
 def all_passed(result):
@@ -55,8 +56,8 @@ class TestHergQC(unittest.TestCase):
             if vend == vstart
         ]
 
-        plot_dir = "test_output"
-        os.makedirs(plot_dir, exist_ok=True)
+        plot_dir = directory_builder.setup_output_directory("test_output",
+                                                            self.__class__.__name__)
 
         self.hergqc = hERGQC(
             sampling_rate=sampling_rate,
