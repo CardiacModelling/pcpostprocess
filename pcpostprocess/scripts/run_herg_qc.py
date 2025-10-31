@@ -982,6 +982,9 @@ def qc3_bookend(readname, savename, time_strs, args):
     plot_dir = os.path.join(output_dir, args.savedir,
                             f"{args.saveID}-{savename}-qc3-bookend")
 
+    if not os.path.exists(plot_dir):
+        os.makedirs(plot_dir)
+
     filepath_first_before = os.path.join(args.data_directory,
                                          f"{readname}_{time_strs[0]}")
     filepath_last_before = os.path.join(args.data_directory,

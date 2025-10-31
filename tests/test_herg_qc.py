@@ -7,8 +7,8 @@ import unittest
 import numpy as np
 from syncropatch_export.trace import Trace
 
-from pcpostprocess.hergQC import NOISE_LEN, hERGQC
 from pcpostprocess import directory_builder
+from pcpostprocess.hergQC import NOISE_LEN, hERGQC
 
 
 def all_passed(result):
