@@ -51,7 +51,7 @@ def main():
     parser.add_argument('--reversal_spread_threshold', type=float, default=10)
     parser.add_argument('--export_failed', action='store_true')
     parser.add_argument('--selection_file')
-    parser.add_argument('--figsize', nargs=2, type=int, default=[5, 8])
+    parser.add_argument('--figsize', nargs=2, type=int, default=[16, 18])
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--log_level', default='INFO')
     parser.add_argument('--Erev', default=-90.71, type=float)
@@ -517,7 +517,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     #  Find start of leak section
     desc = voltage_protocol.get_all_sections()
     ramp_bounds = detect_ramp_bounds(times, desc)
-    tstart, tend = ramp_bounds
 
     nsweeps_before = before_trace.NofSweeps = 2
     nsweeps_after = after_trace.NofSweeps = 2
