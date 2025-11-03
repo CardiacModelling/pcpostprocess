@@ -735,7 +735,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
             res = \
                 get_time_constant_of_first_decay(subtracted_trace, times, desc,
                                                  args=args,
-                                                 output_path=os.path.join(output_dir,
+                                                 output_path=os.path.join(savedir,
                                                                           "debug",
                                                                           "-120mV time constant",
                                                                           f"{savename}-{well}-sweep"
