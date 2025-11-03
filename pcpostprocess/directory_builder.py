@@ -1,5 +1,7 @@
 import datetime
 import os
+import re
+import shutil
 import subprocess
 import sys
 from importlib.metadata import version
@@ -9,16 +11,34 @@ def get_git_revision_hash():
     """
     Get the hash for the git commit currently being used.
 
-    @return The most recent commit hash or the string "No git history"
+    @return The most recent commit hash or a suitable message
 
     """
 
-    ret_string = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    exe = shutil.which("git")
 
-    if ret_string.startswith("fatal: not a git repository"):
-        ret_string = "No git history"
-
+    if exe is None:
+        ret_string = "git not found"
     else:
+        run_success = False
+        try:
+            subprocess.run([exe, "--version"], check=True,
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+            run_success = True
+
+        except subprocess.CalledProcessError:
+            ret_string = "git error"
+
+        if run_success:
+            try:
+                ret_string = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                                     stderr=subprocess.DEVNULL).decode('ascii').strip()
+
+            except subprocess.CalledProcessError:
+                ret_string = "No git history"
+
+    if bool(re.fullmatch(r"[0-9a-fA-F]{40}", ret_string)):
         # Check if working tree has uncommitted changes
         is_clean = subprocess.call(["git", "diff-index", "--quiet", "HEAD", "--"]) == 0
 
@@ -62,7 +82,7 @@ def setup_output_directory(dirname: str = None, subdir_name: str = None):
                                "https://github.com/CardiacModelling/pcpostprocess\n")
         description_fout.write(f"Date: {datetimestr}\n")
         description_fout.write(f"Version: {version('pcpostprocess')}\n")
-        description_fout.write(f"Commit {git_hash}\n")
+        description_fout.write(f"Commit: {git_hash}\n")
 
         command = " ".join(sys.argv)
         description_fout.write(f"Command: {command}\n")
