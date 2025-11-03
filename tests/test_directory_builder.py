@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-import copy
 import os
 import re
 import shutil
-import string
 import subprocess
 import tempfile
 import unittest
 from contextlib import contextmanager
 from unittest.mock import patch
-
-import numpy as np
-from syncropatch_export.trace import Trace
 
 from pcpostprocess import directory_builder
 
