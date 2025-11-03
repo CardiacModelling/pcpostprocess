@@ -599,7 +599,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
         after_leak_currents = []
 
         out_path = os.path.join(savedir, "leak_correction",
-                               f"{saveID}-{savename}-leak_fit-before")
+                                f"{saveID}-{savename}-leak_fit-before")
 
         for sweep in range(before_current.shape[0]):
             row_dict = {
@@ -628,7 +628,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             before_leak_currents.append(before_leak)
 
             out_path = os.path.join(savedir,
-                                   f"{saveID}-{savename}-leak_fit-after")
+                                    f"{saveID}-{savename}-leak_fit-after")
             # Convert linear regression parameters into conductance and reversal
             row_dict['gleak_before'] = before_params[1]
             row_dict['E_leak_before'] = -before_params[0] / before_params[1]
@@ -1068,10 +1068,10 @@ def qc3_bookend(readname, savename, time_strs, args, wells):
             #  Plot subtraction
             if args.debug:
                 get_leak_corrected(first_before_current,
-                                voltage, times,
-                                *ramp_bounds,
-                                save_fname=save_fname,
-                                output_dir=leak_correct_dir)
+                                   voltage, times,
+                                   *ramp_bounds,
+                                   save_fname=save_fname,
+                                   output_dir=leak_correct_dir)
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
