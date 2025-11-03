@@ -39,7 +39,7 @@ def setup_output_directory(dirname: str = None, subdir_name: str = None):
         if subdir_name:
             dirname = os.path.join("output", f"{subdir_name}")
         else:
-            dirname = os.path.join("output", f"output")
+            dirname = os.path.join("output", "output")
 
     if subdir_name is not None:
         dirname = os.path.join(dirname, subdir_name)
@@ -49,7 +49,7 @@ def setup_output_directory(dirname: str = None, subdir_name: str = None):
     with open(os.path.join(dirname, "pcpostprocess_info.txt"), "w") as description_fout:
         git_hash = get_git_revision_hash()
         datetimestr = str(datetime.datetime.now())
-        description_fout.write(f"pcpostprocess output "
+        description_fout.write("pcpostprocess output "
                                "https://github.com/CardiacModelling/pcpostprocess\n")
         description_fout.write(f"Date: {datetimestr}\n")
         description_fout.write(f"Version: {version('pcpostprocess')}\n")
