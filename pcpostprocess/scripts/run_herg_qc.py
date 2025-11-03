@@ -62,7 +62,6 @@ def main():
 
     logging.basicConfig(level=args.log_level)
 
-    global output_dir
     output_dir = setup_output_directory(args.output_dir, "run_herg_qc")
 
     spec = importlib.util.spec_from_file_location(
@@ -184,7 +183,7 @@ def main():
     times = sorted(res_dict[protocol])
     if len(times) == 4:
         qc3_bookend_dict = qc3_bookend(protocol, savename,
-                                       times, args, wells)
+                                       times, args, wells, output_dir)
     else:
         qc3_bookend_dict = {well: True for well in qc_df.well.unique()}
 
@@ -273,7 +272,8 @@ def main():
 
     args_list = list(zip(readnames, savenames, times_list, [wells_to_export] *
                          len(savenames),
-                         [args for i in readnames]))
+                         [args for i in readnames],
+                         [output_dir for i in readnames]))
 
     with multiprocessing.Pool(min(args.no_cpus, no_protocols),
                               **pool_kws) as pool:
@@ -465,9 +465,9 @@ def create_qc_table(qc_df):
     return ret_df
 
 
-def extract_protocol(readname, savename, time_strs, selected_wells, args):
+def extract_protocol(readname, savename, time_strs, selected_wells, args, savedir):
     logging.info(f"extracting {savename}")
-    savedir = output_dir
+
     saveID = args.saveID
 
     traces_dir = os.path.join(savedir, 'traces')
@@ -982,7 +982,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
     return selected_wells, df
 
 
-def qc3_bookend(readname, savename, time_strs, args, wells):
+def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
     plot_dir = os.path.join(output_dir, args.savedir,
                             f"{args.saveID}-{savename}-qc3-bookend")
 
