@@ -63,7 +63,7 @@ def main():
     logging.basicConfig(level=args.log_level)
 
     global output_dir
-    output_dir = setup_output_directory("run_herg_qc")
+    output_dir = setup_output_directory(args.output_dir, "run_herg_qc")
 
     spec = importlib.util.spec_from_file_location(
         'export_config',
@@ -170,7 +170,9 @@ def main():
                               **pool_kws) as pool:
 
         pool_argument_list = zip(readnames, savenames, times_list,
-                                 [args for i in readnames])
+                                 [args for i in readnames],
+                                 [output_dir for i in readnames])
+
         well_selections, qc_dfs = \
             list(zip(*pool.starmap(run_qc_for_protocol, pool_argument_list)))
 
@@ -182,7 +184,7 @@ def main():
     times = sorted(res_dict[protocol])
     if len(times) == 4:
         qc3_bookend_dict = qc3_bookend(protocol, savename,
-                                       times, args)
+                                       times, args, wells)
     else:
         qc3_bookend_dict = {well: True for well in qc_df.well.unique()}
 
@@ -596,7 +598,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
         before_leak_currents = []
         after_leak_currents = []
 
-        out_dir = os.path.join(savedir,
+        out_path = os.path.join(savedir, "leak_correction",
                                f"{saveID}-{savename}-leak_fit-before")
 
         for sweep in range(before_current.shape[0]):
@@ -619,13 +621,13 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             before_params, before_leak = fit_linear_leak(before_current[sweep, :],
                                                          voltages, times,
                                                          *ramp_bounds,
-                                                         output_dir=out_dir,
+                                                         output_dir=out_path,
                                                          save_fname=f"{well}_sweep{sweep}.png"
                                                          )
 
             before_leak_currents.append(before_leak)
 
-            out_dir = os.path.join(savedir,
+            out_path = os.path.join(savedir,
                                    f"{saveID}-{savename}-leak_fit-after")
             # Convert linear regression parameters into conductance and reversal
             row_dict['gleak_before'] = before_params[1]
@@ -635,7 +637,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                                                        voltages, times,
                                                        *ramp_bounds,
                                                        save_fname=f"{well}_sweep{sweep}.png",
-                                                       output_dir=out_dir)
+                                                       output_dir=out_path)
 
             after_leak_currents.append(after_leak)
 
@@ -676,7 +678,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
             row_dict['QC.Erev'] = E_rev < -50 and E_rev > -120
 
             # Check QC6 for each protocol (not just the staircase)
-            plot_dir = os.path.join(savedir, 'debug')
+            plot_dir = os.path.join(savedir, "QC", "debug",
+                                    f"debug_{well}_{savename}")
 
             if not os.path.exists(plot_dir):
                 os.makedirs(plot_dir)
@@ -733,10 +736,10 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                 get_time_constant_of_first_decay(subtracted_trace, times, desc,
                                                  args=args,
                                                  output_path=os.path.join(output_dir,
-                                                                          'debug',
-                                                                          '-120mV time constant',
+                                                                          "debug",
+                                                                          "-120mV time constant",
                                                                           f"{savename}-{well}-sweep"
-                                                                          "{sweep}-time-constant-fit.pdf"))
+                                                                          f"{sweep}-time-constant-fit.pdf"))
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -799,7 +802,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
     return extract_df
 
 
-def run_qc_for_protocol(readname, savename, time_strs, args):
+def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
     df_rows = []
 
     assert len(time_strs) == 2
@@ -826,6 +829,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
     sampling_rate = before_trace.sampling_rate
 
     savedir = os.path.join(output_dir, "QC")
+    leak_correction_dir = os.path.join(savedir, "leak_correction")
+
     if not os.path.exists(savedir):
         os.makedirs(savedir)
 
@@ -899,14 +904,14 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
                                                           times,
                                                           *ramp_bounds,
                                                           save_fname=f"{well}-sweep{sweep}-before.png",
-                                                          output_dir=savedir)
+                                                          output_dir=leak_correction_dir)
 
             after_params1, after_leak = fit_linear_leak(after_raw,
                                                         voltage,
                                                         times,
                                                         *ramp_bounds,
                                                         save_fname=f"{well}-sweep{sweep}-after.png",
-                                                        output_dir=savedir)
+                                                        output_dir=leak_correction_dir)
 
             before_currents_corrected[sweep, :] = before_raw - before_leak
             after_currents_corrected[sweep, :] = after_raw - after_leak
@@ -977,7 +982,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args):
     return selected_wells, df
 
 
-def qc3_bookend(readname, savename, time_strs, args):
+def qc3_bookend(readname, savename, time_strs, args, wells):
     plot_dir = os.path.join(output_dir, args.savedir,
                             f"{args.saveID}-{savename}-qc3-bookend")
 
@@ -1039,21 +1044,37 @@ def qc3_bookend(readname, savename, time_strs, args):
     last_processed = {}
 
     #  Iterate over all wells
-    for well in np.array(all_wells).flatten():
+    for well in np.array(wells).flatten():
         first_before_current = first_before_current_dict[well][0, :]
         first_after_current = first_after_current_dict[well][0, :]
         last_before_current = last_before_current_dict[well][-1, :]
         last_after_current = last_after_current_dict[well][-1, :]
 
-        output_directory = os.path.join(output_dir, "leak_correction")
+        if args.debug:
+            qc3_output_directory = os.path.join(output_dir,
+                                                "QC",
+                                                "debug",
+                                                f"debug_{well}_{savename}",
+                                                "qc3_bookend")
+
+            if not os.path.exists(qc3_output_directory):
+                os.makedirs(qc3_output_directory)
+
+            leak_correct_dir = os.path.join(qc3_output_directory,
+                                            "leak_correction")
+        else:
+            qc3_output_dir = None
+            leak_correct_dir = None
+
         save_fname = f"{well}_{savename}_before0.pdf"
 
         #  Plot subtraction
-        get_leak_corrected(first_before_current,
-                           voltage, times,
-                           *ramp_bounds,
-                           save_fname=save_fname,
-                           output_dir=output_directory)
+        if args.debug:
+            get_leak_corrected(first_before_current,
+                               voltage, times,
+                               *ramp_bounds,
+                               save_fname=save_fname,
+                               output_dir=leak_correct_dir)
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
@@ -1103,8 +1124,6 @@ def qc3_bookend(readname, savename, time_strs, args):
         res_dict[well] = passed
 
         save_fname = os.path.join(output_dir,
-                                  'debug',
-                                  f"debug_{well}_{savename}",
                                   'qc3_bookend')
 
         ax.plot(times, trace1)
