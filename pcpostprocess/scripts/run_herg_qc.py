@@ -1050,31 +1050,28 @@ def qc3_bookend(readname, savename, time_strs, args, wells):
         last_before_current = last_before_current_dict[well][-1, :]
         last_after_current = last_after_current_dict[well][-1, :]
 
+        save_fname = f"{well}_{savename}_before0.pdf"
+
         if args.debug:
-            qc3_output_directory = os.path.join(output_dir,
+            qc3_output_dir = os.path.join(output_dir,
                                                 "QC",
                                                 "debug",
                                                 f"debug_{well}_{savename}",
                                                 "qc3_bookend")
 
-            if not os.path.exists(qc3_output_directory):
+            if not os.path.exists(qc3_output_dir):
                 os.makedirs(qc3_output_directory)
 
-            leak_correct_dir = os.path.join(qc3_output_directory,
+            leak_correct_dir = os.path.join(qc3_output_dir,
                                             "leak_correction")
-        else:
-            qc3_output_dir = None
-            leak_correct_dir = None
 
-        save_fname = f"{well}_{savename}_before0.pdf"
-
-        #  Plot subtraction
-        if args.debug:
-            get_leak_corrected(first_before_current,
-                               voltage, times,
-                               *ramp_bounds,
-                               save_fname=save_fname,
-                               output_dir=leak_correct_dir)
+            #  Plot subtraction
+            if args.debug:
+                get_leak_corrected(first_before_current,
+                                voltage, times,
+                                *ramp_bounds,
+                                save_fname=save_fname,
+                                output_dir=leak_correct_dir)
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
