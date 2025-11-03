@@ -18,6 +18,15 @@ def get_git_revision_hash():
     if ret_string.startswith("fatal: not a git repository"):
         ret_string = "No git history"
 
+    else:
+        # Check if working tree has uncommitted changes
+        is_clean = subprocess.call(["git", "diff-index", "--quiet", "HEAD", "--"]) == 0
+
+        if is_clean:
+            ret_string += "-clean"
+        else:
+            ret_string += "-dirty"
+
     return ret_string
 
 
