@@ -16,9 +16,9 @@ def get_git_revision_hash():
     ret_string = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
     if ret_string.startswith("fatal: not a git repository"):
-        git_revision_hash = "No git history"
+        ret_string = "No git history"
 
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    return ret_string
 
 
 def setup_output_directory(dirname: str = None, subdir_name: str = None):
