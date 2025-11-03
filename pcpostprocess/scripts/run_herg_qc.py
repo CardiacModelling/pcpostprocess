@@ -1054,13 +1054,13 @@ def qc3_bookend(readname, savename, time_strs, args, wells):
 
         if args.debug:
             qc3_output_dir = os.path.join(output_dir,
-                                                "QC",
-                                                "debug",
-                                                f"debug_{well}_{savename}",
-                                                "qc3_bookend")
+                                          "QC",
+                                          "debug",
+                                          f"debug_{well}_{savename}",
+                                          "qc3_bookend")
 
             if not os.path.exists(qc3_output_dir):
-                os.makedirs(qc3_output_directory)
+                os.makedirs(qc3_output_dir)
 
             leak_correct_dir = os.path.join(qc3_output_dir,
                                             "leak_correction")
