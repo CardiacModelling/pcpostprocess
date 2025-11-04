@@ -1,13 +1,8 @@
 import datetime
-import logging
 import os
-import re
-import shutil
-import subprocess
 import sys
-from importlib.metadata import version
 
-from ._version import __commit_id__, __version__, __version_tuple__
+from ._version import __commit_id__, __version__
 
 
 def get_git_revision_hash():
