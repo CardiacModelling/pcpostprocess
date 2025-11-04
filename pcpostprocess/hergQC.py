@@ -66,7 +66,6 @@ class hERGQC:
     @param removal_time: Number of time units to remove after each step in the protocol
     @param noise_len: Number of initial samples during which the signal is flat, to use for noise estimates.
     @param plot_dir: An optional directory to store plots in
-
     """
     def __init__(self, voltage, sampling_rate=5, removal_time=5, noise_len=200,
                  plot_dir=None):
@@ -75,20 +74,19 @@ class hERGQC:
         self.sampling_rate = sampling_rate
         self.removal_time = removal_time
         self.noise_len = int(noise_len)
-        self._plot_dir  = plot_dir
 
-        self._n_qc = len(QCDict.labels)
-
+        # Passing in a plot dir enables debug mode
+        self._plot_dir = plot_dir
         self.logger = logging.getLogger(__name__)
-        self._debug = True
-        if self._debug:
+        if self._plot_dir is not None:
             self.logger.setLevel(logging.DEBUG)
-        # https://github.com/CardiacModelling/pcpostprocess/issues/42
+            # https://github.com/CardiacModelling/pcpostprocess/issues/42
+        self._plot_dir = plot_dir
 
         # Define all thresholds
 
         # TODO: These should be args? Or perhaps this is good so that this QC
-        # class can be extended
+        # class can be extended?
         # qc1
         self.rsealc = [1e8, 1e12]  # in Ohm, converted from [0.1, 1000] GOhm
         self.cmc = [1e-12, 1e-10]  # in F, converted from [1, 100] pF
@@ -103,43 +101,32 @@ class hERGQC:
         self.rseriessc = 0.5
         # qc5
         self.max_diffc = 0.75
-        # self._qc5_win = [3275, 5750]  # indices with hERG screening peak!
+        # self.qc5_win = [3275, 5750]  # indices with hERG screening peak!
         # indices where hERG could peak (for different temperatures)
-        self._qc5_win = np.array([8550 + 400, 10950 + 400]) * sampling_rate
+        self.qc5_win = np.array([8550 + 400, 10950 + 400]) * sampling_rate
         # qc5_1
         self.rmsd0_diffc = 0.5
         # qc6
         self.negative_tolc = -2
         ''' # These are for `whole` (just staircase) protocol at 5kHz
-        self._qc6_win = [3000, 7000]  # indices for first +40 mV
-        self._qc6_1_win = [35250, 37250]  # indices for second +40 mV
-        self._qc6_2_win = [40250, 42250]  # indices for third +40 mV
+        self.qc6_win = [3000, 7000]  # indices for first +40 mV
+        self.qc6_1_win = [35250, 37250]  # indices for second +40 mV
+        self.qc6_2_win = [40250, 42250]  # indices for third +40 mV
         '''
         # These are for `staircaseramp` protocol
 
         # Firstly, indices for 1st +40 mV
-        self._qc6_win = np.array([1000, 1800]) * sampling_rate
+        self.qc6_win = np.array([1000, 1800]) * sampling_rate
         # indices for 2nd +40 mV
-        self._qc6_1_win = np.array([7450, 7850]) * sampling_rate
+        self.qc6_1_win = np.array([7450, 7850]) * sampling_rate
         # indices for 3rd +40 mV
-        self._qc6_2_win = np.array([8450, 8850]) * sampling_rate
+        self.qc6_2_win = np.array([8450, 8850]) * sampling_rate
 
         # Ensure these indices are integers
-        self._qc5_win = self._qc5_win.astype(int)
-        self._qc6_win = self._qc6_win.astype(int)
-        self._qc6_1_win = self._qc6_1_win.astype(int)
-        self._qc6_2_win = self._qc6_2_win.astype(int)
-
-    @property
-    def plot_dir(self):
-        return self._plot_dir
-
-    @plot_dir.setter
-    def plot_dir(self, path):
-        self._plot_dir = path
-
-    def set_debug(self, debug):
-        self._debug = debug
+        self.qc5_win = self.qc5_win.astype(int)
+        self.qc6_win = self.qc6_win.astype(int)
+        self.qc6_1_win = self.qc6_1_win.astype(int)
+        self.qc6_2_win = self.qc6_2_win.astype(int)
 
     def run_qc(self, voltage_steps, times, before, after, qc_vals_before,
                qc_vals_after, n_sweeps=None):
@@ -147,14 +134,16 @@ class hERGQC:
 
         @param voltage_steps is a list of times at which there are discontinuities in Vcmd
         @param times is the array of observation times
-        @param before are the before-drug current traces, in an array with sweeps on the first index and values on the second.
-        @param after is the post-drug current traces, in an array with sweeps on the first index and values on the second.
-        @param qc_vals_before is an array of values for each before-drug sweep where each row is (Rseal, Cm, Rseries)
-        @param qc_vals_after is an array of values for each after-drug sweep where each row is (Rseal, Cm, Rseries)
+        @param before are the before-drug current traces, in an array with
+               sweeps on the first index and values on the second.
+        @param after is the post-drug current traces, in an array with sweeps
+               on the first index and values on the second.
+        @param qc_vals_before is a sequence (Rseal, Cm, Rseries)
+        @param qc_vals_after is a sequence (Rseal, Cm, Rseries)
         @n_sweeps is the number of sweeps to be run QC on.
-
         @returns A :class:`QCDict` with the test results.
         """
+        # TODO: Why doesn't each sweep have its own "qc_vals" ?
 
         if not n_sweeps:
             n_sweeps = len(before)
@@ -170,8 +159,8 @@ class hERGQC:
         if (None in qc_vals_before) or (None in qc_vals_after):
             return QC
 
-        qc1_1 = self._qc1(*qc_vals_before)
-        qc1_2 = self._qc1(*qc_vals_after)
+        qc1_1 = self.qc1(*qc_vals_before)
+        qc1_2 = self.qc1(*qc_vals_after)
 
         QC['qc1.rseal'] = [qc1_1[0], qc1_2[0]]
         QC['qc1.cm'] = [qc1_1[1], qc1_2[1]]
@@ -180,16 +169,15 @@ class hERGQC:
         QC['qc2.raw'] = []
         QC['qc2.subtracted'] = []
         for i in range(n_sweeps):
-            qc2_1 = self._qc2(before[i])
-            qc2_2 = self._qc2(before[i] - after[i])
+            qc2_1 = self.qc2(before[i])
+            qc2_2 = self.qc2(before[i] - after[i])
 
             QC['qc2.raw'].append(qc2_1)
             QC['qc2.subtracted'].append(qc2_2)
 
-        qc3_1 = self._qc3(before[0, :], before[1, :])
-        qc3_2 = self._qc3(after[0, :], after[1, :])
-        qc3_3 = self._qc3(before[0, :] - after[0, :],
-                         before[1, :] - after[1, :])
+        qc3_1 = self.qc3(before[0, :], before[1, :])
+        qc3_2 = self.qc3(after[0, :], after[1, :])
+        qc3_3 = self.qc3(before[0, :] - after[0, :], before[1, :] - after[1, :])
 
         QC['qc3.raw'] = [qc3_1]
         QC['qc3.E4031'] = [qc3_2]   # Change to 'control' and 'blocker' ?
@@ -198,55 +186,53 @@ class hERGQC:
         rseals = [qc_vals_before[0], qc_vals_after[0]]
         cms = [qc_vals_before[1], qc_vals_after[1]]
         rseriess = [qc_vals_before[2], qc_vals_after[2]]
-        qc4 = self._qc4(rseals, cms, rseriess)
+        qc4 = self.qc4(rseals, cms, rseriess)
 
         QC['qc4.rseal'] = [qc4[0]]
         QC['qc4.cm'] = [qc4[1]]
         QC['qc4.rseries'] = [qc4[2]]
 
         # indices where hERG peaks
-        qc5 = self._qc5(before[0, :], after[0, :],
-                       self._qc5_win)
-
-        qc5_1 = self._qc5_1(before[0, :], after[0, :], label='1')
+        qc5 = self.qc5(before[0, :], after[0, :], self.qc5_win)
+        qc5_1 = self.qc5_1(before[0, :], after[0, :], label='1')
 
         QC['qc5.staircase'] = [qc5]
         QC['qc5.1.staircase'] = [qc5_1]
 
         # Ensure thats the windows are correct by checking the voltage trace
         assert np.all(
-            np.abs(self.voltage[self._qc6_win[0]: self._qc6_win[1]] - 40.0))\
+            np.abs(self.voltage[self.qc6_win[0]: self.qc6_win[1]] - 40.0))\
             < 1e-8
         assert np.all(
-            np.abs(self.voltage[self._qc6_1_win[0]: self._qc6_1_win[1]] - 40.0))\
+            np.abs(self.voltage[self.qc6_1_win[0]: self.qc6_1_win[1]] - 40.0))\
             < 1e-8
         assert np.all(
-            np.abs(self.voltage[self._qc6_2_win[0]: self._qc6_2_win[1]] - 40.0))\
+            np.abs(self.voltage[self.qc6_2_win[0]: self.qc6_2_win[1]] - 40.0))\
             < 1e-8
 
         QC['qc6.subtracted'] = []
         QC['qc6.1.subtracted'] = []
         QC['qc6.2.subtracted'] = []
         for i in range(before.shape[0]):
-            qc6 = self._qc6((before[i, :] - after[i, :]),
-                           self._qc6_win, label='0')
-            qc6_1 = self._qc6((before[i, :] - after[i, :]),
-                             self._qc6_1_win, label='1')
-            qc6_2 = self._qc6((before[i, :] - after[i, :]),
-                             self._qc6_2_win, label='2')
+            qc6 = self.qc6(
+                before[i, :] - after[i, :], self.qc6_win, label='0')
+            qc6_1 = self.qc6(
+                before[i, :] - after[i, :], self.qc6_1_win, label='1')
+            qc6_2 = self.qc6(
+                before[i, :] - after[i, :], self.qc6_2_win, label='2')
 
             QC['qc6.subtracted'].append(qc6)
             QC['qc6.1.subtracted'].append(qc6_1)
             QC['qc6.2.subtracted'].append(qc6_2)
 
-        if self._plot_dir and self._debug:
+        if self._plot_dir is not None:
             fig = plt.figure(figsize=(8, 5))
             ax = fig.subplots()
             ax.plot(times, (before - after).T, label='subtracted')
             ax.plot(times, (before).T, label='before')
             ax.plot(times, (after).T, label='after')
-            for l1, l2, l3, l4 in zip(self._qc5_win, self._qc6_win,
-                                      self._qc6_1_win, self._qc6_2_win):
+            for l1, l2, l3, l4 in zip(self.qc5_win, self.qc6_win,
+                                      self.qc6_1_win, self.qc6_2_win):
                 plt.axvline(times[l1], c='#7f7f7f', label='qc5')
                 plt.axvline(times[l2], c='#ff7f0e', ls='--', label='qc6')
                 plt.axvline(times[l3], c='#2ca02c', ls='-.', label='qc6_1')
@@ -265,75 +251,113 @@ class hERGQC:
 
         return QC
 
-    def _qc1(self, rseal, cm, rseries):
+    def qc1(self, rseal, cm, rseries):
+        """
+        Checks that the given ``rseal``, ``cm`` and ``rseries`` are within the
+        desired range.
+
+        @param rseal A scalar indicating a seal resistance in Ohm
+        @param cm A scalar cell capacitance in Farad
+        @param rseries A scalar series resistance in Ohm
+        @returns A tuple ``((qc11_passed, rseal), (qc12_passed, cm), (qc13_passed, rseries))``.
+        """
+        # TODO Is there any reason these are public, other than that it was
+        # convenient for testing?
+        # TODO Could just be 1 method called 3 times
+        # TODO Should boundaries be arguments?
+
         # Check R_seal, C_m, R_series within desired range
-        if (
-            rseal is None
-            or rseal < self.rsealc[0]
-            or rseal > self.rsealc[1]
-            or not np.isfinite(rseal)
-        ):
+        qc11 = not (rseal is None
+                    or rseal < self.rsealc[0]
+                    or rseal > self.rsealc[1]
+                    or not np.isfinite(rseal))
+        qc12 = not (cm is None
+                    or cm < self.cmc[0]
+                    or cm > self.cmc[1]
+                    or not np.isfinite(cm))
+        qc13 = not (rseries is None
+                    or rseries < self.rseriesc[0]
+                    or rseries > self.rseriesc[1]
+                    or not np.isfinite(rseries))
+
+        if not qc11:
             self.logger.debug(f'rseal: {rseal}')
-            qc11 = False
-        else:
-            qc11 = True
-
-        if (
-            cm is None
-            or cm < self.cmc[0]
-            or cm > self.cmc[1]
-            or not np.isfinite(cm)
-        ):
+        if not qc12:
             self.logger.debug(f'cm: {cm}')
-            qc12 = False
-        else:
-            qc12 = True
-
-        if (
-            rseries is None
-            or rseries < self.rseriesc[0]
-            or rseries > self.rseriesc[1]
-            or not np.isfinite(rseries)
-        ):
+        if not qc13:
             self.logger.debug(f'rseries: {rseries}')
-            qc13 = False
-        else:
-            qc13 = True
 
         return [(qc11, rseal), (qc12, cm), (qc13, rseries)]
 
-    def _qc2(self, recording):
-        # Check SNR is good
-        noise = np.std(recording[:self.noise_len])
-        snr = (np.std(recording) / noise) ** 2
-        if snr < self.snrc or not np.isfinite(snr):
+    def qc2(self, recording):
+        """
+        Checks that the signal-to-noise ratio is below a certain threshold.
+
+        Here the signal-to-noise ratio is defined as
+        ``(std(recording) / std(noise))``, where ``noise`` is the initial part
+        of ``recording``.
+
+        @param recording A 1-d numpy array containing recorded currents.
+        @returns a tuple ``(passed, signal-to-noise-ratio)``.
+        """
+        snr = (np.std(recording) / np.std(recording[:self.noise_len])) ** 2
+        passed = snr >= self.snrc and np.isfinite(snr)
+        if not passed:
             self.logger.debug(f'snr: {snr}')
-            result = False
-        else:
-            result = True
+        return (passed, snr)
 
-        return (result, snr)
+    def qc3(self, recording1, recording2):
+        """
+        Checks that ``recording1`` and ``recording2`` are similar, using a
+        measure based on root-mean-square-distance.
 
-    def _qc3(self, recording1, recording2):
-        # Check 2 sweeps similar
-        noise_1 = np.std(recording1[:self.noise_len])
-        noise_2 = np.std(recording2[:self.noise_len])
-        rmsd0_1 = np.sqrt(np.mean((recording1) ** 2))
-        rmsd0_2 = np.sqrt(np.mean((recording2) ** 2))
-        rmsdc = max(np.mean([rmsd0_1, rmsd0_2]) * self.rmsd0c,
-                    np.mean([noise_1, noise_2]) * 6)
-        rmsd = np.sqrt(np.mean((recording1 - recording2) ** 2))
-        if rmsd > rmsdc or not (np.isfinite(rmsd) and np.isfinite(rmsdc)):
-            self.logger.debug(f'rmsd: {rmsd}, rmsdc: {rmsdc}')
-            result = False
-        else:
-            result = True
+        Particularly, it checks whether
+        ``RMSD(recording1, recording2) < threshold``,
+        where ``threshold`` is determined as the maximum of
+        ``w * (RMSD(recording1, 0) + RMSD(recording2, 0))`` and
+        ``6 * (std(noise1) + std(noise2))``.
 
-        return (result, rmsdc - rmsd)
+        @param recording1 A 1-d numpy array containing recorded currents
+        @param recording2 The same, but for a repeat measurement
+        @returns a tuple ``(passed, RMSD - threshold)``
+        """
+        def rmsd(x, y=0):
+            return np.sqrt(np.mean((x - y)**2))
 
-    def _qc4(self, rseals, cms, rseriess):
-        # Check R_seal, C_m, R_series stability
-        # Require std/mean < x%
+        t1 = self.rmsd0c * np.mean((rmsd(recording1), rmsd(recording2)))
+        t2 = 6 * np.mean((
+            np.std(recording1[:self.noise_len]),
+            np.std(recording2[:self.noise_len])))
+        # TODO: This second cut-off is not documented in the paper
+        t = max(t1, t2)
+        r = rmsd(recording1, recording2)
+        passed = r <= t and np.isfinite(t) and np.isfinite(r)
+        if not passed:
+            self.logger.debug(f'rmsd: {r}, rmsdc: {t}')
+
+        # TODO: Is this the best thing to return? Why not t _and_ r?
+        return (passed, t - r)
+
+    def qc4(self, rseals, cms, rseriess):
+        """
+        Checks that Rseal, Cm, and Rseries values remain steady during an
+        experiment.
+
+        For each quantity, it checks if ``std(x) / mean(x) <= cutoff``.
+
+        @param rseals A list of Rseal values, for repeated experiments, in Ohm.
+        @param cms A list of Cm values, in Farad.
+        @param rseriess A list of Rseries values, in Ohm
+        @returns a tuple ``((qc41_passed, ex41), (qc42_passed, ex42), (qc43_passed, ex43))``
+                 where ``exY`` is the amount by which the criterion exceeded the threshold.
+        """
+        # TODO: Run this on values for all sweeps, not 1 before and after ?
+        #       Or, if using only 2, write as just |a-b|/(a+b)
+
+        # TODO: This uses numpy's standard `std` call without the bias
+        #       correction. Do we want to use the bias corrected one instead?
+        #       matters for above, as becomes 2|a-b|/(a+b) !
+
         qc41 = True
         qc42 = True
         qc43 = True
@@ -371,15 +395,29 @@ class hERGQC:
 
         return [(qc41, d_rseal), (qc42, d_cm), (qc43, d_rseries)]
 
-    def _qc5(self, recording1, recording2, win=None, label=''):
-        # Check pharma peak value drops after E-4031 application
-        # Require subtracted peak > 70% of the original peak
+    def qc5(self, recording1, recording2, win=None, label=None):
+        """
+        Checks whether the peak current in ``recording1`` has been blocked in
+        ``recording2``.
+
+        First, find an ``i`` such that ``recording1[i]`` is the largest
+        (positive) current (if a window is given, only this window is
+        searched). Then, checks whether
+        ``(recording1[i] - recording2[i]) / recording1[i] >= 0.75`` (in other
+        words whether at least 75% of the peak current has been blocked).
+
+        @param recording1 A staircase before blocker application
+        @param recording2 A staircase with a strong blocker, e.g. E-4031
+        @param win An optional window (lower and upper indices) within which to search for peak current
+        @param label An optional label for a plot
+        @returns a tuple ``(passed, 0.75 * recording1[i] - (recording1[i] - recording2[i]))``.
+        """
         if win is not None:
             i, f = win
         else:
             i, f = 0, None
 
-        if self._plot_dir and self._debug:
+        if self._plot_dir is not None and label is not None:
             if win is not None:
                 plt.axvspan(win[0], win[1], color='grey', alpha=.1)
             plt.plot(recording1, label='recording1')
@@ -398,19 +436,25 @@ class hERGQC:
         else:
             result = True
 
+        # TODO: More sensible to return max_diff / recording1[i:f][wherepeak] here?
         return (result, max_diffc - max_diff)
 
-    def _qc5_1(self, recording1, recording2, win=None, label=''):
-        # Check RMSD_0 drops after E-4031 application
-        # Require RMSD_0 (after E-4031 / before) diff > 50% of RMSD_0 before
-        if win is not None:
-            i, f = win
-        else:
-            i, f = 0, -1
+    def qc5_1(self, recording1, recording2, label=None):
+        """
+        Checks whether root-mean-squared current in ``recording1`` has been
+        blocked in ``recording2``,
 
-        if self._plot_dir and self._debug:
-            if win is not None:
-                plt.axvspan(win[0], win[1], color='grey', alpha=.1)
+        The test passes if
+        ``(RMSD(recording2, 0) - RMSD(recording1, 0)) / RMSD(recording1, 0) <= 0.5``
+
+        @param recording1 A staircase before blocker application
+        @param recording2 A staircase with a strong blocker, e.g. E-4031
+        @param label An optional label for a plot
+        @returns a tuple ``(passed, 0.5 * recording1[i] - (recording1[i] - recording2[i]))``.
+        """
+        # TODO: Just rephrase this as RMSD(I2) / RMSD(I1) <= 0.5
+
+        if self._plot_dir is not None and label is not None:
             fig = plt.figure()
             ax = fig.subplots()
             ax.plot(recording1, label='recording1')
@@ -418,11 +462,11 @@ class hERGQC:
             fig.savefig(os.path.join(self._plot_dir, f'qc5_{label}'))
             plt.close(fig)
 
-        rmsd0_diff = np.sqrt(np.mean(recording1[i:f] ** 2)) \
-            - np.sqrt(np.mean(recording2[i:f] ** 2))
+        def rmsd(x, y=0):
+            return np.sqrt(np.mean((x - y)**2))
 
-        rmsd0_diffc = self.rmsd0_diffc *\
-            np.sqrt(np.mean(recording1[i:f] ** 2))
+        rmsd0_diff = rmsd(recording1) - rmsd(recording2)
+        rmsd0_diffc = self.rmsd0_diffc * rmsd(recording1)
 
         if (rmsd0_diff < rmsd0_diffc) or not (np.isfinite(rmsd0_diff)
                                               and np.isfinite(rmsd0_diffc)):
@@ -432,22 +476,32 @@ class hERGQC:
         else:
             result = True
 
+        # TODO Just return rmsd(I2) / RMSD(I1)
         return (result, rmsd0_diffc - rmsd0_diff)
 
-    def _qc6(self, recording1, win=None, label=''):
-        # Check subtracted staircase +40mV step up is non negative
-        if win is not None:
-            i, f = win
-        else:
-            i, f = 0, -1
+    def qc6(self, recording1, win, label=None):
+        """
+        Checks that the current in a particular window is non-negative.
 
-        if self._plot_dir and self._debug:
+        Instead of comparing the whole current to 0, we compare the mean
+        current to -2 times the noise level (estimed from the start of the
+        trace).
+
+        @param recording1 The full current trace
+        @param win A tuple ``(i, j)`` such that ``recording[i:j]`` is the window to check
+        @param label A label for an optional plot
+        @returns a tuple ``(passed, -2 * noise -
+        """
+        # Check subtracted staircase +40mV step up is non negative
+
+        if self._plot_dir is not None and label is not None:
             if win is not None:
                 plt.axvspan(win[0], win[1], color='grey', alpha=.1)
             plt.plot(recording1, label='recording1')
             plt.savefig(os.path.join(self._plot_dir, f'qc6_{label}'))
             plt.clf()
 
+        i, f = win
         val = np.mean(recording1[i:f])
         valc = self.negative_tolc * np.std(recording1[:self.noise_len])
         if (val < valc) or not (np.isfinite(val)
@@ -457,6 +511,7 @@ class hERGQC:
         else:
             result = True
 
+        # TODO Return val / valc here?
         return (result, valc - val)
 
     def _filter_capacitive_spikes(self, current, times, voltage_step_times):
@@ -466,6 +521,7 @@ class hERGQC:
         @param current: The observed current
         @param times: the times at which the current was observed
         @param voltage_step_times: the times at which there are discontinuities in Vcmd
+        @returns the ``current`` with some samples set to 0
         """
         if len(current.shape) != 2:
             raise ValueError('Current must have 2 dimensions (sweep, values)')

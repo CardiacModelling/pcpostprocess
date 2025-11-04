@@ -80,12 +80,13 @@ class TestHergQC(unittest.TestCase):
         hergqc = self.create_hergqc()
         times = self.times
 
-        # TODO: This should work some nicer way, without accessing private properties
-        #       But first we probably need to stop hardcoding these windows
-        voltage = hergqc._voltage
-        qc6_win = hergqc._qc6_win
-        qc6_1_win = hergqc._qc6_1_win
-        qc6_2_win = hergqc._qc6_2_win
+        # TODO: This should work some nicer way, without accessing what should
+        #       really be private properties. But first we probably need to
+        #       stop hardcoding these windows
+        voltage = hergqc.voltage
+        qc6_win = hergqc.qc6_win
+        qc6_1_win = hergqc.qc6_1_win
+        qc6_2_win = hergqc.qc6_2_win
 
         self.assertTrue(np.all(np.isfinite(times)))
         self.assertTrue(np.all(np.isfinite(voltage)))
@@ -700,7 +701,7 @@ class TestHergQC(unittest.TestCase):
         hergqc = self.create_hergqc('qc5_1')
 
         test_matrix = [
-            (-1.0, False, 4.22),
+            (-1.0, False, 4.23),
             (-0.5, False, 0),
             (-0.412, True, -0.74),
             (-0.4, True, -0.84),
@@ -709,7 +710,7 @@ class TestHergQC(unittest.TestCase):
             (0.4, True, -0.84),
             (0.412, True, -0.74),
             (0.5, False, 0),
-            (1.0, False, 4.22),
+            (1.0, False, 4.23),
         ]
 
         recording1 = np.asarray([0, 0.1] * 100 + [10] * 500)
