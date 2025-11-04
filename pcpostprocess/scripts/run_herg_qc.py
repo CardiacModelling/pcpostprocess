@@ -324,8 +324,8 @@ def main():
         logging.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
 
         # R_leftover only considered for protocols used for QC (i.e. staircase protocols)
-        passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(args.D2SQC)]
-                                      ["R_leftover"].values
+        passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(args.D2SQC.values())]
+                                      ["QC.R_leftover"].values
                                       )
 
         logging.info(f"passed_QC_R_leftover {passed_QC_R_leftover}")
