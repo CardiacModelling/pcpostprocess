@@ -276,6 +276,7 @@ def main():
 
     wells_to_export = wells if args.export_failed else overall_selection
 
+    logging.info(f"Wells passing QC so far: {overall_selection}")
     logging.info(f"exporting wells {wells_to_export}")
 
     no_protocols = len(res_dict)
