@@ -513,14 +513,13 @@ class hERGQC:
         """
         Set values to 0 where they lie less than ``removal_time`` after a change in voltage.
 
-        @param current: The observed current
+        @param current: The observed current, as a 1 or multi-dimensional array.
+                        If a multi-dimensional array is used, repeats must be
+                        on the first axis, and time series values on the 2nd.
         @param times: the times at which the current was observed
         @param voltage_step_times: the times at which there are discontinuities in Vcmd
         @returns the ``current`` with some samples set to 0
         """
-        if len(current.shape) != 2:
-            raise ValueError('Current must have 2 dimensions (sweep, values)')
-
         voltage_step_ends = np.append(voltage_step_times[1:], np.inf)
         for tstart, tend in zip(voltage_step_times, voltage_step_ends):
             win_end = tstart + self.removal_time
