@@ -148,8 +148,8 @@ class hERGQC:
         if not n_sweeps:
             n_sweeps = len(before)
 
-        before = self._filter_capacitive_spikes(np.array(before), times, voltage_steps)
-        after = self._filter_capacitive_spikes(np.array(after), times, voltage_steps)
+        before = self.filter_capacitive_spikes(np.array(before), times, voltage_steps)
+        after = self.filter_capacitive_spikes(np.array(after), times, voltage_steps)
 
         QC = QCDict()
 
@@ -395,10 +395,10 @@ class hERGQC:
 
         return [(qc41, d_rseal), (qc42, d_cm), (qc43, d_rseries)]
 
-    def qc5(self, recording1, recording2, win=None, label=None):
+    def qc5(self, recording1, recording2, win, label=None):
         """
-        Checks whether the peak current in ``recording1`` has been blocked in
-        ``recording2``.
+        Checks whether the peak current in ``recording1`` during a given window
+        has been blocked in ``recording2``.
 
         First, find an ``i`` such that ``recording1[i]`` is the largest
         (positive) current (if a window is given, only this window is
@@ -408,23 +408,18 @@ class hERGQC:
 
         @param recording1 A staircase before blocker application
         @param recording2 A staircase with a strong blocker, e.g. E-4031
-        @param win An optional window (lower and upper indices) within which to search for peak current
+        @param win A tuple ``(i, j)`` such that ``recording[i:j]`` is the window to search in
         @param label An optional label for a plot
         @returns a tuple ``(passed, 0.75 * recording1[i] - (recording1[i] - recording2[i]))``.
         """
-        if win is not None:
-            i, f = win
-        else:
-            i, f = 0, None
-
         if self._plot_dir is not None and label is not None:
-            if win is not None:
-                plt.axvspan(win[0], win[1], color='grey', alpha=.1)
+            plt.axvspan(win[0], win[1], color='grey', alpha=.1)
             plt.plot(recording1, label='recording1')
             plt.plot(recording2, label='recording2')
             plt.savefig(os.path.join(self._plot_dir, f'qc5_{label}'))
             plt.clf()
 
+        i, f = win
         wherepeak = np.argmax(recording1[i:f])
         max_diff = recording1[i:f][wherepeak] - recording2[i:f][wherepeak]
         max_diffc = self.max_diffc * recording1[i:f][wherepeak]
@@ -514,7 +509,7 @@ class hERGQC:
         # TODO Return val / valc here?
         return (result, valc - val)
 
-    def _filter_capacitive_spikes(self, current, times, voltage_step_times):
+    def filter_capacitive_spikes(self, current, times, voltage_step_times):
         """
         Set values to 0 where they lie less than ``removal_time`` after a change in voltage.
 

@@ -645,7 +645,7 @@ class TestHergQC(unittest.TestCase):
             recording2 = np.asarray(
                 [0, 0.1] * 100 + [10 * i] * 500
             )
-            pass_, d_max_diff = hergqc.qc5(recording1, recording2)
+            pass_, d_max_diff = hergqc.qc5(recording1, recording2, (0, -1))
             self.assertAlmostEqual(
                 d_max_diff,
                 ex_d_max_diff,
