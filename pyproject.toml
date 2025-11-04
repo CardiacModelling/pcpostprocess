@@ -62,3 +62,6 @@ include = ["pcpostprocess", "pcpostprocess.scripts", "pcpostprocess.*"]
 [project.urls]
 Homepage = "https://github.com/CardiacModelling/pcpostprocess"
 Source = "https://github.com/CardiacModelling/pcpostprocess"
+
+[tool.isort]
+skip = ["_version.py"]
