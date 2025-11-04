@@ -174,7 +174,7 @@ def main():
 
     # this error is raised if the user has not specified the dictionary of protocols in the export_config.py file
     if not readnames:
-        logging.error("No compatible protocols found in export config file.")
+        logging.error("No compatible protocols found in export config file")
         return
 
     with multiprocessing.Pool(min(args.no_cpus, len(readnames)),
@@ -291,6 +291,7 @@ def main():
 
     if dfs:
         extract_df = pd.concat(dfs, ignore_index=True)
+
         extract_df['selected'] = extract_df['well'].isin(overall_selection)
     else:
         logging.error("Didn't export any data")
