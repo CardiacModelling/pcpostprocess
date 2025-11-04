@@ -2,24 +2,25 @@
 import os
 import re
 import shutil
-import subprocess
 import tempfile
 import unittest
-from contextlib import contextmanager
+from contextlib import ContextDecorator
 from unittest.mock import patch
 
 from pcpostprocess import directory_builder
 
 
-@contextmanager
-def temp_cwd():
-    old_cwd = os.getcwd()
-    with tempfile.TemporaryDirectory() as tmp:
-        os.chdir(tmp)
-        try:
-            yield tmp
-        finally:
-            os.chdir(old_cwd)
+class temp_cwd(ContextDecorator):
+    def __enter__(self):
+        self.old = os.getcwd()
+        self.tmpdir = tempfile.TemporaryDirectory()
+        os.chdir(self.tmpdir.name)
+        return self.tmpdir
+
+    def __exit__(self, *exc):
+        os.chdir(self.old)
+        self.tmpdir.cleanup()
+        return False
 
 
 def make_info_dict(lines):
@@ -29,11 +30,6 @@ def make_info_dict(lines):
 
 
 class TestDirectoryBuilder(unittest.TestCase):
-    def test_git_exists(self):
-        # If git doesn't exist, other tests will fail
-        exe = shutil.which("git")
-        self.assertIsNotNone(exe)
-
     def test_directory_with_git(self):
         test_dir = directory_builder.setup_output_directory("test_output",
                                                             self.__class__.__name__)
@@ -45,12 +41,13 @@ class TestDirectoryBuilder(unittest.TestCase):
         info_dict = make_info_dict(info_file_contents)
 
         # REGEX to check if the relevant line contains a git commit
-        self.assertTrue(bool(re.fullmatch(r"[0-9a-fA-F]{40}",
-                                          info_dict["Commit"].split("-", 1)[0])))
+        self.assertTrue(bool(re.fullmatch(r"g[0-9a-fA-F]{9}",
+                                          info_dict["Commit"])))
         return
 
-    def test_directory_with_no_git_history(self):
-        with temp_cwd():
+    @temp_cwd()
+    def test_directory_with_dev_version(self):
+        with patch("pcpostprocess.directory_builder.__commit_id__", "a000"):
             test_dir = directory_builder.setup_output_directory("test_output",
                                                                 self.__class__.__name__)
 
@@ -58,40 +55,6 @@ class TestDirectoryBuilder(unittest.TestCase):
                 info_file_contents = [l.strip() for l in fin.readlines()]
 
             info_dict = make_info_dict(info_file_contents)
-
-            self.assertEqual(info_dict["Commit"], "No git history")
+            self.assertEqual(info_dict["Commit"], "a000")
         return
-
-    def test_directory_with_empty_git_history(self):
-        with temp_cwd():
-            subprocess.run(["git", "--init"],
-                           stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL)
-            test_dir = directory_builder.setup_output_directory("test_output",
-                                                                self.__class__.__name__)
-
-            with open(os.path.join(test_dir, "pcpostprocess_info.txt"), "r") as fin:
-                info_file_contents = [l.strip() for l in fin.readlines()]
-
-            info_dict = make_info_dict(info_file_contents)
-
-        self.assertEqual(info_dict["Commit"], "No git history")
-        return
-
-    def test_directory_with_no_git_binary(self):
-        with temp_cwd():
-
-            # Temporarily and safely modify path so git won't be found
-            with patch.dict("os.environ", {"PATH": ""}):
-                test_dir = directory_builder.setup_output_directory("test_output",
-                                                                    self.__class__.__name__)
-
-                with open(os.path.join(test_dir, "pcpostprocess_info.txt"), "r") as fin:
-                    info_file_contents = [l.strip() for l in fin.readlines()]
-
-                info_dict = make_info_dict(info_file_contents)
-
-                self.assertEqual(info_dict["Commit"], "git not found")
-
-
 
