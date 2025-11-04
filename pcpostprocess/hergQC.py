@@ -511,10 +511,10 @@ class hERGQC:
 
     def filter_capacitive_spikes(self, current, times, voltage_step_times):
         """
-        Set values to 0 where they lie less than ``removal_time`` after a change in voltage.
+        Set currents to 0 where they lie less than ``removal_time`` after a change in voltage.
 
-        @param current: The observed current, as a 1 or multi-dimensional array.
-                        If a multi-dimensional array is used, repeats must be
+        @param current: The observed current, as a 1 or 2-dimensional array.
+                        If a 2-dimensional array is used, repeats must be
                         on the first axis, and time series values on the 2nd.
         @param times: the times at which the current was observed
         @param voltage_step_times: the times at which there are discontinuities in Vcmd
@@ -529,6 +529,11 @@ class hERGQC:
             if i_end == 0:
                 break
 
-            current[:, i_start:i_end] = 0
+            if len(current.shape) == 2:
+                current[:, i_start:i_end] = 0
+            elif len(current.shape) == 1:
+                current[i_start:i_end] = 0
+            else:
+                raise ValueError('Current array must be 1 or 2-dimensional')
 
         return current
