@@ -7,7 +7,7 @@ import subprocess
 import sys
 from importlib.metadata import version
 
-from ._version import __version_tuple__, __version__, __commit_id__
+from ._version import __commit_id__, __version__, __version_tuple__
 
 
 def get_git_revision_hash():
