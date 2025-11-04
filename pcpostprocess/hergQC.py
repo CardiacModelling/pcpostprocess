@@ -172,8 +172,19 @@ class hERGQC:
         if (None in qc_vals_before) or (None in qc_vals_after):
             return QC
 
-        qc1_1 = self.qc1(*qc_vals_before)
-        qc1_2 = self.qc1(*qc_vals_after)
+        qc1_1 = True
+        for i in range(n_sweeps):
+            _qc1_1 = self.qc1(*qc_vals_before[i, :])
+            qc1_1 = qc1_1 and _qc1_1
+            if not qc1_1:
+                break
+
+        qc1_2 = True
+        for i in range(n_sweeps):
+            _qc1_2 = self.qc1(*qc_vals_after[i, :])
+            if not qc1_2:
+                break
+            qc1_2 = qc1_2 and _qc1_2
 
         QC['qc1.rseal'] = [qc1_1[0], qc1_2[0]]
         QC['qc1.cm'] = [qc1_1[1], qc1_2[1]]
@@ -197,14 +208,19 @@ class hERGQC:
         QC['qc3.E4031'] = [qc3_2]
         QC['qc3.subtracted'] = [qc3_3]
 
-        rseals = [qc_vals_before[0], qc_vals_after[0]]
-        cms = [qc_vals_before[1], qc_vals_after[1]]
-        rseriess = [qc_vals_before[2], qc_vals_after[2]]
-        qc4 = self.qc4(rseals, cms, rseriess)
+        qc4 = []
+        for i in range(n_sweeps):
+            rseals = [qc_vals_before[i, 0], qc_vals_after[i, 0]]
+            cms = [qc_vals_before[i, 1], qc_vals_after[i, 1]]
+            rseriess = [qc_vals_before[i, 2], qc_vals_after[i, 2]]
+            qc4.append(self.qc4(rseals, cms, rseriess))
 
-        QC['qc4.rseal'] = [qc4[0]]
-        QC['qc4.cm'] = [qc4[1]]
-        QC['qc4.rseries'] = [qc4[2]]
+        # Combine sweepwise QC4 results
+        qc4 = np.array(qc4)
+
+        QC['qc4.rseal'] = [(bool(row[0]), row[1]) for row in qc4[:, 0, :]]
+        QC['qc4.cm'] = [(bool(row[0]), row[1]) for row in qc4[:, 1, :]]
+        QC['qc4.rseries'] = [(bool(row[0]), row[1]) for row in qc4[:, 2, :]]
 
         # indices where hERG peaks
         qc5 = self.qc5(before[0, :], after[0, :],
