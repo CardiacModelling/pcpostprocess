@@ -25,15 +25,13 @@ from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
-pool_kws = {'maxtasksperchild': 1}
 
+# Custom color cycle: why??
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
 plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
 
+# Set matplotlib back-end for "headless" plotting
 matplotlib.use('Agg')
-
-all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
-             for i in range(1, 25)]
 
 
 def get_git_revision_hash() -> str:
@@ -42,6 +40,8 @@ def get_git_revision_hash() -> str:
 
 
 def main():
+
+    # Parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('data_directory')
     parser.add_argument('-c', '--no_cpus', default=1, type=int)
@@ -69,39 +69,49 @@ def main():
         os.path.join(args.data_directory,
                      'export_config.py'))
 
+    all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
+                 for i in range(1, 25)]
     if args.wells is None:
-        args.wells = all_wells
-        wells = args.wells
-
+        # Use all wells
+        wells = all_wells
     else:
-        wells = args.wells
-        # this warning addresses the error that occurs if a user inputs wrong data into args.wells
-        wrongWellNames = [well for well in wells if well not in all_wells]
-        if len(wrongWellNames) > 0:
-            if len(wrongWellNames) == len(wells):
-                logging.error("Specified well names are not in the list of available wells.")
-                return
-            else:
-                logging.warning(f"Specified well names {wrongWellNames} are not in the list of available wells."
-                                f"Removing them from the list of wells to be processed.")
-                wells = [well for well in wells if well not in wrongWellNames]
-                # other functions read args.wells later on, so we need to update it
-                args.wells = wells
+        wells = list(set(args.wells))
+
+    # Check for unknown wells
+    wrongWellNames = set(wells) - set(all_wells)
+    if len(wrongWellNames) > 0:
+        if len(wrongWellNames) == len(args.wells):
+            logging.error("Specified well names are not in the list of available wells.")
+            return
+        else:
+            logging.warning(f"Specified well names {wrongWellNames} are not in the list of available wells."
+                            f"Removing them from the list of wells to be processed.")
+            wells = [well for well in wells if well not in wrongWellNames]
+            # other functions read args.wells later on, so we need to update it
+            args.wells = wells
+
+    #TODO: Once this input has been sanitised, args and parser should be deleted
 
     # Import and exec config file
+    #TODO: Avoid global
     global export_config
     export_config = importlib.util.module_from_spec(spec)
 
+    #TODO: What is happening here!?
     sys.modules['export_config'] = export_config
     spec.loader.exec_module(export_config)
 
+    #TODO: Don't do this
     export_config.savedir = output_dir
 
+    #TODO: Don't do this
     args.saveID = export_config.saveID
     args.savedir = export_config.savedir
     args.D2S = export_config.D2S
     args.D2SQC = export_config.D2S_QC
 
+    #TODO: Why regex module instead of re?
+    #TODO: Why are we doing this?
     protocols_regex = \
         r'^([a-z|A-Z|_|0-9| |\-|\(|\)]+)_([0-9][0-9]\.[0-9][0-9]\.[0-9][0-9])$'
 
@@ -166,7 +176,7 @@ def main():
         return
 
     with multiprocessing.Pool(min(args.no_cpus, len(readnames)),
-                              **pool_kws) as pool:
+                              maxtasksperchild=1) as pool:
 
         pool_argument_list = zip(readnames, savenames, times_list,
                                  [args for i in readnames],
@@ -276,7 +286,7 @@ def main():
                          [output_dir for i in readnames]))
 
     with multiprocessing.Pool(min(args.no_cpus, no_protocols),
-                              **pool_kws) as pool:
+                              maxtasksperchild=1) as pool:
         dfs = list(pool.starmap(extract_protocol, args_list))
 
     if dfs:
