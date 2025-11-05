@@ -69,7 +69,7 @@ class TestHergQC(unittest.TestCase):
             os.makedirs(plot_dir, exist_ok=True)
         else:
             plot_dir = None
-
+        
         return hERGQC(
             sampling_rate=self.sampling_rate,
             plot_dir=plot_dir,
