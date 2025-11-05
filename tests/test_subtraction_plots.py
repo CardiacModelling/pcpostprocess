@@ -20,11 +20,8 @@ class TestSubtractionPlots(unittest.TestCase):
         json_file_before = "staircaseramp (2)_2kHz_15.01.07.json"
         json_file_after = "staircaseramp (2)_2kHz_15.11.33.json"
 
-        self.output_dir = os.makedirs("test_output", self.__class__.__name__,
-                                      exist_ok=True)
-
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        self.output_dir = os.path.join("test_output", self.__class__.__name__)
+        os.makedirs(self.output_dir, exist_ok=True)
 
         # Use identical traces for purpose of the test
         self.before_trace = Trace(test_data_dir_before, json_file_before)

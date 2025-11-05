@@ -55,7 +55,8 @@ class TestHergQC(unittest.TestCase):
             if vend == vstart
         ]
 
-        plot_dir = os.makedirs("test_output", self.__class__.__name__, exists_ok=True)
+        plot_dir = os.path.join("test_output", self.__class__.__name__)
+        os.makedirs(plot_dir, exist_ok=True)
 
         self.hergqc = hERGQC(
             sampling_rate=sampling_rate,
