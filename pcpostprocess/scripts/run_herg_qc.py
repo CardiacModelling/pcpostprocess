@@ -693,6 +693,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args):
                 os.makedirs(plot_dir)
 
             hergqc = hERGQC(sampling_rate=before_trace.sampling_rate,
+                            voltage=voltage,
                             plot_dir=plot_dir)
 
             times = before_trace.get_times()
