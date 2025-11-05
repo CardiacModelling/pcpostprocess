@@ -4,6 +4,7 @@ import json
 import logging
 import multiprocessing
 import os
+#import re
 import string
 import subprocess
 import sys
@@ -15,6 +16,7 @@ import numpy as np
 import pandas as pd
 import regex as re
 import scipy
+
 from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
@@ -75,7 +77,7 @@ def main():
         # Use all wells
         wells = all_wells
     else:
-        wells = list(set(args.wells))
+        wells = args.wells
 
     # Check for unknown wells
     wrongWellNames = set(wells) - set(all_wells)
@@ -90,31 +92,30 @@ def main():
             # other functions read args.wells later on, so we need to update it
             args.wells = wells
 
-    #TODO: Once this input has been sanitised, args and parser should be deleted
+    # TODO: Once this input has been sanitised, args and parser should be deleted
 
     # Import and exec config file
-    #TODO: Avoid global
+    # TODO: Avoid global
     global export_config
     export_config = importlib.util.module_from_spec(spec)
 
-    #TODO: What is happening here!?
+    # TODO: What is happening here!?
     sys.modules['export_config'] = export_config
     spec.loader.exec_module(export_config)
 
-    #TODO: Don't do this
+    # TODO: Don't do this
     export_config.savedir = output_dir
 
-    #TODO: Don't do this
+    # TODO: Don't do this
     args.saveID = export_config.saveID
     args.savedir = export_config.savedir
     args.D2S = export_config.D2S
     args.D2SQC = export_config.D2S_QC
 
-    #TODO: Why regex module instead of re?
-    #TODO: Why are we doing this?
+    # TODO: Why regex module instead of re?
+    # TODO: Why are we doing this?
     protocols_regex = \
         r'^([a-z|A-Z|_|0-9| |\-|\(|\)]+)_([0-9][0-9]\.[0-9][0-9]\.[0-9][0-9])$'
-
     protocols_regex = re.compile(protocols_regex)
 
     res_dict = {}
