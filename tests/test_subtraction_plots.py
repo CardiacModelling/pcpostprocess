@@ -21,7 +21,7 @@ class TestSubtractionPlots(unittest.TestCase):
         json_file_after = "staircaseramp (2)_2kHz_15.11.33.json"
 
         self.output_dir = os.makedirs("test_output", self.__class__.__name__,
-                                      exists_ok=True)
+                                      exist_ok=True)
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
