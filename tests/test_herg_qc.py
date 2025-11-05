@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import copy
 import os
 import string
@@ -54,7 +55,7 @@ class TestHergQC(unittest.TestCase):
             if vend == vstart
         ]
 
-        plot_dir = "test_output"
+        plot_dir = os.path.join("test_output", self.__class__.__name__)
         os.makedirs(plot_dir, exist_ok=True)
 
         self.hergqc = hERGQC(

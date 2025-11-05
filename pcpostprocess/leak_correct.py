@@ -5,114 +5,93 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def linear_reg(V, I_obs):
+def linear_reg(V, I):
+    """
+    Performs linear regression on ``V`` and ``I``, returning coefficients
+    ``b_0, b_1`` such that ``I`` if fit by ``b_0 + b_1 * V``.
+    """
+
     # number of observations/points
     n = np.size(V)
+    # TODO Test that I has same size, nice error if not
 
     # mean of V and I vector
     m_V = np.mean(V)
-    m_I = np.mean(I_obs)
+    m_I = np.mean(I)
 
-    # calculating cross-deviation and deviation about V
-    SS_VI = np.sum(I_obs*V) - n*m_I*m_V
-    SS_VV = np.sum(V*V) - n*m_V*m_V
+    # calculate cross-deviation and deviation about V
+    SS_VI = np.sum(I * V) - n * m_I * m_V
+    SS_VV = np.sum(V * V) - n * m_V * m_V
 
     # calculating regression coefficients
     b_1 = SS_VI / SS_VV
-    b_0 = m_I - b_1*m_V
+    b_0 = m_I - b_1 * m_V
 
     # return intercept, gradient
     return b_0, b_1
 
 
-def get_QC_dict(QC, bounds={'Rseal': (10e8, 10e12), 'Cm': (1e-12, 1e-10),
-                            'Rseries': (1e6, 2.5e7)}):
-    '''
-    @params:
-    QC: QC trace attribute extracted from the JSON file
-    bounds: A dictionary of bound tuples, (lower, upper), for each QC variable
-
-    @returns:
-    A dictionary where the keys are wells and the values are sweeps that passed QC
-    '''
-    #  TODO decouple this code from syncropatch export
-
-    QC_dict = {}
-    for well in QC:
-        for sweep in QC[well]:
-            if all(sweep):
-                if bounds['Rseal'][0] < sweep[0] < bounds['Rseal'][1] and \
-                   bounds['Cm'][0] < sweep[1] < bounds['Cm'][1] and \
-                   bounds['Rseries'][0] < sweep[2] < bounds['Rseries'][1]:
-
-                    if well in QC_dict:
-                        QC_dict[well] = QC_dict[well] + [sweep]
-                    else:
-                        QC_dict[well] = [sweep]
-
-    max_swp = max(len(QC_dict[well]) for well in QC_dict)
-    QC_copy = QC_dict.copy()
-    for well in QC_copy:
-        if len(QC_dict[well]) != max_swp:
-            QC_dict.pop(well)
-    return QC_dict
-
-
 def get_leak_corrected(current, voltages, times, ramp_start_index,
-                       ramp_end_index, **kwargs):
-    """Leak correct all data in a trace
+                       ramp_end_index, *args, **kwargs):
+    """
+    Leak correct all data in a trace by subtracting a linear current derived
+    from a leak ramp.
 
-    @Params:
-    current: the observed currents taken from the entire sweep
+    @param current: the observed currents taken from the entire sweep
+    @param voltages: the voltages at each timepoint; has the same shape as current
+    @param ramp_start_index: the index of the observation where the leak ramp begins
+    @ramp_end_index: the index of the observation where the leak ramp ends
 
-    voltages: the voltages at each timepoint; has the same shape as current
+    Any extra arguments will be passed to ``fit_linear_leak``, allowing figure
+    creation.
 
-    ramp_start_index: the index of the observation where the leak ramp begins
-
-    ramp_end_index: the index of the observation where the leak ramp ends
-
-    @Returns: A leak correct trace with the same shape as current
-
+    @return: A leak correct trace with the same shape as current
     """
 
     (b0, b1), I_leak = fit_linear_leak(current, voltages, times, ramp_start_index,
-                                       ramp_end_index, **kwargs)
+                                       ramp_end_index, *args, **kwargs)
 
     return current - I_leak
 
 
 def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
-                    save_fname='', output_dir='',
-                    figsize=(5.54, 7)):
+                    save_fname=None, output_dir=None, figsize=(5.54, 7)):
+    """
+    Fits linear leak to a leak ramp, returning
+
+    @param current: the observed currents taken from the entire sweep
+    @param voltage: the voltages at each timepoint; has the same shape as current
+    @param ramp_start_index: the index of the observation where the leak ramp begins
+    @param ramp_end_index: the index of the observation where the leak ramp ends
+    @param save_fname: if set, a debugging figure will be made and stored with this name
+    @param output_dir: if ``save_fname`` is set, this directory will be used to store
+    the figure, and created if it does not exist
+    @param figsize: if ``save_fname`` is set, the figure size.
+
+    @return: the linear regression parameters obtained from fitting the leak
+    ramp as a tuple ``(intercept, slope)``, and the linear leak current as a
+    numpy array.
     """
 
-
-    @params
-    current: the observed currents taken from the entire sweep
-
-    voltages: the voltages at each timepoint; has the same shape as current
-
-    ramp_start_index: the index of the observation where the leak ramp begins
-
-    ramp_end_index: the index of the observation where the leak ramp ends
-
-    @Returns: the linear regression parameters obtained from fitting the leak ramp (tuple),
-    and the leak current (np.array with the same shape as current)
-    """
-
+    # TODO: This should not be handled here
     if len(current) == 0:
         return (np.nan, np.nan), np.full(times.shape, np.nan)
 
+    # TODO: This should definitely not be handled here! Raise an error if this
+    # needs to be done
     current = current.flatten()
 
     # Convert to mV for convinience
+    # TODO: This is apparently no longer done?
     V = voltage
-
+    # TODO: Remove these unecessary renames?
     I_obs = current  # pA
+    # TODO: Make the user give half-open intervals instead of using the +1 here!
     b_0, b_1 = linear_reg(V[ramp_start_index:ramp_end_index+1],
                           I_obs[ramp_start_index:ramp_end_index+1])
-    I_leak = b_1*V + b_0
+    I_leak = b_1 * V + b_0
 
+    # TODO: Should this not be an error instead?
     if not np.all(np.isfinite(I_leak)) or not np.all(np.isfinite(I_obs)):
         return (np.nan, np.nan), np.full(times.shape, np.nan)
 
@@ -170,7 +149,7 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
         ax4.plot(times, I_obs, label=r'$I_\mathrm{obs}$')
         ax4.plot(times, I_leak, linestyle='--', label=r'$I_\mathrm{L}$')
         ax4.plot(times, I_obs - I_leak,
-                 linestyle='--', alpha=0.5, label=r'$I_\mathrm{obs} - I_\mathrm{L}$')
+                 alpha=0.5, label=r'$I_\mathrm{obs} - I_\mathrm{L}$')
         ax4.legend(frameon=False)
 
         if not os.path.exists(output_dir):
