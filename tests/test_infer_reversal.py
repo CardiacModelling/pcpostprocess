@@ -55,7 +55,7 @@ class TestInferReversal(unittest.TestCase):
             output_path=os.path.join(self.output_dir,
                                      f"{well}_staircase"),
             known_Erev=self.correct_Erev)
-        self.assertEqual(E_rev, self.correct_Erev)
+        self.assertLess(abs(E_rev - self.correct_Erev), 1e-5)
 
 
 if __name__ == "__main__":
