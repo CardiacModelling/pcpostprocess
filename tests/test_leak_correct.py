@@ -30,7 +30,7 @@ class TestLeakCorrect(unittest.TestCase):
         # Find first times ahead of these times
         voltage_protocol = self.test_trace.get_voltage_protocol().get_all_sections()
         times = self.currents['times'].flatten()
-        self.ramp_bound_indices = detect_ramp_bounds(times, voltage_protocol, ramp_no=0)
+        self.ramp_bound_indices = detect_ramp_bounds(times, voltage_protocol, ramp_index=0)
 
     def test_plot_leak_fit(self):
         well = 'A01'
