@@ -33,10 +33,7 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
     """
 
     # Get ramp bounds, assuming final ramp is the reversal ramp
-    tstart, tend = detect_ramp_bounds(times, voltage_segments, -1)
-
-    istart = np.argmax(times > tstart)
-    iend = np.argmax(times > tend)
+    istart, iend = detect_ramp_bounds(times, voltage_segments, -1)
 
     current = current[istart:iend]
     voltages = voltages[istart:iend]
