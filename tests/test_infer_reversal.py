@@ -13,7 +13,7 @@ class TestInferReversal(unittest.TestCase):
                                      "staircaseramp (2)_2kHz_15.01.07")
         json_file = "staircaseramp (2)_2kHz_15.01.07.json"
 
-        self.output_dir = os.path.join('test_output', 'test_trace_class')
+        self.output_dir = os.path.join('test_output', self.__class__.__name__)
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
