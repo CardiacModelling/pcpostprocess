@@ -32,15 +32,10 @@ class TestInferReversal(unittest.TestCase):
                                                           ramp_index=0)
 
         self.voltages = self.test_trace.get_voltage()
-
         self.correct_Erev = -89.57184330525791438049054704606533050537109375
 
     def test_plot_leak_fit(self):
         well = "A03"
-        self.voltages = self.test_trace.get_voltage()
-
-        self.correct_Erev = -90.06155612421054001970333047211170196533203125
-
         sweep = 0
 
         voltage = self.test_trace.get_voltage()
