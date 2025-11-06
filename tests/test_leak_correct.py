@@ -14,8 +14,7 @@ class TestLeakCorrect(unittest.TestCase):
                                      "staircaseramp (2)_2kHz_15.01.07")
         json_file = "staircaseramp (2)_2kHz_15.01.07.json"
 
-        self.output_dir = os.path.join("test_output",
-                                       self.__class__.__name__)
+        self.output_dir = os.path.join('test_output', self.__class__.__name__)
 
         os.makedirs(self.output_dir, exist_ok=True)
 
