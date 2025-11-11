@@ -162,7 +162,7 @@ def main():
 
     # this error is raised if the user has not specified the dictionary of protocols in the export_config.py file
     if not readnames:
-        logging.error("No compatible protocols found in export config file.")
+        logging.error("No compatible protocols found in export config file")
         return
 
     with multiprocessing.Pool(min(args.no_cpus, len(readnames)),
@@ -266,7 +266,8 @@ def main():
 
     wells_to_export = wells if args.export_failed else overall_selection
 
-    logging.info(f"exporting wells {wells}")
+    logging.info(f"Wells passing QC so far: {overall_selection}")
+    logging.info(f"exporting wells {wells_to_export}")
 
     no_protocols = len(res_dict)
 
@@ -281,6 +282,7 @@ def main():
 
     if dfs:
         extract_df = pd.concat(dfs, ignore_index=True)
+
         extract_df['selected'] = extract_df['well'].isin(overall_selection)
     else:
         logging.error("Didn't export any data")
@@ -423,8 +425,6 @@ def create_qc_table(qc_df):
 
     qc_df['protocol'] = ['staircaseramp1_2' if p == 'staircaseramp2' else p
                          for p in qc_df.protocol]
-
-    print(qc_df.protocol.unique())
 
     fails_dict = {}
     no_wells = 384
@@ -855,6 +855,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
     raw_before_all = before_trace.get_trace_sweeps(sweeps)
     raw_after_all = after_trace.get_trace_sweeps(sweeps)
 
+    logging.info(f"sampling_rate is {sampling_rate}")
+
     selected_wells = []
     for well in args.wells:
 
@@ -929,7 +931,6 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
             after_currents[sweep, :] = after_raw
 
         logging.info(f"{well} {savename}\n----------")
-        logging.info(f"sampling_rate is {sampling_rate}")
 
         voltage_steps = [tend
                          for tstart, tend, vstart, vend in
@@ -941,8 +942,8 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
             times,
             before_currents_corrected,
             after_currents_corrected,
-            np.array(qc_before[well])[0, :],
-            np.array(qc_after[well])[0, :],
+            np.array(qc_before[well]),
+            np.array(qc_after[well]),
             nsweeps,
         )
 
