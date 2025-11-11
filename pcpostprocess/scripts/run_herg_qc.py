@@ -382,7 +382,7 @@ def main():
 
     qc_styled_df = create_qc_table(qc_df)
     logging.info(qc_styled_df)
-    qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
+    #qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
 
     # Save in csv format
@@ -741,14 +741,11 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
 
             t_step = times[1] - times[0]
             row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
-            res = \
-                get_time_constant_of_first_decay(subtracted_trace, times, desc,
-                                                 args=args,
-                                                 output_path=os.path.join(savedir,
-                                                                          "debug",
-                                                                          "-120mV time constant",
-                                                                          f"{savename}-{well}-sweep"
-                                                                          f"{sweep}-time-constant-fit.pdf"))
+            res = get_time_constant_of_first_decay(
+                subtracted_trace, times, desc, args=args,
+                output_path=os.path.join(
+                    savedir, 'debug', '-120mV time constant',
+                    f'{savename}-{well}-sweep{sweep}-time-constant-fit.png'))
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
