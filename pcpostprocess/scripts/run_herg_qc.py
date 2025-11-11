@@ -316,7 +316,7 @@ def main():
 
         # R_leftover only considered for protocols used for QC (i.e. staircase protocols)
         passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(args.D2SQC.values())]
-                                      ["R_leftover"].values
+                                      ["QC.R_leftover"].values
                                       )
 
         logging.info(f"passed_QC_R_leftover {passed_QC_R_leftover}")
@@ -332,9 +332,9 @@ def main():
         was_selected = np.all(sub_df['selected'].values)
 
         passed_qc = passed_qc3_bookend and was_selected\
-            and passed_QC_Erev_all and passed_QC1_all\
-            and passed_QC_Erev_spread and passed_QC4_all\
-            and passed_QC6_all and passed_QC_R_leftover
+            and passed_QC_Erev_all and passed_QC6_all\
+            and passed_QC_Erev_spread and passed_QC1_all\
+            and passed_QC4_all
 
         passed_qc_dict[well] = passed_qc
 
