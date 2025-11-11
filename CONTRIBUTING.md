@@ -6,26 +6,25 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 When making changes, we try to follow the procedure below.
 
 1. **Discuss proposed changes before starting any work.**
-   Before coding, always create an [issue](https://guides.github.com/features/issues/) and disucss the proposed work.
+   Before coding, always create an [issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues) and disucss the proposed work.
    Something similar may already exist, be under development, or have been proposed and rejected - so this can save valuable time.
 
 2. **Always work on branches**.
    Once the idea has been agreed upon, start coding in a new _branch_.
-   If you're in the CardiacModelling team, you can create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) in the main pcpostprocess repository.
+   If you're in the CardiacModelling team, you can create a [branch](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-and-deleting-branches-within-your-repository) directly in the main pcpostprocess repository.
    For outside contributions, you'll first need to [create a fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo).
 
    There are no rules for branch names, but try to make them relate to the issue, e.g. by including the issue number.
 
-   Commit your changes to your branch with useful, descriptive commit messages.
-   Remember, these messages are publicly visible and should still make sense in years to come.
+   Commit your changes to your branch with useful, descriptive commit messages that will still make sense in years to come.
 
-3. **Conform to style guidelines, and document every class, method, and method argument.**
-   For more information, please see below.
+3. **Conform to style guidelines, and document every class, method, and argument.**
+   For more information, see below.
    
    **Note: as of 2025-11-11, we are still in the process of making `pcpostprocess` confirm to this rule.**
    
 4. **Test locally, and ensure 100% test coverage**
-    For more information, please see below.
+    For more information, see below.
 
     **Note: as of 2025-11-11, we are stillin the process of making `pcpostprocess` confirm to this rule.**
 
@@ -34,14 +33,13 @@ When making changes, we try to follow the procedure below.
    In your branch, update the [Changelog](./CHANGELOG.md) with a link to this PR and a concise summary of the changes.
    Finally, request a review of the code.
 
-
 ## Project structure
 
 `pcpostprocess` is written in [Python 3](https://en.wikipedia.org/wiki/Python_(programming_language)), but at the moment has a few **non-python dependencies** i.e. latex.
 
 ## Developer installation
 
-TODO: Once there is a "user" way to install, move the git clone etc. information here.
+**TODO: Once there is a "user" way to install, move the git clone etc. information here.**
 
 ```
 pip install -e .[test]
@@ -62,7 +60,7 @@ In addition to the rules checked by flake8, we try to use single quotes (`'`) fo
 
 ### Spelling
 
-TODO WE SHOULD MAYBE DISCUSS WHICH ENGLISH TO USE?
+**TODO WE SHOULD MAYBE DISCUSS WHICH ENGLISH TO USE?**
 
 ### Import ordering
 
@@ -84,9 +82,9 @@ Every method and every class should have a [docstring](https://www.python.org/de
 Each docstring should start with a one-line explanation.
 If more explanation is needed, this one-liner is followed by a blank line and more information in the following paragraphs.
 
-TODO: SYNTAX, RUNNING LOCALLY, ETC
+**TODO: SYNTAX, RUNNING LOCALLY, ETC**
 
-TODO: EXAMPLES
+**TODO: EXAMPLES**
 
 ```
 cd doc
@@ -145,7 +143,11 @@ Each PR should add a line (or occasionally multiple lines) to [CHANGELOG.md](./C
 This should be a very concise summary of the work done, and link to the PR itself for further info.
 Changes are classified as `Added`, `Changed`, `Deprecated`, `Removed`, or `Fixed`.
 
-
+For example, the first entry in our Changelog was:
+```
+- Added
+  - [#104](https://github.com/CardiacModelling/pcpostprocess/pull/104) Added a CHANGELOG.md and CONTRIBUTING.md
+```
 
 ## Packaging
 
@@ -178,7 +180,7 @@ Releases, like other changes, are made on a branch, using the following procedur
 6. Merge the PR.
 7. [Add a new release](https://github.com/CardiacModelling/pcpostprocess/releases) in GitHub, using the tag you created, and copy in the changes from the changelog.
 
-TODO: THERE IS NO PACKAGING ON PYPI ATM
+**TODO: THERE IS NO PACKAGING ON PYPI ATM**
 
 ### Licensing
 
