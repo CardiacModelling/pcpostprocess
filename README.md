@@ -117,5 +117,5 @@ Although `pcpostprocess` is still early in its development, we have set up guide
 
 ## Licensing
 
-For licensing information, see [LICENSE.md](./LICENSE.md).
+For licensing information, see the [LICENSE](./LICENSE.md) file.
 
