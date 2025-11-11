@@ -39,7 +39,7 @@ When making changes, we try to follow the procedure below.
 
 ## Developer installation
 
-**TODO: Once there is a "user" way to install, move the git clone etc. information here #105.**
+**TODO: Once there is a "user" way to install, move the git clone etc. information here [#105](https://github.com/CardiacModelling/pcpostprocess/issues/105).**
 
 ```
 pip install -e .[test]
@@ -60,7 +60,7 @@ In addition to the rules checked by flake8, we try to use single quotes (`'`) fo
 
 ### Spelling
 
-**TODO WE SHOULD MAYBE DISCUSS WHICH ENGLISH TO USE?**
+**TODO WE SHOULD MAYBE DISCUSS WHICH ENGLISH TO USE? [#106](https://github.com/CardiacModelling/pcpostprocess/issues/106)**
 
 ### Import ordering
 
@@ -133,7 +133,7 @@ coverage report
 
 Whenever changes are made to a branch with an open pull request, tests will be run using GitHub actions.
 
-These are configured in a single workflow TODO THIS IS BEING UPDATED ATM
+These are configured in a single workflow **TODO THIS IS BEING UPDATED ATM**
 
 Coverage testing is run, and sent to [codecov.io](https://docs.codecov.io/docs) to generate [online reports](https://app.codecov.io/github/CardiacModelling/pcpostprocess).
 
@@ -180,7 +180,7 @@ Releases, like other changes, are made on a branch, using the following procedur
 6. Merge the PR.
 7. [Add a new release](https://github.com/CardiacModelling/pcpostprocess/releases) in GitHub, using the tag you created, and copy in the changes from the changelog.
 
-**TODO: THERE IS NO PACKAGING ON PYPI ATM**
+**TODO: THERE IS NO PACKAGING ON PYPI ATM [#105](https://github.com/CardiacModelling/pcpostprocess/issues/105)**
 
 ### Licensing
 
