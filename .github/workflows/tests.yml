@@ -1,10 +1,18 @@
-name: build
-on: [push]
+name: Tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - '**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
+
     env:
         python-latest: 3.14
     strategy:
@@ -26,14 +34,14 @@ jobs:
         python -m pip install -e .[test]
 
     - name: Check code style with flake8
+      if: ${{ matrix.python-version == env.python-latest }}
       run: |
         python -m flake8 pcpostprocess/*.py tests/*.py pcpostprocess/scripts/*.py
-      if: matrix.python-version == ${{ env.python-latest }}
 
     - name: Check import ordering with isort
+      if: ${{ matrix.python-version == env.python-latest }}
       run: |
         python -m isort --verbose --check-only --diff pcpostprocess tests setup.py
-      if: matrix.python-version == ${{ env.python-latest }}
 
     - name: Extract test data
       run: |
@@ -56,5 +64,5 @@ jobs:
         pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF -w A01 A02 A03
 
     - uses: codecov/codecov-action@v4
-      if: success() && matrix.python-version == ${{ env.python-latest }}
+      if: ${{ success() && matrix.python-version == env.python-latest }}
 
