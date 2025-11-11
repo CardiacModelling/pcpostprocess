@@ -39,7 +39,7 @@ When making changes, we try to follow the procedure below.
 
 ## Developer installation
 
-**TODO: Once there is a "user" way to install, move the git clone etc. information here.**
+**TODO: Once there is a "user" way to install, move the git clone etc. information here #105.**
 
 ```
 pip install -e .[test]
