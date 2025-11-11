@@ -5,10 +5,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
+    env:
+        python_latest = 3.14
     strategy:
       matrix:
         python-version: ['3.10', 3.11, 3.12, 3.13, 3.14]
-        
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -23,13 +25,15 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -e .[test]
 
-    - name: Lint with flake8
+    - name: Check code style with flake8
       run: |
         python -m flake8 pcpostprocess/*.py tests/*.py pcpostprocess/scripts/*.py
+      if: matrix.python-version == ${{ python-latest }}
 
-    - name: Import sorting with isort
+    - name: Check import ordering with isort
       run: |
         python -m isort --verbose --check-only --diff pcpostprocess tests setup.py
+      if: matrix.python-version == ${{ python-latest }}
 
     - name: Extract test data
       run: |
@@ -41,18 +45,16 @@ jobs:
         python -m pip install -e .
         python -m pytest --cov --cov-config=.coveragerc
 
-    - name: Install TeX dependencies
+    - name: Install TeX dependencies for run_herg_qc test
       timeout-minutes: 15
       run: |
         sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
 
-    - name: Test running QC
+    - name: Test running run_herg_qc
       timeout-minutes: 15
       run: |
         pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF -w A01 A02 A03
 
     - uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-      if: success() && matrix.python-version == 3.14
+      if: success() && matrix.python-version == ${{ python-latest }}
 
