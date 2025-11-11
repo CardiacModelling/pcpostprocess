@@ -4,6 +4,7 @@ This page lists the main changes made to pcpostprocess in each release.
 
 ## Unreleased
 - Added
+  - [#104](https://github.com/CardiacModelling/pcpostprocess/pull/104) Added a CHANGELOG.md and CONTRIBUTING.md
 - Changed
 - Deprecated
 - Removed

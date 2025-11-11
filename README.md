@@ -111,3 +111,11 @@ options:
   --log_level LOG_LEVEL
 ```
 
+## Contributing
+
+Although `pcpostprocess` is still early in its development, we have set up guidelines for user contributions in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Licensing
+
+For licensing information, see [LICENSE.md](./LICENSE.md).
+
