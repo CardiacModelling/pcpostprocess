@@ -1,0 +1,7 @@
+,well,qc1.rseal,qc1.cm,qc1.rseries,qc2.raw,qc2.subtracted,qc3.raw,qc3.E4031,qc3.subtracted,qc4.rseal,qc4.cm,qc4.rseries,qc5.staircase,qc5.1.staircase,qc6.subtracted,qc6.1.subtracted,qc6.2.subtracted,protocol,qc3.bookend,QC.Erev.all_protocols,QC.Erev.spread,QC1.all_protocols,QC4.all_protocols,QC6.all_protocols
+0,A03,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,staircaseramp,True,True,True,True,True,True
+1,A20,False,False,False,True,True,False,False,False,True,False,False,True,False,False,False,False,staircaseramp,False,True,True,True,True,True
+2,D16,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,staircaseramp,False,True,True,True,True,True
+3,A03,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,True,staircaseramp_2,True,True,True,True,True,True
+4,A20,False,False,False,True,False,False,True,True,True,False,False,False,False,False,True,True,staircaseramp_2,False,True,True,True,True,True
+5,D16,True,True,False,True,True,True,True,True,True,True,True,True,True,True,True,True,staircaseramp_2,False,True,True,True,True,True
