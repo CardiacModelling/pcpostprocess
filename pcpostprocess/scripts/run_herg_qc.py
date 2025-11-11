@@ -9,7 +9,6 @@ import logging
 import multiprocessing
 import os
 import string
-import subprocess
 import sys
 
 import cycler
@@ -48,18 +47,22 @@ def run_from_command_line():
 
     parser.add_argument('data_directory', help='The path to read input from')
     parser.add_argument('-o', '--output_dir', default='output',
-        help='The path to write output to')
+                        help='The path to write output to')
 
-    parser.add_argument('-w', '--wells', nargs='+',
+    parser.add_argument(
+        '-w', '--wells', nargs='+',
         help='A space separated list of wells to include. If not given, all'
              'wells are loaded.')
 
-    parser.add_argument('--output_traces', action='store_true',
+    parser.add_argument(
+        '--output_traces', action='store_true',
         help='Add this flag to store (raw and processed) traces, as .csv files')
-    parser.add_argument('--export_failed', action='store_true',
+    parser.add_argument(
+        '--export_failed', action='store_true',
         help='Add this flag to produce full output even for wells failing QC')
 
-    parser.add_argument('--Erev', default=-90.71, type=float,
+    parser.add_argument(
+        '--Erev', default=-90.71, type=float,
         help='The calculated or estimated reversal potential.')
     parser.add_argument(
         '--reversal_spread_threshold', type=float, default=10,
@@ -73,7 +76,6 @@ def run_from_command_line():
 
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--log_level', default='INFO')
-
 
     args = parser.parse_args()
 
@@ -141,6 +143,9 @@ def run(data_path, output_path, qc_map, wells=None,
     """
     # TODO reversal_spread_threshold should be specified the same way as all
     #      other QC thresholds & parameters.
+
+    # Create output path if necessary, and write info file
+    output_path = setup_output_directory(output_path)
 
     # TODO Remove protocol selection here: this is done via the export file!
     #      Only protocols listed there are accepted
@@ -388,13 +393,12 @@ def run(data_path, output_path, qc_map, wells=None,
         logging.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
 
         # R_leftover only considered for protocols used for QC (i.e. staircase protocols)
-        passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(args.D2SQC.values())]
-                                      ["QC.R_leftover"].values
-                                      )
+        passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(qc_map.values())]
+                                      ['QC.R_leftover'].values)
 
         logging.info(f"passed_QC_R_leftover {passed_QC_R_leftover}")
 
-        passed_QC_Erev_spread = E_rev_spread <= args.reversal_spread_threshold
+        passed_QC_Erev_spread = E_rev_spread <= reversal_spread_threshold
 
         qc_erev_spread[well] = passed_QC_Erev_spread
         erev_spreads[well] = E_rev_spread
@@ -821,7 +825,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                     savedir, 'debug', '-120mV time constant',
                     f'{savename}-{well}-sweep{sweep}-time-constant-fit.pdf'),
                 figure_size
-                )
+            )
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -859,7 +863,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                             protocol=savename)
 
         fig.savefig(os.path.join(subtraction_plots_dir,
-                                 f"{save_id}-{savename}-{well}-sweep{sweep}-subtraction"))
+                                 f'{save_id}-{savename}-{well}-sweep{sweep}-subtraction'))
         fig.clf()
 
     plt.close(fig)
@@ -874,11 +878,11 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     # extract protocol
     protocol = before_trace.get_voltage_protocol()
     protocol.export_txt(os.path.join(protocol_dir,
-                                     f"{save_id}-{savename}.txt"))
+                                     f'{save_id}-{savename}.txt'))
 
     json_protocol = before_trace.get_voltage_protocol_json()
 
-    with open(os.path.join(protocol_dir, f"{save_id}-{savename}.json"), 'w') as fout:
+    with open(os.path.join(protocol_dir, f'{save_id}-{savename}.json'), 'w') as fout:
         json.dump(json_protocol, fout)
 
     return extract_df
@@ -898,7 +902,7 @@ def run_qc_for_protocol(readname, savename, time_strs, output_path,
     filepath_before = os.path.join(data_path, f'{readname}_{time_strs[0]}')
     json_file_before = f"{readname}_{time_strs[0]}"
 
-    filepath_after = os.path.join(data_path,  f'{readname}_{time_strs[1]}')
+    filepath_after = os.path.join(data_path, f'{readname}_{time_strs[1]}')
     json_file_after = f"{readname}_{time_strs[1]}"
 
     logging.debug(f"loading {json_file_after} and {json_file_before}")
@@ -910,7 +914,7 @@ def run_qc_for_protocol(readname, savename, time_strs, output_path,
     # Convert to s
     sampling_rate = before_trace.sampling_rate
 
-    savedir = os.path.join(output_path, "QC")
+    savedir = os.path.join(output_path, 'QC')
     leak_correction_dir = os.path.join(savedir, "leak_correction")
 
     if not os.path.exists(savedir):
@@ -1031,7 +1035,7 @@ def run_qc_for_protocol(readname, savename, time_strs, output_path,
         for i in range(nsweeps):
 
             savepath = os.path.join(savedir,
-                                    f"{save_id}-{savename}-{well}-sweep{i}.csv")
+                                    f'{save_id}-{savename}-{well}-sweep{i}.csv')
             subtracted_current = before_currents_corrected[i, :] - after_currents_corrected[i, :]
 
             if write_traces:
@@ -1125,25 +1129,18 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
         save_fname = f"{well}_{savename}_before0.pdf"
 
         if debug:
-            qc3_output_dir = os.path.join(output_path,
-                                          "QC",
-                                          "debug",
-                                          f"debug_{well}_{savename}",
-                                          "qc3_bookend")
+            qc3_output_dir = os.path.join(
+                output_path, 'QC', 'debug', f'{well}_{savename}', 'qc3_bookend')
 
             if not os.path.exists(qc3_output_dir):
                 os.makedirs(qc3_output_dir)
 
-            leak_correct_dir = os.path.join(qc3_output_dir,
-                                            "leak_correction")
+            leak_correct_dir = os.path.join(qc3_output_dir, 'leak_correction')
 
             #  Plot subtraction
-            if debug:
-                get_leak_corrected(first_before_current,
-                                   voltage, times,
-                                   *ramp_bounds,
-                                   save_fname=save_fname,
-                                   output_dir=leak_correct_dir)
+            get_leak_corrected(
+                first_before_current, voltage, times, *ramp_bounds,
+                save_fname=save_fname, output_dir=leak_correct_dir)
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
@@ -1166,9 +1163,8 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 
     voltage_protocol = VoltageProtocol.from_voltage_trace(voltage, times)
 
-
     plot_dir = os.path.join(output_path, output_path,
-                            f"{save_id}-{savename}-qc3-bookend")
+                            f'{save_id}-{savename}-qc3-bookend')
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
     hergqc = hERGQC(sampling_rate=first_before_trace.sampling_rate,
@@ -1197,8 +1193,7 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 
         res_dict[well] = passed
 
-        save_fname = os.path.join(output_path,
-                                  'qc3_bookend')
+        save_fname = os.path.join(output_path, 'qc3_bookend')
 
         ax.plot(times, trace1)
         ax.plot(times, trace2)
