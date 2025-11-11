@@ -1,4 +1,4 @@
-[![Unit tests](https://github.com/CardiacModelling/pcpostprocess/actions/workflows/pytest.yml/badge.svg)](https://github.com//CardiacModelling/pcpostprocess/actions/workflows/pytest.yml)
+[![Unit tests](https://github.com/CardiacModelling/pcpostprocess/actions/workflows/tests.yml/badge.svg)](https://github.com//CardiacModelling/pcpostprocess/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/CardiacModelling/pcpostprocess/graph/badge.svg?token=HOL0FrpGqs)](https://codecov.io/gh/CardiacModelling/pcpostprocess)
 
 This repository contains a python package and scripts for handling time-series data from patch-clamp experiments.
