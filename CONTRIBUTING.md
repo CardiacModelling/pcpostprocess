@@ -29,7 +29,7 @@ When making changes, we try to follow the procedure below.
     **Note: as of 2025-11-11, we are stillin the process of making `pcpostprocess` confirm to this rule.**
 
 4. **Discuss code in a PR**
-   When your code is finished, or warrants discussion, create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR).
+   When your code is finished, or warrants discussion, create a [pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) (PR).
    In your branch, update the [Changelog](./CHANGELOG.md) with a link to this PR and a concise summary of the changes.
    Finally, request a review of the code.
 
@@ -75,12 +75,12 @@ Isort is configured in [pyproject.toml](./pyproject.toml) under the section `too
 
 ## Documentation
 
-[#60](https://github.com/CardiacModelling/pcpostprocess/issues/60)
-
 Every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.
 
 Each docstring should start with a one-line explanation.
 If more explanation is needed, this one-liner is followed by a blank line and more information in the following paragraphs.
+
+**TODO: READTHEDOCS [#60](https://github.com/CardiacModelling/pcpostprocess/issues/60)**
 
 **TODO: SYNTAX, RUNNING LOCALLY, ETC**
 
@@ -110,7 +110,7 @@ $ python3 -m unittest TestClass.test_method
 
 ### Unit tests
 
-Testing is done with [unittest](https://docs.python.org/3.9/library/unittest.html).
+Testing is done with [unittest](https://docs.python.org/3/library/unittest.html).
 
 Each method in `pcpostprocess` should have a unit test.
 
@@ -118,7 +118,7 @@ Tests should always aim to compare generated output with reference values, inste
 
 ### Coverage
 
-Coverage is checked with [coverage](https://coverage.readthedocs.io/en/7.11.3/).
+Coverage is checked with [coverage](https://coverage.readthedocs.io/en/latest/).
 
 To run locally, use
 ```
