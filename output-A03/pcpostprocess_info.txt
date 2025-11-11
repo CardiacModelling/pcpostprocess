@@ -1,0 +1,6 @@
+pcpostprocess output https://github.com/CardiacModelling/pcpostprocess
+Date: 2025-11-11 19:10:18.597787
+Version: 0.2.1.dev1
+Build type: Develop
+Commit: g62a0bd564
+Command: pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF -w A03
