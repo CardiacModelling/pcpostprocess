@@ -62,7 +62,7 @@ def main():
 
     logging.basicConfig(level=args.log_level)
 
-    output_dir = setup_output_directory(args.output_dir, "run_herg_qc")
+    output_dir = setup_output_directory(args.output_dir)
 
     spec = importlib.util.spec_from_file_location(
         'export_config',
