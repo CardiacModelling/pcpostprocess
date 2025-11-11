@@ -1,29 +1,29 @@
 [build-system]
 requires = [
-         "setuptools>=61",
-         "wheel",
-         "setuptools_scm[toml]>=8.0",
+         'setuptools>=61',
+         'wheel',
+         'setuptools_scm[toml]>=8.0',
 ]
 
-build-backend = "setuptools.build_meta"
+build-backend = 'setuptools.build_meta'
 
 [tool.setuptools_scm]
-local_scheme = "dirty-tag"
-write_to = "pcpostprocess/_version.py"
+local_scheme = 'dirty-tag'
+write_to = 'pcpostprocess/_version.py'
 
 [project]
-requires-python = ">=3.10"
-dynamic = ["version"]
-readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = '>=3.10'
+dynamic = ['version']
+readme = { file = 'README.md', content-type = 'text/markdown' }
 
-name = "pcpostprocess"
-description = "Post-process patch clamp recordings with the staircase protocol"
+name = 'pcpostprocess'
+description = 'Post-process patch clamp recordings with the staircase protocol'
 authors = [
-            {name="Frankie Patten-Elliot"},
-            {name="Joseph Shuttleworth", email="joey.shuttleworth@nottingham.ac.uk"},
-            {name="Chon Lok Lei"},
-            {name="Michael Clerx"}
-           ]
+    {name='Frankie Patten-Elliot'},
+    {name='Joseph Shuttleworth', email='joey.shuttleworth@nottingham.ac.uk'},
+    {name='Chon Lok Lei'},
+    {name='Michael Clerx'}
+]
 
 classifiers = [
     'Programming Language :: Python :: 3',
@@ -32,38 +32,49 @@ classifiers = [
 ]
 
 dependencies = [
-        'scipy>=1.7',
-        'numpy>=1.21',
-        'matplotlib>=3.4',
-        'pandas>=1.3',
-        'regex>=2023.12.25',
-        'seaborn>=0.12.2',
-        'openpyxl>=3.1.2',
-        'jinja2>=3.1.0',
+    'scipy>=1.7',
+    'numpy>=1.21',
+    'matplotlib>=3.4',
+    'pandas>=1.3',
+    'regex>=2023.12.25',
+    'seaborn>=0.12.2',
+    'openpyxl>=3.1.2',
+    'jinja2>=3.1.0',
+    'syncropatch_export @ git+https://github.com/CardiacModelling/syncropatch_export.git'
 ]
 
 [project.optional-dependencies]
 test = [
-          'pytest-cov>=2.10',     # For coverage checking
-          'pytest>=4.6',          # For unit tests
-          'flake8>=3',            # For code style checking
-          'isort',
-          'codecov>=2.1.3',
-          'syncropatch_export @ git+https://github.com/CardiacModelling/syncropatch_export.git'
-      ]
+    'coverage',             # For coverage testing
+    'codecov>=2.1.3',       # To upload coverage reports
+    'flake8>=3',            # For code style checking
+    'isort',
+]
 
 [tools.setuptools.package-data]
 include_package_data = true
 
+[project.urls]
+Homepage = 'https://github.com/CardiacModelling/pcpostprocess'
+Source = 'https://github.com/CardiacModelling/pcpostprocess'
+
 [project.scripts]
-pcpostprocess = "pcpostprocess.scripts.__main__:main"
+pcpostprocess = 'pcpostprocess.scripts.__main__:main'
 
 [tool.setuptools.packages.find]
-include = ["pcpostprocess", "pcpostprocess.scripts", "pcpostprocess.*"]
-
-[project.urls]
-Homepage = "https://github.com/CardiacModelling/pcpostprocess"
-Source = "https://github.com/CardiacModelling/pcpostprocess"
+include = [
+    'pcpostprocess',
+    'pcpostprocess.*',
+    'pcpostprocess.scripts',
+]
 
 [tool.isort]
-skip = ["_version.py"]
+skip = ['_version.py']
+
+[tool.coverage.run]
+source = [
+    'pcpostprocess',
+    'pcpostprocess.scripts',
+    'tests',
+]
+

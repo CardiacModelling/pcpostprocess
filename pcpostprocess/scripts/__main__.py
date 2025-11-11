@@ -18,7 +18,7 @@ def main():
     sys.argv.pop(1)  # Subcommand's argparser shouldn't see this
 
     if args.subcommand == "run_herg_qc":
-        run_herg_qc.main()
+        run_herg_qc.run_from_command_line()
 
     elif args.subcommand == "summarise_herg_export":
         summarise_herg_export.main()

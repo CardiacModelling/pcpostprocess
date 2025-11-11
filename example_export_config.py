@@ -4,9 +4,6 @@
 
 # Copy this config file to the top-level data directory and modify fields.
 
-# Data output directory
-savedir = './data'
-
 # Save name for this set of data
 saveID = 'EXPERIMENT_NAME'
 
