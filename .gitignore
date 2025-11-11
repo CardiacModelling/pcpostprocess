@@ -5,3 +5,4 @@ pcpostprocess/_version.py
 *__pycache__*
 *.egg-info
 *.DS_Store
+.coverage
