@@ -28,7 +28,6 @@ from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
-
 # TODO: Remove this
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
 plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
