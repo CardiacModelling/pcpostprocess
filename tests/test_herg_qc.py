@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import copy
 import os
 import string
 import unittest
@@ -7,7 +6,7 @@ import unittest
 import numpy as np
 from syncropatch_export.trace import Trace
 
-from pcpostprocess.hergQC import NOISE_LEN, hERGQC
+from pcpostprocess.hergQC import hERGQC
 
 
 def all_passed(result):
@@ -45,7 +44,8 @@ class TestHergQC(unittest.TestCase):
             for i in range(1, 25)
         ]
 
-        sampling_rate = int(1.0 / (self.times[1] - self.times[0]))  # in kHz
+        # in kHz
+        self.sampling_rate = int(1 / (self.times[1] - self.times[0]))
 
         #  Assume that there are no discontinuities at the start or end of ramps
         voltage_protocol = trace_before.get_voltage_protocol()
@@ -55,29 +55,38 @@ class TestHergQC(unittest.TestCase):
             if vend == vstart
         ]
 
-        plot_dir = os.path.join("test_output", self.__class__.__name__)
-        os.makedirs(plot_dir, exist_ok=True)
+    def create_hergqc(self, plot_dir=None):
+        """
+        Creates and returns a hERGQC object.
 
-        self.hergqc = hERGQC(
-            sampling_rate=sampling_rate,
+        If a ``plot_dir`` is set this will be used for debug output
+        """
+        # Set this to True to generate plot directories
+        debug = False
+
+        if debug and plot_dir is not None:
+            plot_dir = os.path.join('test_output', plot_dir)
+            os.makedirs(plot_dir, exist_ok=True)
+        else:
+            plot_dir = None
+
+        return hERGQC(
+            sampling_rate=self.sampling_rate,
             plot_dir=plot_dir,
             voltage=self.voltage,
         )
-        self.hergqc._debug = False  # Turn this on to output plots
-
-    def clone_hergqc(self, plot_dir):
-        hergqc = copy.deepcopy(self.hergqc)
-        plot_dir = os.path.join(hergqc.plot_dir, plot_dir)
-        os.makedirs(plot_dir, exist_ok=True)
-        hergqc.plot_dir = plot_dir
-        return hergqc
 
     def test_qc_inputs(self):
+        hergqc = self.create_hergqc()
         times = self.times
-        voltage = self.hergqc.voltage
-        qc6_win = self.hergqc.qc6_win
-        qc6_1_win = self.hergqc.qc6_1_win
-        qc6_2_win = self.hergqc.qc6_2_win
+
+        # TODO: This should work some nicer way, without accessing what should
+        #       really be private properties. But first we probably need to
+        #       stop hardcoding these windows
+        voltage = hergqc.voltage
+        qc6_win = hergqc.qc6_win
+        qc6_1_win = hergqc.qc6_1_win
+        qc6_2_win = hergqc.qc6_2_win
 
         self.assertTrue(np.all(np.isfinite(times)))
         self.assertTrue(np.all(np.isfinite(voltage)))
@@ -89,7 +98,7 @@ class TestHergQC(unittest.TestCase):
 
     def test_qc1(self):
         # qc1 checks that rseal, cm, rseries are within range
-        hergqc = self.clone_hergqc("test_qc1")
+        hergqc = self.create_hergqc('qc1')
 
         rseal_lo, rseal_hi = 1e8, 1e12
         rseal_mid = (rseal_lo + rseal_hi) / 2
@@ -297,7 +306,7 @@ class TestHergQC(unittest.TestCase):
 
     def test_qc2(self):
         # qc2 checks that raw and subtracted SNR are above a minimum threshold
-        hergqc = self.clone_hergqc("test_qc2")
+        hergqc = self.create_hergqc('qc2')
 
         test_matrix = [
             (10, True, 8082.1),
@@ -310,7 +319,7 @@ class TestHergQC(unittest.TestCase):
         ]
 
         for i, ex_pass, ex_snr in test_matrix:
-            recording = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [i] * 500)
+            recording = np.asarray([0, 0.1] * 100 + [i] * 500)
             pass_, snr = hergqc.qc2(recording)
             self.assertAlmostEqual(
                 snr, ex_snr, 1, f"QC2: ({i}) {snr} != {ex_snr}"
@@ -349,7 +358,7 @@ class TestHergQC(unittest.TestCase):
 
     def test_qc3(self):
         # qc3 checks that rmsd of two sweeps are similar
-        hergqc = self.clone_hergqc("test_qc3")
+        hergqc = self.create_hergqc('qc3')
 
         # Test with same noise, different signal
         test_matrix = [
@@ -363,10 +372,10 @@ class TestHergQC(unittest.TestCase):
             (10, False, -0.8),
         ]
 
-        recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
+        recording1 = np.asarray([0, 0.1] * 100 + [40] * 500)
         for i, ex_pass, ex_d_rmsd in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [40 + i] * 500
+                [0, 0.1] * 100 + [40 + i] * 500
             )
             pass_, d_rmsd = hergqc.qc3(recording1, recording2)
             self.assertAlmostEqual(
@@ -388,10 +397,10 @@ class TestHergQC(unittest.TestCase):
             (100, True, 11.4),
         ]
 
-        recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [40] * 500)
+        recording1 = np.asarray([0, 0.1] * 100 + [40] * 500)
         for i, ex_pass, ex_d_rmsd in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1 * i] * (NOISE_LEN // 2) + [40] * 500
+                [0, 0.1 * i] * 100 + [40] * 500
             )
             pass_, d_rmsd = hergqc.qc3(recording1, recording2)
             self.assertAlmostEqual(
@@ -456,7 +465,7 @@ class TestHergQC(unittest.TestCase):
 
     def test_qc4(self):
         # qc4 checks that rseal, cm, rseries are similar before/after E-4031 change
-        hergqc = self.clone_hergqc("test_qc4")
+        hergqc = self.create_hergqc('qc4')
 
         r_lo, r_hi = 1e6, 3e7
         c_lo, c_hi = 1e-12, 1e-10
@@ -617,7 +626,7 @@ class TestHergQC(unittest.TestCase):
     def test_qc5(self):
         # qc5 checks that the maximum current during the second half of the
         # staircase changes by at least 75% of the raw trace after E-4031 addition
-        hergqc = self.clone_hergqc("test_qc5")
+        hergqc = self.create_hergqc('qc5')
 
         test_matrix = [
             (-1.0, True, -12.5),
@@ -631,12 +640,12 @@ class TestHergQC(unittest.TestCase):
             (1.0, False, 7.5),
         ]
 
-        recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
+        recording1 = np.asarray([0, 0.1] * 100 + [10] * 500)
         for i, ex_pass, ex_d_max_diff in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500
+                [0, 0.1] * 100 + [10 * i] * 500
             )
-            pass_, d_max_diff = hergqc.qc5(recording1, recording2)
+            pass_, d_max_diff = hergqc.qc5(recording1, recording2, (0, -1))
             self.assertAlmostEqual(
                 d_max_diff,
                 ex_d_max_diff,
@@ -689,10 +698,10 @@ class TestHergQC(unittest.TestCase):
     def test_qc5_1(self):
         # qc5_1 checks that the RMSD to zero of staircase protocol changes
         # by at least 50% of the raw trace after E-4031 addition.
-        hergqc = self.clone_hergqc("test_qc5_1")
+        hergqc = self.create_hergqc('qc5_1')
 
         test_matrix = [
-            (-1.0, False, 4.22),
+            (-1.0, False, 4.23),
             (-0.5, False, 0),
             (-0.412, True, -0.74),
             (-0.4, True, -0.84),
@@ -701,13 +710,13 @@ class TestHergQC(unittest.TestCase):
             (0.4, True, -0.84),
             (0.412, True, -0.74),
             (0.5, False, 0),
-            (1.0, False, 4.22),
+            (1.0, False, 4.23),
         ]
 
-        recording1 = np.asarray([0, 0.1] * (NOISE_LEN // 2) + [10] * 500)
+        recording1 = np.asarray([0, 0.1] * 100 + [10] * 500)
         for i, ex_pass, ex_d_max_diff in test_matrix:
             recording2 = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [10 * i] * 500
+                [0, 0.1] * 100 + [10 * i] * 500
             )
             pass_, d_max_diff = hergqc.qc5_1(recording1, recording2)
             self.assertAlmostEqual(
@@ -765,7 +774,7 @@ class TestHergQC(unittest.TestCase):
     def test_qc6(self):
         # qc6 checks that the first step up to +40 mV, before the staircase, in
         # the subtracted trace is bigger than -2 x estimated noise level.
-        hergqc = self.clone_hergqc("test_qc6")
+        hergqc = self.create_hergqc('qc6')
 
         test_matrix = [
             (-100, False, 9.9),
@@ -779,9 +788,9 @@ class TestHergQC(unittest.TestCase):
 
         for i, ex_pass, ex_d_val in test_matrix:
             recording = np.asarray(
-                [0, 0.1] * (NOISE_LEN // 2) + [0.1 * i] * 500
+                [0, 0.1] * 100 + [0.1 * i] * 500
             )
-            pass_, d_val = hergqc.qc6(recording, win=[NOISE_LEN, -1])
+            pass_, d_val = hergqc.qc6(recording, win=[200, -1])
             self.assertAlmostEqual(
                 d_val,
                 ex_d_val,
@@ -888,7 +897,7 @@ class TestHergQC(unittest.TestCase):
 
     def test_run_qc(self):
         # Test all wells
-        hergqc = self.clone_hergqc("test_run_qc")
+        hergqc = self.create_hergqc('run_qc')
 
         failed_wells = [
             'A04', 'A05', 'A06', 'A07', 'A08', 'A10', 'A11', 'A12', 'A13', 'A15',
