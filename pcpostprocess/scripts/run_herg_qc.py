@@ -694,8 +694,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
                 os.makedirs(plot_dir)
 
             hergqc = hERGQC(sampling_rate=before_trace.sampling_rate,
-                            plot_dir=plot_dir,
-                            n_sweeps=before_trace.NofSweeps)
+                            voltage=voltage,
+                            plot_dir=plot_dir)
 
             times = before_trace.get_times()
             voltage = before_trace.get_voltage()

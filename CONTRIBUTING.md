@@ -149,6 +149,9 @@ For example, the first entry in our Changelog was:
   - [#104](https://github.com/CardiacModelling/pcpostprocess/pull/104) Added a CHANGELOG.md and CONTRIBUTING.md
 ```
 
+Changelog entries are intended for _users_, and so should focus on changes to the public API or command line interface.
+Changes to internals are less likely to need reporting.
+
 ## Packaging
 
 This project uses a minimal [`setup.py`](./setup.py), and instead uses [pyproject.toml](./pyproject.toml).

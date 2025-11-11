@@ -1,6 +1,7 @@
 pcpostprocess/_version.py
 /tests/test_data
 /test_output
+/output
 *__pycache__*
 *.egg-info
 *.DS_Store
