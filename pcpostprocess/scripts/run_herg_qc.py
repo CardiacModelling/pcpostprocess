@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 import regex as re
 import scipy
-
 from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
 
