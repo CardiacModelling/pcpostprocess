@@ -31,7 +31,7 @@ When making changes, we try to follow the procedure below.
 
 4. **Discuss code in a PR**
    When your code is finished, or warrants discussion, create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR).
-   In your branch, update the [CHANGELOG.md](./CHANGELOG.MD) with a link to this PR and a concise summary of the changes.
+   In your branch, update the [Changelog](./CHANGELOG.md) with a link to this PR and a concise summary of the changes.
    Finally, request a review of the code.
 
 
@@ -73,7 +73,7 @@ To run locally, use
 isort --check-only --verbose ./pcpostprocess ./tests/
 ```
 
-Isort is configured in [`pyproject.toml'](./pyproject.toml) under the section `tool.isort`.
+Isort is configured in [pyproject.toml](./pyproject.toml) under the section `tool.isort`.
 
 ## Documentation
 
