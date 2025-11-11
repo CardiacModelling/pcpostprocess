@@ -382,7 +382,7 @@ def main():
 
     qc_styled_df = create_qc_table(qc_df)
     logging.info(qc_styled_df)
-    #qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
+    # qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
 
     # Save in csv format
