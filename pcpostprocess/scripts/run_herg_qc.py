@@ -457,7 +457,7 @@ def run(data_path, output_path, qc_map, wells=None,
 
     qc_styled_df = create_qc_table(qc_df)
     logging.info(qc_styled_df)
-    qc_styled_df.to_excel(os.path.join(output_path, 'qc_table.xlsx'))
+    # qc_styled_df.to_excel(os.path.join(output_path, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_path, 'qc_table.tex'))
 
     # Save in csv format
@@ -821,7 +821,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                 subtracted_trace, times, desc,
                 os.path.join(
                     savedir, 'debug', '-120mV time constant',
-                    f'{savename}-{well}-sweep{sweep}-time-constant-fit.pdf'),
+                    f'{savename}-{well}-sweep{sweep}-time-constant-fit.png'),
                 figure_size
             )
 
@@ -1203,16 +1203,16 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
     return res_dict
 
 
-def get_time_constant_of_first_decay(trace, times, protocol_desc, output_path,
-                                     figure_size):
+def get_time_constant_of_first_decay(
+        trace, times, protocol_desc, output_path, figure_size):
     """
     ???
     """
-    if output_path:
-        if not os.path.exists(os.path.dirname(output_path)):
-            os.makedirs(os.path.dirname(output_path))
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
 
-    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2] == 40][0] + 1
+    first_120mV_step_index = [
+        i for i, line in enumerate(protocol_desc) if line[2] == 40][0] + 1
 
     tstart, tend, vstart, vend = protocol_desc[first_120mV_step_index, :]
     assert (vstart == vend)
@@ -1253,6 +1253,9 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, output_path,
         (-np.abs(trace).max()*2, 0),
         (1e-12, 5e3),
     ]
+
+    # TESTING ONLY
+    np.random.seed(1)
 
     #  Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
