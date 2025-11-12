@@ -5,9 +5,10 @@ This page lists the main changes made to pcpostprocess in each release.
 ## Unreleased
 - Added
   - [#81](https://github.com/CardiacModelling/pcpostprocess/pull/81) Added docstrings to the `hERGQC` class.
-  - [#104](https://github.com/CardiacModelling/pcpostprocess/pull/104) Added a CHANGELOG.md and CONTRIBUTING.md
+  - [#104](https://github.com/CardiacModelling/pcpostprocess/pull/104) Added a CHANGELOG.md and CONTRIBUTING.md.
 - Changed
   - [#81](https://github.com/CardiacModelling/pcpostprocess/pull/81) Changed the constructor arguments for `hERGQC`.
+  - [#122](https://github.com/CardiacModelling/pcpostprocess/pull/122) `fit_linear_leak` no longer accepts an `output_dir` argument.
 - Deprecated
 - Removed
  - [#81](https://github.com/CardiacModelling/pcpostprocess/pull/81) Removed `hERGQC.plot_dir`, `hERGQC.set_trace` and `hERGQC.set_debug`.

@@ -499,8 +499,7 @@ class hERGQC:
         i, f = win
         val = np.mean(recording1[i:f])
         valc = self.negative_tolc * np.std(recording1[:self.noise_len])
-        if (val < valc) or not (np.isfinite(val)
-                                and np.isfinite(valc)):
+        if (val < valc) or not (np.isfinite(val) and np.isfinite(valc)):
             self.logger.debug(f'qc6_{label} val:  {val}, valc: {valc}')
             result = False
         else:

@@ -1,6 +1,6 @@
-import logging
-import os
-
+#
+# Leak correction methods
+#
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -55,7 +55,7 @@ def get_leak_corrected(current, voltages, times, ramp_start_index,
 
 
 def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
-                    save_fname=None, output_dir=None, figsize=(5.54, 7)):
+                    save_fname=None, figsize=(5.54, 7)):
     """
     Fits linear leak to a leak ramp, returning
 
@@ -64,8 +64,6 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
     @param ramp_start_index: the index of the observation where the leak ramp begins
     @param ramp_end_index: the index of the observation where the leak ramp ends
     @param save_fname: if set, a debugging figure will be made and stored with this name
-    @param output_dir: if ``save_fname`` is set, this directory will be used to store
-    the figure, and created if it does not exist
     @param figsize: if ``save_fname`` is set, the figure size.
 
     @return: the linear regression parameters obtained from fitting the leak
@@ -152,14 +150,8 @@ def fit_linear_leak(current, voltage, times, ramp_start_index, ramp_end_index,
                  alpha=0.5, label=r'$I_\mathrm{obs} - I_\mathrm{L}$')
         ax4.legend(frameon=False)
 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        if output_dir:
-            try:
-                fig.savefig(os.path.join(output_dir, save_fname))
-                plt.close(fig)
-            except Exception as exc:
-                logging.warning(str(exc))
+        if save_fname is not None:
+            fig.savefig(save_fname)
+            plt.close(fig)
 
     return (b_0, b_1), I_leak

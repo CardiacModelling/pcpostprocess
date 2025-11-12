@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 import unittest
+import sys
+import tempfile
 
 from syncropatch_export.trace import Trace
 
@@ -8,55 +10,63 @@ from pcpostprocess import infer_reversal, leak_correct
 from pcpostprocess.detect_ramp_bounds import detect_ramp_bounds
 
 
+store_output = False
+
+
 class TestInferReversal(unittest.TestCase):
-    def setUp(self):
-        test_data_dir = os.path.join('tests', 'test_data', '13112023_MW2_FF',
-                                     "staircaseramp (2)_2kHz_15.01.07")
-        json_file = "staircaseramp (2)_2kHz_15.01.07.json"
+    """
+    Tests the `infer_reversal` method.
+    """
+    @classmethod
+    def setUpClass(self):
+        if store_output:  # pragma: no cover
+            self.temp_dir = None
+            self.plot_dir = os.path.join('test_output', 'infer_reversal')
+            os.makedirs(self.plot_dir, exist_ok=True)
+        else:
+            self.temp_dir = tempfile.TemporaryDirectory()
+            self.plot_dir = self.temp_dir.name
 
-        self.output_dir = os.path.join('test_output', self.__class__.__name__)
+    @classmethod
+    def tearDownClass(self):
+        if self.temp_dir:
+            self.temp_dir.cleanup()
 
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+    def test_infer_reversal(self):
+        # Test infer_reversal_potential, including plot
 
-        self.test_trace = Trace(test_data_dir, json_file)
+        # Load test data
+        data = os.path.join('test_data', '13112023_MW2_FF',
+                            'staircaseramp (2)_2kHz_15.01.07')
+        trace = Trace(data, 'staircaseramp (2)_2kHz_15.01.07.json')
 
-        # get currents and QC from trace object
-        self.currents = self.test_trace.get_all_traces(leakcorrect=False)
-        self.currents['times'] = self.test_trace.get_times()
-        self.currents['voltages'] = self.test_trace.get_voltage()
+        # Get times and voltages
+        times = trace.get_times()
+        voltages = trace.get_voltage()
 
-        self.protocol_desc = self.test_trace.get_voltage_protocol().get_all_sections()
-        self.leak_ramp_bound_indices = detect_ramp_bounds(self.currents['times'],
-                                                          self.protocol_desc,
-                                                          ramp_index=0)
+        # Get protocol and leak ramp indices
+        protocol = trace.get_voltage_protocol().get_all_sections()
+        leak_indices = detect_ramp_bounds(times, protocol, ramp_index=0)
 
-        self.voltages = self.test_trace.get_voltage()
-        self.correct_Erev = -89.57184330525791438049054704606533050537109375
+        # Load current for one well, one sweep, and leak correct
+        well, sweep = 'A03', 0
+        current = trace.get_trace_sweeps(sweeps=[sweep])[well][0]
+        _, leak = leak_correct.fit_linear_leak(
+            current, voltages, times, *leak_indices)
+        current -= leak
 
-    def test_plot_leak_fit(self):
-        well = "A03"
-        sweep = 0
-
-        voltage = self.test_trace.get_voltage()
-        times = self.test_trace.get_times()
-
-        current = self.test_trace.get_trace_sweeps(sweeps=[sweep])[well][0, :]
-        params, Ileak = leak_correct.fit_linear_leak(current, voltage, times,
-                                                     *self.leak_ramp_bound_indices,
-                                                     output_dir=self.output_dir,
-                                                     save_fname=f"{well}_sweep{sweep}_leak_correction")
-
-        I_corrected = current - Ileak
-
-        E_rev = infer_reversal.infer_reversal_potential(
-            I_corrected, times, self.protocol_desc,
-            self.voltages,
-            output_path=os.path.join(self.output_dir,
-                                     f"{well}_staircase"),
-            known_Erev=self.correct_Erev)
-        self.assertLess(abs(E_rev - self.correct_Erev), 1e-5)
+        # Estimate reversal potential
+        fpath = os.path.join(self.plot_dir, f'{well}-{sweep}.png')
+        erev = infer_reversal.infer_reversal_potential(
+            current, times, protocol, voltages, fpath, -89.57184)
+        self.assertAlmostEqual(erev, -89.57184, 5)
 
 
 if __name__ == "__main__":
-    pass
+    if '-store' in sys.argv:
+        store_output = True
+        sys.argv.remove('-store')
+    else:
+        print('Add -store to store output')
+
+    unittest.main()

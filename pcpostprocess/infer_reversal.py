@@ -1,5 +1,4 @@
 import logging
-import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -65,9 +64,6 @@ def infer_reversal_potential(current, times, voltage_segments, voltages,
 
     # Optional plot
     if output_path is not None:
-        dirname = os.path.dirname(output_path)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
 
         fig = plt.figure(figsize=figsize)
         ax = fig.subplots()
