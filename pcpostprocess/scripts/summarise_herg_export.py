@@ -1,10 +1,8 @@
 import argparse
 import json
-import logging
 import os
 import string
 
-import cycler
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -121,7 +119,7 @@ def run(data_path, output_path, experiment_name, reversal_potential=None,
             leak_parameters_df['protocol'], categories=protocol_order, ordered=True)
 
         leak_parameters_df.sort_values(['protocol', 'sweep'], inplace=True)
-    except FileNotFoundError as exc:
+    except FileNotFoundError:
         leak_parameters_df.sort_values(['protocol', 'sweep'])
 
     scatterplot_timescale_E_obs(output_path, leak_parameters_df, passed_wells, figsize)

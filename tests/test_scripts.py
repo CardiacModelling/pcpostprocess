@@ -33,11 +33,14 @@ class TestScripts(unittest.TestCase):
                 write_traces=True, write_map=write_map,
                 save_id='13112023_MW2', reversal_potential=erev)
 
+            with open(os.path.join(d1, 'passed_wells.txt'), 'r') as f:
+                self.assertEqual(f.read().strip(), 'A03')
+
             # Test summarise herg export
             run_summarise(d1, d2, '13112023_MW2', reversal_potential=erev)
 
 
 if __name__ == '__main__':
-    store_output=True
+    store_output = True
     unittest.main()
 

@@ -11,7 +11,6 @@ import os
 import string
 import sys
 
-import cycler
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
