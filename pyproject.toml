@@ -68,4 +68,7 @@ include = [
 source = [
     'pcpostprocess',
 ]
+omit = [
+    'pcpostprocess/__main__.py',
+]
 

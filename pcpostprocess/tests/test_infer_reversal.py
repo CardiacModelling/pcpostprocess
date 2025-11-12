@@ -62,7 +62,7 @@ class TestInferReversal(unittest.TestCase):
         self.assertAlmostEqual(erev, -89.57184, 5)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     if '-store' in sys.argv:
         store_output = True
         sys.argv.remove('-store')

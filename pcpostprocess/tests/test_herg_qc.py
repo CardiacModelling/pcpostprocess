@@ -870,7 +870,7 @@ class TestHergQC(unittest.TestCase):
             self.assertEqual(QC.all_passed(), ex_pass, trace)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     if '-store' in sys.argv:
         sys.argv.remove('-store')
         store_output = True

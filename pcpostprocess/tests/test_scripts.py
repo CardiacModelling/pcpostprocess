@@ -54,7 +54,7 @@ class TestScripts(unittest.TestCase):
         run_summarise(d1, d2, '13112023_MW2', reversal_potential=erev)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     if '-store' in sys.argv:
         sys.argv.remove('-store')
         store_output = True

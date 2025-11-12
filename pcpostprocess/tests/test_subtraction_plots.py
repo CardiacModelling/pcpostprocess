@@ -67,7 +67,7 @@ class TestSubtractionPlots(unittest.TestCase):
         fig.savefig(os.path.join(self.plot_dir, f'{well}.png'))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     if '-store' in sys.argv:
         sys.argv.remove('-store')
         store_output = True

@@ -35,7 +35,7 @@ class TestDirectoryBuilder(unittest.TestCase):
             self.assertRegex(info_dict['Commit'], r'^g[0-9a-fA-F]{9}$')
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     if '-store' in sys.argv:
         store_output = True
         sys.argv.remove('-store')

@@ -77,7 +77,7 @@ class TestLeakCorrect(unittest.TestCase):
         self.assertEqual(x.shape, (30784,))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     if '-store' in sys.argv:
         sys.argv.remove('-store')
         store_output = True

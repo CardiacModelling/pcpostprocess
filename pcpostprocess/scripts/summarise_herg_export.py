@@ -37,7 +37,7 @@ def get_protocol_list(input_dir, experiment_name):
     return list(np.unique(protocols))
 
 
-def run_from_command_line():
+def run_from_command_line():  # pragma: no cover
     """
     Parses arguments from the command line and then ???
     """

@@ -40,7 +40,7 @@ def starmap(n, func, iterable):
             return pool.starmap(func, iterable)
 
 
-def run_from_command_line():
+def run_from_command_line():  # pragma: no cover
     """
     Reads arguments from the command line and an ``export_config.py`` and then
     runs herg QC.
