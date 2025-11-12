@@ -895,9 +895,10 @@ def create_attrition_table(qc_df, subtraction_df):
                             'qc6.subtracted', 'qc6.1.subtracted',
                             'qc6.2.subtracted']
 
-    subtraction_df_sc = subtraction_df[subtraction_df.protocol.isin(['staircaseramp1',
-                                                                     'staircaseramp1_2'])]
-    R_leftover_qc = subtraction_df_sc.groupby('well')['R_leftover'].max() < 0.4
+    # subtraction_df_sc = subtraction_df[
+    #    subtraction_df.protocol.isin(['staircaseramp1', 'staircaseramp1_2'])]
+
+    # R_leftover_qc = subtraction_df_sc.groupby('well')['R_leftover'].max() < 0.4
 
     # This line doesn't work: "Length of values does not match length of index"
     # qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] for well in subtraction_df.well.unique()]
@@ -907,7 +908,7 @@ def create_attrition_table(qc_df, subtraction_df):
     stage_4_criteria = stage_3_criteria + ['qc3.bookend']
     stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
 
-    #stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
+    # stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
 
     agg_dict = {crit: 'min' for crit in stage_5_criteria}
 
