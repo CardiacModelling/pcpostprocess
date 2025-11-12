@@ -48,6 +48,10 @@ jobs:
         wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/
         tar xvf tests/test_data.tar.xz -C tests/
 
+    - name: Install TeX dependencies for run_herg_qc test
+      timeout-minutes: 5
+      run: sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
+
     - name: Run unit tests (without coverage testing)
       if: ${{ success() && matrix.python-version != env.python-latest }}
       run: python -m unittest
@@ -55,14 +59,6 @@ jobs:
     - name: Run unit tests (with coverage testing)
       if: ${{ success() && matrix.python-version == env.python-latest }}
       run: coverage run -m unittest
-
-    - name: Install TeX dependencies for run_herg_qc test
-      timeout-minutes: 15
-      run: sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
-
-    - name: Run `run_herg_qc` script
-      timeout-minutes: 15
-      run: pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF -w A01 A02 A03
 
     - name: Report coverage to codecov
       uses: codecov/codecov-action@v4
