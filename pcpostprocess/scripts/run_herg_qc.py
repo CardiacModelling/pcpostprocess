@@ -111,7 +111,7 @@ def run_from_command_line():  # pragma: no cover
 def run(data_path, output_path, qc_map, wells=None,
         write_traces=False, write_failed_traces=False, write_map={},
         reversal_potential=-90, reversal_spread_threshold=10,
-        max_processes=1, figure_size=None, save_id=None, logger=None):
+        max_processes=1, figure_size=None, save_id=None):
     """
     Imports traces and runs QC.
 
@@ -529,7 +529,7 @@ def create_qc_table(qc_df):
 
 def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                      data_path, write_traces, figure_size, reversal_potential,
-                     save_id, logger):
+                     save_id):
     # TODO: Tidy up argument order
     """
     ???
