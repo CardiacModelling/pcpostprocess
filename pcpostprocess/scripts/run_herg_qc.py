@@ -8,6 +8,7 @@ import json
 import logging
 import multiprocessing
 import os
+import re
 import string
 import sys
 
@@ -15,7 +16,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import regex as re
 import scipy
 from syncropatch_export.trace import Trace
 from syncropatch_export.voltage_protocols import VoltageProtocol
@@ -77,7 +77,7 @@ def run_from_command_line():  # pragma: no cover
 
     parser.add_argument('--figsize', nargs=2, type=int, default=[16, 18])
 
-    parser.add_argument('--log_level', default='INFO')
+    parser.add_argument('--log_level', default='WARNING')
 
     args = parser.parse_args()
 
@@ -104,14 +104,14 @@ def run_from_command_line():  # pragma: no cover
         reversal_spread_threshold=args.reversal_spread_threshold,
         max_processes=args.no_cpus,
         figure_size=args.figsize,
-        save_id=export_config.saveID
+        save_id=export_config.saveID,
     )
 
 
 def run(data_path, output_path, qc_map, wells=None,
         write_traces=False, write_failed_traces=False, write_map={},
         reversal_potential=-90, reversal_spread_threshold=10,
-        max_processes=1, figure_size=None, save_id=None):
+        max_processes=1, figure_size=None, save_id=None, logger=None):
     """
     Imports traces and runs QC.
 
@@ -174,7 +174,6 @@ def run(data_path, output_path, qc_map, wells=None,
     # 3. Ends with a code 00.00.00 (where 0 is any number)
     #
     # TODO: Just want to check that it ends in a 6 digit date code
-    # TODO: Just use ``re`` instead of ``regex``
     protocols_regex = \
         r'^([a-z|A-Z|_|0-9| |\-|\(|\)]+)_([0-9][0-9]\.[0-9][0-9]\.[0-9][0-9])$'
     protocols_regex = re.compile(protocols_regex)
@@ -235,17 +234,10 @@ def run(data_path, output_path, qc_map, wells=None,
     if not readnames:
         raise ValueError('No compatible protocols specified.')
 
-    n = min(max_processes, len(readnames))
-    args = zip(
-        readnames,
-        savenames,
-        times_list,
-        [output_path] * len(readnames),
-        [data_path] * len(readnames),
-        [wells] * len(readnames),
-        [write_traces] * len(readnames),
-        [save_id] * len(readnames),
-    )
+    m = len(readnames)
+    n = min(max_processes, m)
+    args = zip(readnames, savenames, times_list, [output_path] * m,
+               [data_path] * m, [wells] * m, [write_traces] * m, [save_id] * m)
     well_selections, qc_dfs = list(zip(*starmap(n, run_qc_for_protocol, args)))
 
     qc_df = pd.concat(qc_dfs, ignore_index=True)
@@ -333,21 +325,11 @@ def run(data_path, output_path, qc_map, wells=None,
 
     logging.info(f"exporting wells {wells}")
 
-    no_protocols = len(res_dict)
-
-    n = min(max_processes, no_protocols)
-    args = zip(
-        readnames,
-        savenames,
-        times_list,
-        [wells_to_export] * len(savenames),
-        [output_path for i in readnames],
-        [data_path for i in readnames],
-        [write_traces for i in readnames],
-        [figure_size for i in readnames],
-        [reversal_potential for i in readnames],
-        [save_id for i in readnames],
-    )
+    m = len(readnames)
+    n = min(max_processes, m)
+    args = zip(readnames, savenames, times_list, [wells_to_export] * m,
+               [output_path] * m, [data_path] * m, [write_traces] * m,
+               [figure_size] * m, [reversal_potential] * m, [save_id] * m)
     dfs = starmap(n, extract_protocol, args)
 
     if dfs:
@@ -547,7 +529,7 @@ def create_qc_table(qc_df):
 
 def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                      data_path, write_traces, figure_size, reversal_potential,
-                     save_id):
+                     save_id, logger):
     # TODO: Tidy up argument order
     """
     ???

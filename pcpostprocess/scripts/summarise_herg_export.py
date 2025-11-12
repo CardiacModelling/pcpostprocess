@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import string
 
@@ -7,10 +6,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import regex as re
 import scipy
 import seaborn as sns
-from syncropatch_export.voltage_protocols import VoltageProtocol
 
 from pcpostprocess.directory_builder import setup_output_directory
 from pcpostprocess.scripts.run_herg_qc import create_qc_table
@@ -190,7 +187,6 @@ def scatterplot_timescale_E_obs(output_path, df, passed_wells, figsize=None):
         plot_dfs.append(plot_df)
 
     plot_df = pd.concat(plot_dfs, ignore_index=True)
-    print(plot_df)
 
     plot_df['E_leak'] = (plot_df.set_index('well')['E_leak'] - plot_df.groupby('well')
                          ['E_leak'].mean()).reset_index()['E_leak']
@@ -690,7 +686,6 @@ def create_attrition_table(qc_df, subtraction_df):
     agg_dict = {crit: 'min' for crit in stage_5_criteria}
 
     qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
-    print(qc_df_sc1.values.shape)
     n_stage_1_wells = np.sum(np.all(qc_df_sc1.groupby('well')
                                     .agg(agg_dict)[original_qc_criteria].values,
                                     axis=1))
@@ -716,12 +711,6 @@ def create_attrition_table(qc_df, subtraction_df):
     # n_stage_6_wells = np.sum(
     #    np.all(qc_df.groupby('well').agg(agg_dict)[stage_6_criteria].values,
     #    axis=1))
-
-    passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_5_criteria]
-    print(passed_qc_df)
-    passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
-
-    print(f"passed wells = {passed_wells}")
 
     res_dict = {
         'stage1': [n_stage_1_wells],

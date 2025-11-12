@@ -75,13 +75,8 @@ class hERGQC:
         self.removal_time = removal_time
         self.noise_len = int(noise_len)
 
-        # Passing in a plot dir enables debug mode
         self._plot_dir = plot_dir
         self.logger = logging.getLogger(__name__)
-        if self._plot_dir is not None:
-            self.logger.setLevel(logging.DEBUG)
-            # https://github.com/CardiacModelling/pcpostprocess/issues/42
-        self._plot_dir = plot_dir
 
         # Define all thresholds
 
