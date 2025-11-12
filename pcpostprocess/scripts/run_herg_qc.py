@@ -11,7 +11,6 @@ import os
 import string
 import sys
 
-import cycler
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,17 +27,11 @@ from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
-# TODO: Remove this
-color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
-plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
-
-# TODO: Not sure we need to explicitly set this!
-matplotlib.use('Agg')
-
 
 def run_from_command_line():
     """
-    Reads arguments from the command line and runs herg QC.
+    Reads arguments from the command line and an ``export_config.py`` and then
+    runs herg QC.
     """
 
     parser = argparse.ArgumentParser()
@@ -109,11 +102,7 @@ def run(data_path, output_path, qc_map, wells=None,
         write_traces=False, write_failed_traces=False, write_map={},
         reversal_potential=-90, reversal_spread_threshold=10,
         max_processes=1, figure_size=None,
-        debug=False,
-
-        save_id=None,
-
-        ):
+        debug=False, save_id=None):
     """
     Imports traces and runs QC.
 
@@ -147,6 +136,9 @@ def run(data_path, output_path, qc_map, wells=None,
 
     # TODO Remove protocol selection here: this is done via the export file!
     #      Only protocols listed there are accepted
+
+    # TODO: Find some way around setting this?
+    matplotlib.use('Agg')
 
     # Select wells to use
     all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
@@ -502,8 +494,6 @@ def create_qc_table(qc_df):
 
     qc_df['protocol'] = ['staircaseramp1_2' if p == 'staircaseramp2' else p
                          for p in qc_df.protocol]
-
-    print(qc_df.protocol.unique())
 
     fails_dict = {}
     no_wells = 384
@@ -1255,7 +1245,7 @@ def get_time_constant_of_first_decay(
     ]
 
     # TESTING ONLY
-    np.random.seed(1)
+    # np.random.seed(1)
 
     #  Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]

@@ -21,7 +21,7 @@ def main():
         run_herg_qc.run_from_command_line()
 
     elif args.subcommand == "summarise_herg_export":
-        summarise_herg_export.main()
+        summarise_herg_export.run_from_command_line()
 
 
 if __name__ == "__main__":
