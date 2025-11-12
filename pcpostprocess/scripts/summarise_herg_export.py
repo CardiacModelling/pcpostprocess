@@ -84,7 +84,6 @@ def run(data_path, output_path, experiment_name, reversal_potential=None,
 
     qc_styled_df = create_qc_table(qc_df)
     qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
-    # qc_styled_df.to_excel(os.path.join(output_path, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_path, 'qc_table.tex'))
 
     qc_df.protocol = ['staircaseramp1' if protocol == 'staircaseramp' else protocol

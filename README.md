@@ -34,9 +34,9 @@ To run the tests you must first download some test data.
 Test data is available at [cardiac.nottingham.ac.uk/syncropatch\_export](https://cardiac.nottingham.ac.uk/syncropatch_export)
 
 ```sh
-wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/
-tar xvf tests/test_data.tar.xz -C tests/
-rm tests/test_data.tar.xz
+wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz
+tar xvf test_data.tar.xz
+rm test_data.tar.xz
 ```
 
 Then you can run the tests.
