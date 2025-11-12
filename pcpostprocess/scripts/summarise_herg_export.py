@@ -17,14 +17,6 @@ from syncropatch_export.voltage_protocols import VoltageProtocol
 from pcpostprocess.directory_builder import setup_output_directory
 from pcpostprocess.scripts.run_herg_qc import create_qc_table
 
-matplotlib.use('Agg')
-
-pool_kws = {'maxtasksperchild': 1}
-
-color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
-plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
-sns.set_palette(sns.color_palette(color_cycle))
-
 
 def get_wells_list(input_dir, experiment_name):
     regex = re.compile(f"{experiment_name}-([a-z|A-Z|0-9]*)-([A-Z][0-9][0-9])-after")
@@ -54,7 +46,6 @@ def run_from_command_line():
 
     description = ''    # TODO Describe what this does
     parser = argparse.ArgumentParser(description)
-
     parser.add_argument(
         'data_directory', help='path to the run_herg_qc results')
     parser.add_argument(
@@ -67,32 +58,27 @@ def run_from_command_line():
     parser.add_argument(
         '--figsize', type=int, nargs=2, default=(5, 3),
         help='A figure size, to pass to matplotlib')
-    parser.add_argument('--log_level', default='INFO')
     args = parser.parse_args()
 
-    # Setup logging
-    logging.basicConfig(level=args.log_level)
-    logger = logging.getLogger(__name__)
-    logger.setLevel(args.log_level)
-
     run(args.data_directory, args.output_dir, args.experiment_name,
-        logger, args.Erev, args.figsize)
+        args.Erev, args.figsize)
 
 
-def run(data_path, output_path, experiment_name, logger,
-        reversal_potential=None, figsize=None):
+def run(data_path, output_path, experiment_name, reversal_potential=None,
+        figsize=None):
     """
     Does whatever this does.
 
     @param data_path The path to read data from
     @param output_path A root path, will be appended with "summarise_herg_export"
     @param experiment_name
-    @param logger
     @param reversal_potential The calculated reversal potential, or ``None``
     @param figsize The matplotlib figure size, or ``None``.
-
     """
-    output_path = setup_output_directory(output_path, 'summarise_herg_export')
+    # TODO: Find some way around setting this
+    matplotlib.use('Agg')
+
+    output_path = setup_output_directory(output_path)
 
     leak_parameters_df = pd.read_csv(os.path.join(data_path, 'subtraction_qc.csv'))
 
@@ -112,8 +98,6 @@ def run(data_path, output_path, experiment_name, logger,
                                    for protocol in leak_parameters_df.protocol]
     leak_parameters_df.protocol = ['staircaseramp1_2' if protocol == 'staircaseramp_2' else protocol
                                    for protocol in leak_parameters_df.protocol]
-
-    print(leak_parameters_df.protocol.unique())
 
     with open(os.path.join(data_path, 'passed_wells.txt')) as fin:
         passed_wells = fin.read().splitlines()
@@ -138,8 +122,6 @@ def run(data_path, output_path, experiment_name, logger,
 
         leak_parameters_df.sort_values(['protocol', 'sweep'], inplace=True)
     except FileNotFoundError as exc:
-        logging.warning(str(exc))
-        logger.warning('no chronological information provided. Sorting alphabetically')
         leak_parameters_df.sort_values(['protocol', 'sweep'])
 
     scatterplot_timescale_E_obs(output_path, leak_parameters_df, passed_wells, figsize)
@@ -170,13 +152,6 @@ def run(data_path, output_path, experiment_name, logger,
 
     # do_scatter_matrices(leak_parameters_df, qc_vals_df, output_path, reversal_potential)
     plot_histograms(leak_parameters_df, output_path, reversal_potential, figsize)
-
-    # Don't work
-    # wells = leak_parameters_df.well.unique()
-    # overlay_reversal_plots(data_path, output_path, experiment_name,
-    #                       leak_parameters_df, wells, reversal_potential, figsize)
-    # do_combined_plots(data_path, output_path, experiment_name,
-    #                  leak_parameters_df, passed_wells, logger, figsize)
 
 
 def compute_leak_magnitude(df, lims=[-120, 60]):
@@ -371,7 +346,7 @@ def do_chronological_plots(df, output_path, reversal_potential=None,
 
 
 def do_combined_plots(data_path, output_path, experiment_name,
-                      leak_parameters_df, passed_wells, logger, figsize=None):
+                      leak_parameters_df, passed_wells, figsize=None):
     """
     ???
 
@@ -380,7 +355,6 @@ def do_combined_plots(data_path, output_path, experiment_name,
     @param experiment_name
     @param leak_parameters_df
     @param passed_wells
-    @param logger
     @param figsize
 
     """
@@ -388,8 +362,6 @@ def do_combined_plots(data_path, output_path, experiment_name,
     ax = fig.subplots()
 
     wells = [well for well in leak_parameters_df.well.unique() if well in passed_wells]
-
-    logger.info(f"passed wells are {passed_wells}")
 
     protocol_overlaid_dir = os.path.join(output_path, 'overlaid_by_protocol')
     if not os.path.exists(protocol_overlaid_dir):
@@ -455,8 +427,6 @@ def do_combined_plots(data_path, output_path, experiment_name,
     wells_overlaid_dir = os.path.join(output_path, 'overlaid_by_well')
     if not os.path.exists(wells_overlaid_dir):
         os.makedirs(wells_overlaid_dir)
-
-    logger.info('overlaying traces by well')
 
     for well in passed_wells:
         i = 0
@@ -728,6 +698,7 @@ def plot_spatial_Erev(df, output_path, figsize=None):
         ax = fig.subplots()
         # add black color for NaNs
 
+        color_cycle = ["#5790fc", "#f89c20"]
         cmap = matplotlib.colors.ListedColormap([color_cycle[0], color_cycle[1]], 'indexed')
         ax.pcolormesh(zs, edgecolors='white', cmap=cmap,
                       linewidths=1, antialiased=True)
@@ -776,6 +747,7 @@ def plot_spatial_passed(df, output_path, passed_wells):
 
     zs = np.array(zs).reshape(16, 24)
 
+    color_cycle = ["#5790fc", "#f89c20"]
     cmap = matplotlib.colors.ListedColormap([color_cycle[0], color_cycle[1]], 'indexed')
     _ = ax.pcolormesh(zs, edgecolors='white',
                       linewidths=1, antialiased=True, cmap=cmap

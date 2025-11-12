@@ -76,6 +76,7 @@ Isort is configured in [pyproject.toml](./pyproject.toml) under the section `too
 ## Documentation
 
 Every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.
+The only exception are unit test methods starting with `test_` - unit test classes and other methods in unit tests should all have docstrings.
 
 Each docstring should start with a one-line explanation.
 If more explanation is needed, this one-liner is followed by a blank line and more information in the following paragraphs.
