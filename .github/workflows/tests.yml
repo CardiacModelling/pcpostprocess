@@ -44,10 +44,6 @@ jobs:
         tar xvf test_data.tar.xz
         rm test_data.tar.xz
 
-    - name: Install TeX dependencies for run_herg_qc test
-      timeout-minutes: 5
-      run: sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
-
     - name: Run unit tests (without coverage testing)
       if: ${{ success() && matrix.python-version != env.python-latest }}
       run: python -m unittest
