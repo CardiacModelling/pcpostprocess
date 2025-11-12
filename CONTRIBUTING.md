@@ -60,7 +60,7 @@ In addition to the rules checked by flake8, we try to use single quotes (`'`) fo
 
 ### Spelling
 
-**TODO WE SHOULD MAYBE DISCUSS WHICH ENGLISH TO USE? [#106](https://github.com/CardiacModelling/pcpostprocess/issues/106)**
+Class, method, and argument names are in UK english.
 
 ### Import ordering
 
@@ -94,6 +94,8 @@ make html
 
 [reStructuredText](http://docutils.sourceforge.net/docs/user/rst/quickref.html)
 [Sphinx](http://www.sphinx-doc.org/en/stable/)
+
+UK english
 
 ## Testing
 
