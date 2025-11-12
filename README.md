@@ -1,4 +1,4 @@
-[![Unit tests](https://github.com/CardiacModelling/pcpostprocess/actions/workflows/pytest.yml/badge.svg)](https://github.com//CardiacModelling/pcpostprocess/actions/workflows/pytest.yml)
+[![Unit tests](https://github.com/CardiacModelling/pcpostprocess/actions/workflows/tests.yml/badge.svg)](https://github.com//CardiacModelling/pcpostprocess/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/CardiacModelling/pcpostprocess/graph/badge.svg?token=HOL0FrpGqs)](https://codecov.io/gh/CardiacModelling/pcpostprocess)
 
 This repository contains a python package and scripts for handling time-series data from patch-clamp experiments.
@@ -19,13 +19,15 @@ cd pcpostprocess
 Create and activate a virtual environment.
 
 ```sh
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 Then install the package with `pip`.
 
 ```sh
-python3 -m pip install --upgrade pip && python3 -m pip install -e .'[test]'
+python3 -m pip install --upgrade pip
+python3 -m pip install -e .'[test]'
 ```
 
 To run the tests you must first download some test data.

@@ -1,0 +1,72 @@
+name: Tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    env:
+        python-latest: 3.14
+    strategy:
+      matrix:
+        python-version: ['3.10', 3.11, 3.12, 3.13, 3.14]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -e .[test]
+
+    - name: Check code style with flake8
+      if: ${{ matrix.python-version == env.python-latest }}
+      run: |
+        python -m flake8 pcpostprocess/*.py tests/*.py pcpostprocess/scripts/*.py
+
+    - name: Check import ordering with isort
+      if: ${{ matrix.python-version == env.python-latest }}
+      run: |
+        python -m isort --verbose --check-only --diff pcpostprocess tests setup.py
+
+    - name: Extract test data
+      run: |
+        wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/
+        tar xvf tests/test_data.tar.xz -C tests/
+
+    - name: Run unit tests (without coverage testing)
+      if: ${{ success() && matrix.python-version != env.python-latest }}
+      run: python -m unittest
+
+    - name: Run unit tests (with coverage testing)
+      if: ${{ success() && matrix.python-version == env.python-latest }}
+      run: coverage run -m unittest
+
+    - name: Install TeX dependencies for run_herg_qc test
+      timeout-minutes: 15
+      run: sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
+
+    - name: Run `run_herg_qc` script
+      timeout-minutes: 15
+      run: pcpostprocess run_herg_qc tests/test_data/13112023_MW2_FF -w A01 A02 A03
+
+    - name: Report coverage to codecov
+      uses: codecov/codecov-action@v4
+      if: ${{ success() && matrix.python-version == env.python-latest }}
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+

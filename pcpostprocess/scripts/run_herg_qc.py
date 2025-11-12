@@ -1,3 +1,7 @@
+#
+# Runs leak subtraction and quality control on syncropatch data
+#
+#
 import argparse
 import importlib.util
 import json
@@ -5,7 +9,6 @@ import logging
 import multiprocessing
 import os
 import string
-import subprocess
 import sys
 
 import cycler
@@ -25,90 +28,161 @@ from pcpostprocess.infer_reversal import infer_reversal_potential
 from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
-pool_kws = {'maxtasksperchild': 1}
-
+# TODO: Remove this
 color_cycle = ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]
 plt.rcParams['axes.prop_cycle'] = cycler.cycler('color', color_cycle)
 
+# TODO: Not sure we need to explicitly set this!
 matplotlib.use('Agg')
 
-all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
-             for i in range(1, 25)]
 
+def run_from_command_line():
+    """
+    Reads arguments from the command line and runs herg QC.
+    """
 
-def get_git_revision_hash() -> str:
-    #  Requires git to be installed
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
-
-
-def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('data_directory')
-    parser.add_argument('-c', '--no_cpus', default=1, type=int)
-    parser.add_argument('--output_dir', default="output")
-    parser.add_argument('-w', '--wells', nargs='+')
-    parser.add_argument('--protocols', nargs='+')
-    parser.add_argument('--reversal_spread_threshold', type=float, default=10)
-    parser.add_argument('--export_failed', action='store_true')
-    parser.add_argument('--selection_file')
+
+    parser.add_argument('data_directory', help='The path to read input from')
+    parser.add_argument('-o', '--output_dir', default='output',
+                        help='The path to write output to')
+
+    parser.add_argument(
+        '-w', '--wells', nargs='+',
+        help='A space separated list of wells to include. If not given, all'
+             'wells are loaded.')
+
+    parser.add_argument(
+        '--output_traces', action='store_true',
+        help='Add this flag to store (raw and processed) traces, as .csv files')
+    parser.add_argument(
+        '--export_failed', action='store_true',
+        help='Add this flag to produce full output even for wells failing QC')
+
+    parser.add_argument(
+        '--Erev', default=-90.71, type=float,
+        help='The calculated or estimated reversal potential.')
+    parser.add_argument(
+        '--reversal_spread_threshold', type=float, default=10,
+        help='The maximum spread in reversal potential (across sweeps) allowed for QC')
+
+    parser.add_argument(
+        '-c', '--no_cpus', default=1, type=int,
+        help='Number of workers to spawn in the multiprocessing pool (default: 1)')
+
     parser.add_argument('--figsize', nargs=2, type=int, default=[16, 18])
+
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--log_level', default='INFO')
-    parser.add_argument('--Erev', default=-90.71, type=float)
-    parser.add_argument('--output_traces', action='store_true',
-                        help="When true output raw and processed traces as .csv files")
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=args.log_level)
-
-    output_dir = setup_output_directory(args.output_dir, "run_herg_qc")
-
+    # Import options from configuration file
     spec = importlib.util.spec_from_file_location(
-        'export_config',
-        os.path.join(args.data_directory,
-                     'export_config.py'))
-
-    if args.wells is None:
-        args.wells = all_wells
-        wells = args.wells
-
-    else:
-        wells = args.wells
-        # this warning addresses the error that occurs if a user inputs wrong data into args.wells
-        wrongWellNames = [well for well in wells if well not in all_wells]
-        if len(wrongWellNames) > 0:
-            if len(wrongWellNames) == len(wells):
-                logging.error("Specified well names are not in the list of available wells.")
-                return
-            else:
-                logging.warning(f"Specified well names {wrongWellNames} are not in the list of available wells."
-                                f"Removing them from the list of wells to be processed.")
-                wells = [well for well in wells if well not in wrongWellNames]
-                # other functions read args.wells later on, so we need to update it
-                args.wells = wells
-
-    # Import and exec config file
-    global export_config
+        'export_config', os.path.join(args.data_directory, 'export_config.py'))
     export_config = importlib.util.module_from_spec(spec)
-
-    sys.modules['export_config'] = export_config
+    sys.modules['export_config'] = export_config    # What's happening here!?
     spec.loader.exec_module(export_config)
 
-    export_config.savedir = output_dir
+    # Only from command line: set logging level
+    logging.basicConfig(level=args.log_level)
 
-    args.saveID = export_config.saveID
-    args.savedir = export_config.savedir
-    args.D2S = export_config.D2S
-    args.D2SQC = export_config.D2S_QC
+    # Pass in gathered options and run
+    run(
+        args.data_directory,
+        args.output_dir,
+        export_config.D2S_QC,
+        wells=args.wells,
+        write_traces=args.output_traces,
+        write_failed_traces=args.export_failed,
+        write_map=export_config.D2S,
+        reversal_potential=args.Erev,
+        reversal_spread_threshold=args.reversal_spread_threshold,
+        max_processes=args.no_cpus,
+        figure_size=args.figsize,
+        debug=args.debug,
+        save_id=export_config.saveID
+    )
 
+
+def run(data_path, output_path, qc_map, wells=None,
+        write_traces=False, write_failed_traces=False, write_map={},
+        reversal_potential=-90, reversal_spread_threshold=10,
+        max_processes=1, figure_size=None,
+        debug=False,
+
+        save_id=None,
+
+        ):
+    """
+    Imports traces and runs QC.
+
+    @param data_path The path to read data from
+    @param output_path The path to write output to
+    @param qc_map A dictionary mapping input protocol names to output names.
+           All protocols in this dictionary will be used for quality control.
+    @param wells A list of strings indicating the wells to use, or ``None`` for
+           all wells.
+    @param write_traces Set to ``True`` to write (raw and processed) traces to
+           the output directory in CSV format.
+    @param write_failed_traces Set to ``True`` to write traces for wells
+           failing quality control.  Ignored if ``write_traces=False`.
+    @param write_map A dictionary like ``qc_map``, but specifying protocols to
+           write traces for without using them in quality control. Ignored if
+           ``write_traces=False`.
+    @param reversal_potential The calculated reversal potential, in mV.
+    @param reversal_spread_threshold The maximum reversal
+    @param max_processes The maximum number of processes to run simultaneously
+    @param figure_size An optional tuple specifying the size of figures to
+           create
+
+    @param save_id TODO
+
+    """
+    # TODO reversal_spread_threshold should be specified the same way as all
+    #      other QC thresholds & parameters.
+
+    # Create output path if necessary, and write info file
+    output_path = setup_output_directory(output_path)
+
+    # TODO Remove protocol selection here: this is done via the export file!
+    #      Only protocols listed there are accepted
+
+    # Select wells to use
+    all_wells = [row + str(i).zfill(2) for row in string.ascii_uppercase[:16]
+                 for i in range(1, 25)]
+    if wells is None:
+        wells = all_wells
+    else:
+        # Check wells exist
+        not_found = set(wells) - set(all_wells)
+        if len(not_found) == len(wells):
+            raise ValueError(
+                'None of the specified well names are in the list of'
+                ' available wells.')
+        elif len(not_found) > 0:
+            raise ValueError(
+                f'Specified well names {not_found} are not in the list of'
+                ' available wells.')
+
+    #
+    # Regex to detect protocol names
+    # 1. Starts with at least letter, number, underscore, hyphen, space, or
+    #    opening or closing bracket
+    # 2. An underscore
+    # 3. Ends with a code 00.00.00 (where 0 is any number)
+    #
+    # TODO: Just want to check that it ends in a 6 digit date code
+    # TODO: Just use ``re`` instead of ``regex``
     protocols_regex = \
         r'^([a-z|A-Z|_|0-9| |\-|\(|\)]+)_([0-9][0-9]\.[0-9][0-9]\.[0-9][0-9])$'
-
     protocols_regex = re.compile(protocols_regex)
 
+    # Gather protocol directories to use in a dictionary k:v, where v is a list
+    # of times so that k_v[i] is a directory name
+    # TODO: Replace this by looping over qc_map and write_map
     res_dict = {}
-    for dirname in os.listdir(args.data_directory):
+    for dirname in os.listdir(data_path):
         dirname = os.path.basename(dirname)
         match = protocols_regex.match(dirname)
 
@@ -117,12 +191,9 @@ def main():
 
         protocol_name = match.group(1)
 
-        if protocol_name not in export_config.D2S\
-           and protocol_name not in export_config.D2S_QC:
+        if not (protocol_name in qc_map or protocol_name in write_map):
             continue
 
-        # map name to new name using export_config
-        # savename = export_config.D2S[protocol_name]
         time = match.group(2)
 
         if protocol_name not in res_dict:
@@ -132,16 +203,16 @@ def main():
 
     readnames, savenames, times_list = [], [], []
 
-    combined_dict = {**export_config.D2S, **export_config.D2S_QC}
+    combined_dict = qc_map | write_map
 
     # Select QC protocols and times
     for protocol in res_dict:
-        if protocol not in export_config.D2S_QC:
+        if protocol not in qc_map:
             continue
 
         times = sorted(res_dict[protocol])
 
-        savename = export_config.D2S_QC[protocol]
+        savename = qc_map[protocol]
 
         if len(times) == 2:
             savenames.append(savename)
@@ -155,57 +226,56 @@ def main():
 
             # Make seperate savename for protocol repeat
             savename = combined_dict[protocol] + '_2'
-            assert savename not in export_config.D2S.values()
+            assert savename not in write_map.values()
             savenames.append(savename)
             times_list.append([times[1], times[3]])
             readnames.append(protocol)
 
-    # this error is raised if the user has not specified the dictionary of protocols in the export_config.py file
     if not readnames:
-        logging.error("No compatible protocols found in export config file.")
-        return
+        raise ValueError('No compatible protocols specified.')
 
-    with multiprocessing.Pool(min(args.no_cpus, len(readnames)),
-                              **pool_kws) as pool:
+    n = min(1, max_processes, len(readnames))
+    with multiprocessing.Pool(n, maxtasksperchild=1) as pool:
 
-        pool_argument_list = zip(readnames, savenames, times_list,
-                                 [args for i in readnames],
-                                 [output_dir for i in readnames])
-
-        well_selections, qc_dfs = \
-            list(zip(*pool.starmap(run_qc_for_protocol, pool_argument_list)))
+        pool_argument_list = zip(
+            readnames,
+            savenames,
+            times_list,
+            [output_path for i in readnames],
+            [data_path for i in readnames],
+            [wells for i in readnames],
+            [write_traces for i in readnames],
+            [save_id] * len(readnames),
+        )
+        well_selections, qc_dfs = list(zip(
+            *pool.starmap(run_qc_for_protocol, pool_argument_list)))
 
     qc_df = pd.concat(qc_dfs, ignore_index=True)
 
     # Do QC which requires both repeats
     # qc3.bookend check very first and very last staircases are similar
-    protocol, savename = list(export_config.D2S_QC.items())[0]
+    protocol, savename = list(qc_map.items())[0]
     times = sorted(res_dict[protocol])
     if len(times) == 4:
-        qc3_bookend_dict = qc3_bookend(protocol, savename,
-                                       times, args, wells, output_dir)
+        qc3_bookend_dict = qc3_bookend(
+            protocol, savename, times, wells, output_path, data_path,
+            debug, figure_size, save_id)
     else:
         qc3_bookend_dict = {well: True for well in qc_df.well.unique()}
 
     qc_df['qc3.bookend'] = [qc3_bookend_dict[well] for well in qc_df.well]
 
-    savedir = output_dir
-    saveID = export_config.saveID
-
-    if not os.path.exists(os.path.join(output_dir, savedir)):
-        os.makedirs(os.path.join(output_dir, savedir))
-
     #  qc_df will be updated and saved again, but it's useful to save them here for debugging
     # Write qc_df to file
-    qc_df.to_csv(os.path.join(savedir, 'QC-%s.csv' % saveID))
+    qc_df.to_csv(os.path.join(output_path, 'QC-%s.csv' % save_id))
 
     # Write data to JSON file
-    qc_df.to_json(os.path.join(savedir, 'QC-%s.json' % saveID),
+    qc_df.to_json(os.path.join(output_path, 'QC-%s.json' % save_id),
                   orient='records')
 
     # Overwrite old files
-    for protocol in list(export_config.D2S_QC.values()):
-        fname = os.path.join(savedir, 'selected-%s-%s.txt' % (saveID, protocol))
+    for protocol in list(qc_map.values()):
+        fname = os.path.join(output_path, 'selected-%s-%s.txt' % (save_id, protocol))
         with open(fname, 'w') as fout:
             pass
 
@@ -216,8 +286,8 @@ def main():
                                             list(savenames)):
 
             logging.debug(f"{well_selection} selected from protocol {protocol}")
-            fname = os.path.join(savedir, 'selected-%s-%s.txt' %
-                                 (saveID, protocol))
+            fname = os.path.join(output_path, 'selected-%s-%s.txt' %
+                                 (save_id, protocol))
             if well not in well_selection:
                 failed = True
             else:
@@ -229,7 +299,7 @@ def main():
         if not failed:
             overall_selection.append(well)
 
-    selectedfile = os.path.join(savedir, 'selected-%s.txt' % saveID)
+    selectedfile = os.path.join(output_path, 'selected-%s.txt' % save_id)
     with open(selectedfile, 'w') as fout:
         for well in overall_selection:
             fout.write(well)
@@ -238,10 +308,6 @@ def main():
     # Export all protocols
     savenames, readnames, times_list = [], [], []
     for protocol in res_dict:
-
-        if args.protocols:
-            if savename not in args.protocols:
-                continue
 
         # Sort into chronological order
         times = sorted(res_dict[protocol])
@@ -264,19 +330,29 @@ def main():
             times_list.append(times[1::2])
             readnames.append(protocol)
 
-    wells_to_export = wells if args.export_failed else overall_selection
+        # TODO Else raise error?
+
+    wells_to_export = wells if write_failed_traces else overall_selection
 
     logging.info(f"exporting wells {wells}")
 
     no_protocols = len(res_dict)
 
-    args_list = list(zip(readnames, savenames, times_list, [wells_to_export] *
-                         len(savenames),
-                         [args for i in readnames],
-                         [output_dir for i in readnames]))
+    args_list = list(zip(
+        readnames,
+        savenames,
+        times_list,
+        [wells_to_export] * len(savenames),
+        [output_path for i in readnames],
+        [data_path for i in readnames],
+        [write_traces for i in readnames],
+        [figure_size for i in readnames],
+        [reversal_potential for i in readnames],
+        [save_id for i in readnames],
+    ))
 
-    with multiprocessing.Pool(min(args.no_cpus, no_protocols),
-                              **pool_kws) as pool:
+    n = min(1, max_processes, no_protocols)
+    with multiprocessing.Pool(n, maxtasksperchild=1) as pool:
         dfs = list(pool.starmap(extract_protocol, args_list))
 
     if dfs:
@@ -311,17 +387,16 @@ def main():
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
         # QC Erev spread: check spread in reversal potential isn't too large
-        passed_QC_Erev_spread = E_rev_spread <= args.reversal_spread_threshold
+        passed_QC_Erev_spread = E_rev_spread <= reversal_spread_threshold
         logging.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
 
         # R_leftover only considered for protocols used for QC (i.e. staircase protocols)
-        passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(args.D2SQC.values())]
-                                      ["QC.R_leftover"].values
-                                      )
+        passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(qc_map.values())]
+                                      ['QC.R_leftover'].values)
 
         logging.info(f"passed_QC_R_leftover {passed_QC_R_leftover}")
 
-        passed_QC_Erev_spread = E_rev_spread <= args.reversal_spread_threshold
+        passed_QC_Erev_spread = E_rev_spread <= reversal_spread_threshold
 
         qc_erev_spread[well] = passed_QC_Erev_spread
         erev_spreads[well] = E_rev_spread
@@ -344,7 +419,7 @@ def main():
 
     chrono_dict = {times[0]: prot for prot, times in zip(savenames, times_list)}
 
-    with open(os.path.join(output_dir, 'chrono.txt'), 'w') as fout:
+    with open(os.path.join(output_path, 'chrono.txt'), 'w') as fout:
         for key in sorted(chrono_dict):
             val = chrono_dict[key]
             #  Output order of protocols
@@ -382,24 +457,24 @@ def main():
 
     qc_styled_df = create_qc_table(qc_df)
     logging.info(qc_styled_df)
-    qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
-    qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
+    # qc_styled_df.to_excel(os.path.join(output_path, 'qc_table.xlsx'))
+    qc_styled_df.to_latex(os.path.join(output_path, 'qc_table.tex'))
 
     # Save in csv format
-    qc_df.to_csv(os.path.join(savedir, 'QC-%s.csv' % saveID))
+    qc_df.to_csv(os.path.join(output_path, 'QC-%s.csv' % save_id))
 
     # Write data to JSON file
-    qc_df.to_json(os.path.join(savedir, 'QC-%s.json' % saveID),
+    qc_df.to_json(os.path.join(output_path, 'QC-%s.json' % save_id),
                   orient='records')
 
     #  Load only QC vals. TODO use a new variabile name to avoid confusion
     qc_vals_df = extract_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']].copy()
     qc_vals_df['drug'] = 'before'
-    qc_vals_df.to_csv(os.path.join(output_dir, 'qc_vals_df.csv'))
+    qc_vals_df.to_csv(os.path.join(output_path, 'qc_vals_df.csv'))
 
-    extract_df.to_csv(os.path.join(output_dir, 'subtraction_qc.csv'))
+    extract_df.to_csv(os.path.join(output_path, 'subtraction_qc.csv'))
 
-    with open(os.path.join(output_dir, 'passed_wells.txt'), 'w') as fout:
+    with open(os.path.join(output_path, 'passed_wells.txt'), 'w') as fout:
         for well, passed in passed_qc_dict.items():
             if passed:
                 fout.write(well)
@@ -407,6 +482,10 @@ def main():
 
 
 def create_qc_table(qc_df):
+    """
+    ???
+    """
+
     if len(qc_df.index) == 0:
         return None
 
@@ -474,10 +553,15 @@ def create_qc_table(qc_df):
     return ret_df
 
 
-def extract_protocol(readname, savename, time_strs, selected_wells, args, savedir):
-    logging.info(f"extracting {savename}")
+def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
+                     data_path, write_traces, figure_size, reversal_potential,
+                     save_id):
+    # TODO: Tidy up argument order
+    """
+    ???
+    """
 
-    saveID = args.saveID
+    logging.info(f"extracting {savename}")
 
     traces_dir = os.path.join(savedir, 'traces')
 
@@ -499,16 +583,12 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
 
     logging.info(f"Exporting {readname} as {savename}")
 
-    filepath_before = os.path.join(args.data_directory,
-                                   f"{readname}_{time_strs[0]}")
-    filepath_after = os.path.join(args.data_directory,
-                                  f"{readname}_{time_strs[1]}")
+    filepath_before = os.path.join(data_path, f'{readname}_{time_strs[0]}')
+    filepath_after = os.path.join(data_path, f'{readname}_{time_strs[1]}')
     json_file_before = f"{readname}_{time_strs[0]}"
     json_file_after = f"{readname}_{time_strs[1]}"
-    before_trace = Trace(filepath_before,
-                         json_file_before)
-    after_trace = Trace(filepath_after,
-                        json_file_after)
+    before_trace = Trace(filepath_before, json_file_before)
+    after_trace = Trace(filepath_after, json_file_after)
 
     voltage_protocol = before_trace.get_voltage_protocol()
     times = before_trace.get_times()
@@ -543,27 +623,23 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
         if i_well % 24 == 0:
             logging.info('row ' + well[0])
 
-        if args.selection_file:
-            if well not in selected_wells:
-                continue
-
         if None in qc_before[well] or None in qc_after[well]:
             continue
 
-        if args.output_traces:
+        if write_traces:
             # Save 'before drug' trace as .csv
             for sweep in range(nsweeps_before):
                 out = before_trace.get_trace_sweeps([sweep])[well][0]
-                save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
+                save_fname = os.path.join(traces_dir, f"{save_id}-{savename}-"
                                           f"{well}-before-sweep{sweep}.csv")
 
                 np.savetxt(save_fname, out, delimiter=',',
                            header=header)
 
-        if args.output_traces:
+        if write_traces:
             # Save 'after drug' trace as .csv
             for sweep in range(nsweeps_after):
-                save_fname = os.path.join(traces_dir, f"{saveID}-{savename}-"
+                save_fname = os.path.join(traces_dir, f"{save_id}-{savename}-"
                                           f"{well}-after-sweep{sweep}.csv")
                 out = after_trace.get_trace_sweeps([sweep])[well][0]
                 if len(out) > 0:
@@ -583,15 +659,15 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
                               columns=['time', 'voltage'])
 
     if not os.path.exists(os.path.join(traces_dir,
-                                       f"{saveID}-{savename}-voltages.csv")):
+                                       f"{save_id}-{savename}-voltages.csv")):
         voltage_df.to_csv(os.path.join(traces_dir,
-                                       f"{saveID}-{savename}-voltages.csv"))
+                                       f"{save_id}-{savename}-voltages.csv"))
 
-    np.savetxt(os.path.join(traces_dir, f"{saveID}-{savename}-times.csv"),
+    np.savetxt(os.path.join(traces_dir, f"{save_id}-{savename}-times.csv"),
                times_before)
 
     # plot subtraction
-    fig = plt.figure(figsize=args.figsize, layout='constrained')
+    fig = plt.figure(figsize=figure_size, layout='constrained')
 
     reversal_plot_dir = os.path.join(savedir, 'reversal_plots')
 
@@ -608,7 +684,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
         after_leak_currents = []
 
         out_path = os.path.join(savedir, "leak_correction",
-                                f"{saveID}-{savename}-leak_fit-before")
+                                f"{save_id}-{savename}-leak_fit-before")
 
         for sweep in range(before_current.shape[0]):
             row_dict = {
@@ -637,7 +713,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
             before_leak_currents.append(before_leak)
 
             out_path = os.path.join(savedir,
-                                    f"{saveID}-{savename}-leak_fit-after")
+                                    f"{save_id}-{savename}-leak_fit-after")
             # Convert linear regression parameters into conductance and reversal
             row_dict['gleak_before'] = before_params[1]
             row_dict['E_leak_before'] = -before_params[0] / before_params[1]
@@ -662,17 +738,17 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
             E_rev_before = infer_reversal_potential(
                 before_corrected, times, desc, voltages,
                 output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_before"),
-                known_Erev=args.Erev)
+                known_Erev=reversal_potential)
 
             E_rev_after = infer_reversal_potential(
                 after_corrected, times, desc, voltages,
                 output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_after"),
-                known_Erev=args.Erev)
+                known_Erev=reversal_potential)
 
             E_rev = infer_reversal_potential(
                 subtracted_trace, times, desc, voltages,
                 output_path=os.path.join(reversal_plot_dir, f"{well}_{savename}_sweep{sweep}_subtracted"),
-                known_Erev=args.Erev)
+                known_Erev=reversal_potential)
 
             row_dict['R_leftover'] =\
                 np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
@@ -727,9 +803,9 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
 
             row_dict['QC4'] = all([x for x, _ in qc4])
 
-            if args.output_traces:
+            if write_traces:
                 out_fname = os.path.join(traces_dir,
-                                         f"{saveID}-{savename}-{well}-sweep{sweep}-subtracted.csv")
+                                         f"{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv")
 
                 np.savetxt(out_fname, subtracted_trace.flatten())
             rows.append(row_dict)
@@ -741,14 +817,13 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
 
             t_step = times[1] - times[0]
             row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
-            res = \
-                get_time_constant_of_first_decay(subtracted_trace, times, desc,
-                                                 args=args,
-                                                 output_path=os.path.join(savedir,
-                                                                          "debug",
-                                                                          "-120mV time constant",
-                                                                          f"{savename}-{well}-sweep"
-                                                                          f"{sweep}-time-constant-fit.pdf"))
+            res = get_time_constant_of_first_decay(
+                subtracted_trace, times, desc,
+                os.path.join(
+                    savedir, 'debug', '-120mV time constant',
+                    f'{savename}-{well}-sweep{sweep}-time-constant-fit.png'),
+                figure_size
+            )
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -786,7 +861,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
                             protocol=savename)
 
         fig.savefig(os.path.join(subtraction_plots_dir,
-                                 f"{saveID}-{savename}-{well}-sweep{sweep}-subtraction"))
+                                 f'{save_id}-{savename}-{well}-sweep{sweep}-subtraction'))
         fig.clf()
 
     plt.close(fig)
@@ -801,43 +876,43 @@ def extract_protocol(readname, savename, time_strs, selected_wells, args, savedi
     # extract protocol
     protocol = before_trace.get_voltage_protocol()
     protocol.export_txt(os.path.join(protocol_dir,
-                                     f"{saveID}-{savename}.txt"))
+                                     f'{save_id}-{savename}.txt'))
 
     json_protocol = before_trace.get_voltage_protocol_json()
 
-    with open(os.path.join(protocol_dir, f"{saveID}-{savename}.json"), 'w') as fout:
+    with open(os.path.join(protocol_dir, f'{save_id}-{savename}.json'), 'w') as fout:
         json.dump(json_protocol, fout)
 
     return extract_df
 
 
-def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
+def run_qc_for_protocol(readname, savename, time_strs, output_path,
+                        data_path, wells, write_traces, save_id):
+    """
+    ???
+    """
+    # TODO Tidy up argument order
+
     df_rows = []
 
     assert len(time_strs) == 2
 
-    filepath_before = os.path.join(args.data_directory,
-                                   f"{readname}_{time_strs[0]}")
+    filepath_before = os.path.join(data_path, f'{readname}_{time_strs[0]}')
     json_file_before = f"{readname}_{time_strs[0]}"
 
-    filepath_after = os.path.join(args.data_directory,
-                                  f"{readname}_{time_strs[1]}")
+    filepath_after = os.path.join(data_path, f'{readname}_{time_strs[1]}')
     json_file_after = f"{readname}_{time_strs[1]}"
 
     logging.debug(f"loading {json_file_after} and {json_file_before}")
 
-    before_trace = Trace(filepath_before,
-                         json_file_before)
-
-    after_trace = Trace(filepath_after,
-                        json_file_after)
-
+    before_trace = Trace(filepath_before, json_file_before)
+    after_trace = Trace(filepath_after, json_file_after)
     assert before_trace.sampling_rate == after_trace.sampling_rate
 
     # Convert to s
     sampling_rate = before_trace.sampling_rate
 
-    savedir = os.path.join(output_dir, "QC")
+    savedir = os.path.join(output_path, 'QC')
     leak_correction_dir = os.path.join(savedir, "leak_correction")
 
     if not os.path.exists(savedir):
@@ -856,7 +931,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
     raw_after_all = after_trace.get_trace_sweeps(sweeps)
 
     selected_wells = []
-    for well in args.wells:
+    for well in wells:
 
         plot_dir = os.path.join(savedir, "debug", f"debug_{well}_{savename}")
 
@@ -958,10 +1033,10 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
         for i in range(nsweeps):
 
             savepath = os.path.join(savedir,
-                                    f"{args.saveID}-{savename}-{well}-sweep{i}.csv")
+                                    f'{save_id}-{savename}-{well}-sweep{i}.csv')
             subtracted_current = before_currents_corrected[i, :] - after_currents_corrected[i, :]
 
-            if args.output_traces:
+            if write_traces:
                 if not os.path.exists(savedir):
                     os.makedirs(savedir)
 
@@ -978,7 +1053,7 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
 
     missing_wells_dfs = []
     # Add onboard qc to dataframe
-    for well in args.wells:
+    for well in wells:
         if well not in df['well'].values:
             onboard_qc_df = pd.DataFrame([[well] + [False for col in
                                                     list(df)[1:]]],
@@ -991,17 +1066,11 @@ def run_qc_for_protocol(readname, savename, time_strs, args, output_dir):
     return selected_wells, df
 
 
-def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
-    plot_dir = os.path.join(output_dir, args.savedir,
-                            f"{args.saveID}-{savename}-qc3-bookend")
+def qc3_bookend(readname, savename, time_strs, wells, output_path,
+                data_path, debug, figure_size, save_id):
 
-    if not os.path.exists(plot_dir):
-        os.makedirs(plot_dir)
-
-    filepath_first_before = os.path.join(args.data_directory,
-                                         f"{readname}_{time_strs[0]}")
-    filepath_last_before = os.path.join(args.data_directory,
-                                        f"{readname}_{time_strs[1]}")
+    filepath_first_before = os.path.join(data_path, f'{readname}_{time_strs[0]}')
+    filepath_last_before = os.path.join(data_path, f'{readname}_{time_strs[1]}')
     json_file_first_before = f"{readname}_{time_strs[0]}"
     json_file_last_before = f"{readname}_{time_strs[1]}"
 
@@ -1017,17 +1086,13 @@ def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
     voltage_protocol = first_before_trace.get_voltage_protocol()
     ramp_bounds = detect_ramp_bounds(times,
                                      voltage_protocol.get_all_sections())
-    filepath_first_after = os.path.join(args.data_directory,
-                                        f"{readname}_{time_strs[2]}")
-    filepath_last_after = os.path.join(args.data_directory,
-                                       f"{readname}_{time_strs[3]}")
+    filepath_first_after = os.path.join(data_path, f'{readname}_{time_strs[2]}')
+    filepath_last_after = os.path.join(data_path, f'{readname}_{time_strs[3]}')
     json_file_first_after = f"{readname}_{time_strs[2]}"
     json_file_last_after = f"{readname}_{time_strs[3]}"
 
-    first_after_trace = Trace(filepath_first_after,
-                              json_file_first_after)
-    last_after_trace = Trace(filepath_last_after,
-                             json_file_last_after)
+    first_after_trace = Trace(filepath_first_after, json_file_first_after)
+    last_after_trace = Trace(filepath_last_after, json_file_last_after)
 
     # Ensure that all traces use the same voltage protocol
     assert np.all(first_before_trace.get_voltage() == last_before_trace.get_voltage())
@@ -1061,26 +1126,19 @@ def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
 
         save_fname = f"{well}_{savename}_before0.pdf"
 
-        if args.debug:
-            qc3_output_dir = os.path.join(output_dir,
-                                          "QC",
-                                          "debug",
-                                          f"debug_{well}_{savename}",
-                                          "qc3_bookend")
+        if debug:
+            qc3_output_dir = os.path.join(
+                output_path, 'QC', 'debug', f'{well}_{savename}', 'qc3_bookend')
 
             if not os.path.exists(qc3_output_dir):
                 os.makedirs(qc3_output_dir)
 
-            leak_correct_dir = os.path.join(qc3_output_dir,
-                                            "leak_correction")
+            leak_correct_dir = os.path.join(qc3_output_dir, 'leak_correction')
 
             #  Plot subtraction
-            if args.debug:
-                get_leak_corrected(first_before_current,
-                                   voltage, times,
-                                   *ramp_bounds,
-                                   save_fname=save_fname,
-                                   output_dir=leak_correct_dir)
+            get_leak_corrected(
+                first_before_current, voltage, times, *ramp_bounds,
+                save_fname=save_fname, output_dir=leak_correct_dir)
 
         before_traces_first[well] = get_leak_corrected(first_before_current,
                                                        voltage, times,
@@ -1103,6 +1161,10 @@ def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
 
     voltage_protocol = VoltageProtocol.from_voltage_trace(voltage, times)
 
+    plot_dir = os.path.join(output_path, output_path,
+                            f'{save_id}-{savename}-qc3-bookend')
+    if not os.path.exists(plot_dir):
+        os.makedirs(plot_dir)
     hergqc = hERGQC(sampling_rate=first_before_trace.sampling_rate,
                     plot_dir=plot_dir,
                     voltage=voltage)
@@ -1114,9 +1176,9 @@ def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
                      voltage_protocol.get_all_sections() if vend == vstart]
     res_dict = {}
 
-    fig = plt.figure(figsize=args.figsize)
+    fig = plt.figure(figsize=figure_size)
     ax = fig.subplots()
-    for well in args.wells:
+    for well in wells:
         trace1 = hergqc.filter_capacitive_spikes(
             first_processed[well], times, voltage_steps
         ).flatten()
@@ -1129,8 +1191,7 @@ def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
 
         res_dict[well] = passed
 
-        save_fname = os.path.join(output_dir,
-                                  'qc3_bookend')
+        save_fname = os.path.join(output_path, 'qc3_bookend')
 
         ax.plot(times, trace1)
         ax.plot(times, trace2)
@@ -1142,13 +1203,16 @@ def qc3_bookend(readname, savename, time_strs, args, wells, output_dir):
     return res_dict
 
 
-def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_path):
+def get_time_constant_of_first_decay(
+        trace, times, protocol_desc, output_path, figure_size):
+    """
+    ???
+    """
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
 
-    if output_path:
-        if not os.path.exists(os.path.dirname(output_path)):
-            os.makedirs(os.path.dirname(output_path))
-
-    first_120mV_step_index = [i for i, line in enumerate(protocol_desc) if line[2] == 40][0] + 1
+    first_120mV_step_index = [
+        i for i, line in enumerate(protocol_desc) if line[2] == 40][0] + 1
 
     tstart, tend, vstart, vend = protocol_desc[first_120mV_step_index, :]
     assert (vstart == vend)
@@ -1190,6 +1254,9 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         (1e-12, 5e3),
     ]
 
+    # TESTING ONLY
+    np.random.seed(1)
+
     #  Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
 
@@ -1228,7 +1295,7 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
         logging.warning('finding 120mv decay timeconstant failed:' + str(res))
 
     if output_path and res:
-        fig = plt.figure(figsize=args.figsize, constrained_layout=True)
+        fig = plt.figure(figsize=figure_size, constrained_layout=True)
         axs = fig.subplots(2)
 
         for ax in axs:
@@ -1297,4 +1364,4 @@ def get_time_constant_of_first_decay(trace, times, protocol_desc, args, output_p
 
 
 if __name__ == '__main__':
-    main()
+    run_from_command_line()
