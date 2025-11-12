@@ -172,11 +172,11 @@ def run(data_path, output_path, experiment_name, logger,
     plot_histograms(leak_parameters_df, output_path, reversal_potential, figsize)
 
     # Very resource intensive
-    # overlay_reversal_plots(data_path, output_path, experiment_name,
+    #wells = leak_parameters_df.well.unique()
+    #overlay_reversal_plots(data_path, output_path, experiment_name,
     #                       leak_parameters_df, wells, reversal_potential, figsize)
-    # do_combined_plots(data_path, output_path, experiment_name,
-    #                  leak_parameters_df, passed_wells, logger, figsize):
-
+    do_combined_plots(data_path, output_path, experiment_name,
+                      leak_parameters_df, passed_wells, logger, figsize)
 
 def compute_leak_magnitude(df, lims=[-120, 60]):
     def compute_magnitude(g, E, lims=lims):
@@ -398,9 +398,16 @@ def do_combined_plots(data_path, output_path, experiment_name,
 
     palette = sns.color_palette('husl', len(leak_parameters_df.groupby(['well', 'sweep'])))
     for protocol in leak_parameters_df.protocol.unique():
-        times_fname = f"{experiment_name}-{protocol}-times.csv"
+        pname = protocol
+        if pname == 'staircaseramp1':
+            pname = 'staircaseramp'
+        elif pname == 'staircaseramp1_2':
+            pname = 'staircaseramp_2'
+
+        times_fname = os.path.join(data_path, 'traces',
+                                   f'{experiment_name}-{pname}-times.csv')
         try:
-            times = np.loadtxt(os.path.join(data_path, 'traces', times_fname)).astype(np.float64).flatten()
+            times = np.loadtxt(times_fname).astype(np.float64).flatten()
         except FileNotFoundError:
             continue
 
@@ -411,7 +418,7 @@ def do_combined_plots(data_path, output_path, experiment_name,
         i = 0
         for sweep in leak_parameters_df.sweep.unique():
             for well in wells:
-                fname = f"{experiment_name}-{protocol}-{well}-sweep{sweep}.csv"
+                fname = f"{experiment_name}-{pname}-{well}-sweep{sweep}.csv"
                 try:
                     data = pd.read_csv(os.path.join(data_path, 'traces', fname))
 
@@ -454,7 +461,13 @@ def do_combined_plots(data_path, output_path, experiment_name,
         i = 0
         for sweep in leak_parameters_df.sweep.unique():
             for protocol in leak_parameters_df.protocol.unique():
-                times_fname = f"{experiment_name}-{protocol}-times.csv"
+                pname = protocol
+                if pname == 'staircaseramp1':
+                    pname = 'staircaseramp'
+                elif pname == 'staircaseramp1_2':
+                    pname = 'staircaseramp_2'
+
+                times_fname = f'{experiment_name}-{pname}-times.csv'
                 times = np.loadtxt(os.path.join(data_path, 'traces', times_fname))
                 times = times.flatten().astype(np.float64)
 
@@ -911,35 +924,43 @@ def overlay_reversal_plots(
         for protocol in protocols_to_plot:
             if protocol == np.nan:
                 continue
-            for sweep in sweeps_to_plot:
-                voltage_fname = os.path.join(data_path, 'traces',
-                                             f"{experiment_name}-{protocol}-voltages.csv")
-                voltages = pd.read_csv(voltage_fname)['voltage'].values.flatten()
 
-                fname = f"{experiment_name}-{protocol}-{well}-sweep{sweep}.csv"
+            pname = protocol
+            if pname == 'staircaseramp1':
+                pname = 'staircaseramp'
+            elif pname == 'staircaseramp1_2':
+                pname = 'staircaseramp_2'
+            voltage_fname = os.path.join(data_path, 'traces',
+                                         f'{experiment_name}-{pname}-voltages.csv')
+            voltages = pd.read_csv(voltage_fname)['voltage'].values.flatten()
+
+            times_fname = f"{experiment_name}-{pname}-times.csv"
+            times = np.loadtxt(os.path.join(data_path, 'traces', times_fname))
+            times = times.flatten().astype(np.float64)
+
+            # First, find the reversal ramp
+            json_name = os.path.join(data_path, 'traces', 'protocols',
+                                     f'{experiment_name}-{pname}.json')
+            with open(json_name, 'r') as f:
+                json_protocol = json.load(f)
+            v_protocol = VoltageProtocol.from_json(json_protocol)
+            ramps = v_protocol.get_ramps()
+            reversal_ramp = ramps[-1]
+            ramp_start, ramp_end = reversal_ramp[:2]
+
+            # Next extract steps
+            istart = np.argmax(times >= ramp_start)
+            iend = np.argmax(times > ramp_end)
+
+            if istart == 0 or iend == 0 or istart == iend:
+                raise Exception('Could not identify reversal ramp')
+
+            for sweep in sweeps_to_plot:
+                fname = f"{experiment_name}-{pname}-{well}-sweep{sweep}.csv"
                 try:
                     data = pd.read_csv(os.path.join(data_path, 'traces', fname))
                 except FileNotFoundError:
                     continue
-
-                times_fname = f"{experiment_name}-{protocol}-times.csv"
-                times = np.loadtxt(os.path.join(data_path, 'traces', times_fname))
-                times = times.flatten().astype(np.float64)
-
-                # First, find the reversal ramp
-                json_protocol = json.load(os.path.join(data_path, 'traces', 'protocols',
-                                          f"{experiment_name}-{protocol}.json"))
-                v_protocol = VoltageProtocol.from_json(json_protocol)
-                ramps = v_protocol.get_ramps()
-                reversal_ramp = ramps[-1]
-                ramp_start, ramp_end = reversal_ramp[:2]
-
-                # Next extract steps
-                istart = np.argmax(times >= ramp_start)
-                iend = np.argmax(times > ramp_end)
-
-                if istart == 0 or iend == 0 or istart == iend:
-                    raise Exception("Couldn't identify reversal ramp")
 
                 # Plot voltage vs current
                 current = data['current'].values.astype(np.float64)
