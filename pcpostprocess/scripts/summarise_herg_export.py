@@ -59,7 +59,7 @@ def main():
     parser.add_argument('--protocols', type=str, default=[], nargs='+')
     parser.add_argument('-r', '--reversal', type=float, default=np.nan)
     # parser.add_argument('--selection_file', default=None, type=str)
-    parser.add_argument('--experiment_name', default='newtonrun4')
+    parser.add_argument('--experiment_name', default='13112023_MW2')
     parser.add_argument('--figsize', type=int, nargs=2, default=[5, 3])
     parser.add_argument('--output_all', action='store_true')
     parser.add_argument('--log_level', default='INFO')
@@ -88,8 +88,8 @@ def main():
     qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
 
-    qc_estimates_file = os.path.join(args.save_dir, f"{args.experiment_name}_subtraction_qc.csv")
-    qc_vals_df = pd.read_csv(os.path.join(qc_estimates_file))
+    # qc_estimates_file = os.path.join(args.save_dir, f"{args.experiment_name}_subtraction_qc.csv")
+    # qc_vals_df = pd.read_csv(os.path.join(qc_estimates_file))
 
     qc_df.protocol = ['staircaseramp1' if protocol == 'staircaseramp' else protocol
                       for protocol in qc_df.protocol]
@@ -131,9 +131,8 @@ def main():
                                                         categories=protocol_order,
                                                         ordered=True)
 
-        qc_vals_df['protocol'] = pd.Categorical(qc_vals_df['protocol'],
-                                                categories=protocol_order,
-                                                ordered=True)
+        # qc_vals_df['protocol'] = pd.Categorical(
+        #     qc_vals_df['protocol'], categories=protocol_order, ordered=True)
 
         leak_parameters_df.sort_values(['protocol', 'sweep'], inplace=True)
     except FileNotFoundError as exc:
@@ -161,10 +160,10 @@ def main():
         plot_spatial_Erev(leak_parameters_df)
 
     leak_parameters_df['passed QC'] = [well in passed_wells for well in leak_parameters_df.well]
-    qc_vals_df['passed QC'] = [well in passed_wells for well in qc_vals_df.well]
+    # qc_vals_df['passed QC'] = [well in passed_wells for well in qc_vals_df.well]
 
     # do_scatter_matrices(leak_parameters_df, qc_vals_df)
-    plot_histograms(leak_parameters_df, qc_vals_df)
+    plot_histograms(leak_parameters_df)
 
     # Very resource intensive
     # overlay_reversal_plots(leak_parameters_df)
@@ -701,7 +700,7 @@ def plot_spatial_passed(df):
     plt.close(fig)
 
 
-def plot_histograms(df, qc_df):
+def plot_histograms(df):
     fig = plt.figure(figsize=args.figsize, constrained_layout=True)
     ax = fig.subplots()
 
@@ -900,16 +899,17 @@ def create_attrition_table(qc_df, subtraction_df):
                                                                      'staircaseramp1_2'])]
     R_leftover_qc = subtraction_df_sc.groupby('well')['R_leftover'].max() < 0.4
 
-    qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] for well in subtraction_df.well.unique()]
+    # This line doesn't work: "Length of values does not match length of index"
+    # qc_df['QC.R_leftover'] = [R_leftover_qc.loc[well] for well in subtraction_df.well.unique()]
 
     stage_3_criteria = original_qc_criteria + ['QC1.all_protocols', 'QC4.all_protocols',
                                                'QC6.all_protocols']
     stage_4_criteria = stage_3_criteria + ['qc3.bookend']
     stage_5_criteria = stage_4_criteria + ['QC.Erev.all_protocols', 'QC.Erev.spread']
 
-    stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
+    #stage_6_criteria = stage_5_criteria + ['QC.R_leftover']
 
-    agg_dict = {crit: 'min' for crit in stage_6_criteria}
+    agg_dict = {crit: 'min' for crit in stage_5_criteria}
 
     qc_df_sc1 = qc_df[qc_df.protocol == 'staircaseramp1']
     print(qc_df_sc1.values.shape)
@@ -935,11 +935,11 @@ def create_attrition_table(qc_df, subtraction_df):
                                     .agg(agg_dict)[stage_5_criteria].values,
                                     axis=1))
 
-    n_stage_6_wells = np.sum(np.all(qc_df.groupby('well')
-                                    .agg(agg_dict)[stage_6_criteria].values,
-                                    axis=1))
+    # n_stage_6_wells = np.sum(np.all(qc_df.groupby('well')
+    #                                 .agg(agg_dict)[stage_6_criteria].values,
+    #                                 axis=1))
 
-    passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_6_criteria]
+    passed_qc_df = qc_df.groupby('well').agg(agg_dict)[stage_5_criteria]
     print(passed_qc_df)
     passed_wells = [well for well, row in passed_qc_df.iterrows() if np.all(row.values)]
 
@@ -951,7 +951,7 @@ def create_attrition_table(qc_df, subtraction_df):
         'stage3': [n_stage_3_wells],
         'stage4': [n_stage_4_wells],
         'stage5': [n_stage_5_wells],
-        'stage6': [n_stage_6_wells],
+        # 'stage6': [n_stage_6_wells],
     }
 
     res_df = pd.DataFrame.from_records(res_dict)
