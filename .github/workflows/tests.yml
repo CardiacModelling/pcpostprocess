@@ -38,11 +38,6 @@ jobs:
       run: |
         python -m flake8 pcpostprocess
 
-    - name: Check import ordering with isort
-      if: ${{ matrix.python-version == env.python-latest }}
-      run: |
-        python -m isort --verbose --check-only --diff pcpostprocess tests setup.py
-
     - name: Extract test data
       run: |
         wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/

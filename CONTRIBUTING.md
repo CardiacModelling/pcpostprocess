@@ -62,17 +62,6 @@ In addition to the rules checked by flake8, we try to use single quotes (`'`) fo
 
 Class, method, and argument names are in UK english.
 
-### Import ordering
-
-Import ordering is tested with [isort](https://pycqa.github.io/isort/index.html).
-
-To run locally, use
-```
-isort --check-only --verbose ./pcpostprocess ./tests/
-```
-
-Isort is configured in [pyproject.toml](./pyproject.toml) under the section `tool.isort`.
-
 ## Documentation
 
 Every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.

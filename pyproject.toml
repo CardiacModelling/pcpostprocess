@@ -48,7 +48,6 @@ test = [
     'coverage',             # For coverage testing
     'codecov>=2.1.3',       # To upload coverage reports
     'flake8>=3',            # For code style checking
-    'isort',
 ]
 
 [tools.setuptools.package-data]
@@ -65,9 +64,6 @@ pcpostprocess = 'pcpostprocess.scripts.__main__:main'
 include = [
     'pcpostprocess',
 ]
-
-[tool.isort]
-skip = ['_version.py']
 
 [tool.coverage.run]
 source = [
