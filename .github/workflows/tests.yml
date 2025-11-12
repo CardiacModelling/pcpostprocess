@@ -40,8 +40,9 @@ jobs:
 
     - name: Extract test data
       run: |
-        wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/
-        tar xvf test_data.tar.xz -C tests/
+        wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz
+        tar xvf test_data.tar.xz
+        rm test_data.tar.xz
 
     - name: Install TeX dependencies for run_herg_qc test
       timeout-minutes: 5
