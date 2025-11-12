@@ -1,0 +1,6 @@
+pcpostprocess output https://github.com/CardiacModelling/pcpostprocess
+Date: 2025-11-12 15:10:51.794995
+Version: 0.2.1.dev1
+Build type: Develop
+Commit: g62a0bd564
+Command: pcpostprocess summarise_herg_export output-all --experiment_name=13112023_MW2 --output_dir=summarise-all

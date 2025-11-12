@@ -85,7 +85,7 @@ def main():
 
     qc_styled_df = create_qc_table(qc_df)
     qc_styled_df = qc_styled_df.pivot(columns='protocol', index='crit')
-    qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
+    # qc_styled_df.to_excel(os.path.join(output_dir, 'qc_table.xlsx'))
     qc_styled_df.to_latex(os.path.join(output_dir, 'qc_table.tex'))
 
     # qc_estimates_file = os.path.join(args.save_dir, f"{args.experiment_name}_subtraction_qc.csv")
@@ -234,7 +234,7 @@ def scatterplot_timescale_E_obs(df):
     ax.set_ylabel(r'$\tau$ (ms)')
     ax.set_xlabel(r'$E_\mathrm{obs}$')
 
-    fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_scatter.pdf"))
+    fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_scatter.png"))
     ax.cla()
 
     sns.lineplot(data=plot_df, y='40mV decay time constant',
@@ -244,7 +244,7 @@ def scatterplot_timescale_E_obs(df):
     ax.set_ylabel(r'$\tau$ (ms)')
     ax.set_xlabel(r'$E_\mathrm{obs}$')
     ax.spines[['top', 'right']].set_visible(False)
-    fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_line.pdf"))
+    fig.savefig(os.path.join(output_dir, "decay_timescale_vs_E_rev_line.png"))
     ax.cla()
 
     plot_df['E_rev'] = (plot_df.set_index('well')['E_rev'] - plot_df.groupby('well')
@@ -256,7 +256,7 @@ def scatterplot_timescale_E_obs(df):
     ax.set_ylabel(r'$E_\mathrm{leak} - \bar E_\mathrm{leak}$ (ms)')
     ax.set_xlabel(r'$E_\mathrm{obs} - \bar E_\mathrm{obs}$')
 
-    fig.savefig(os.path.join(output_dir, "E_leak_vs_E_rev_scatter.pdf"))
+    fig.savefig(os.path.join(output_dir, "E_leak_vs_E_rev_scatter.png"))
     ax.cla()
 
 
@@ -335,8 +335,7 @@ def do_chronological_plots(df, normalise=False):
         legend_handles, _ = ax.get_legend_handles_labels()
         ax.legend(legend_handles, ['failed QC', 'passed QC'], bbox_to_anchor=(1.26, 1))
 
-        fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.pdf"),
-                    format='pdf')
+        fig.savefig(os.path.join(sub_dir, f"{var.replace(' ', '_')}.png"))
         ax.cla()
 
     plt.close(fig)
@@ -476,8 +475,7 @@ def do_scatter_matrices(df, qc_df):
     grid = sns.pairplot(data=df, hue='hue', diag_kind='hist',
                         plot_kws={'alpha': 0.4, 'edgecolor': None},
                         hue_order=[True, False])
-    grid.savefig(os.path.join(output_dir, 'scatter_matrix_by_reversal.pdf'),
-                 format='pdf')
+    grid.savefig(os.path.join(output_dir, 'scatter_matrix_by_reversal.png'))
 
     # Now do artefact parameters only
     if 'drug' in qc_df:
@@ -655,8 +653,7 @@ def plot_spatial_Erev(df):
         # Put 'A' row at the top
         ax.invert_yaxis()
 
-        fig.savefig(os.path.join(output_dir, f"{protocol}_sweep{sweep}_E_Kr_map.pdf"),
-                    format='pdf')
+        fig.savefig(os.path.join(output_dir, f"{protocol}_sweep{sweep}_E_Kr_map.png"))
         plt.close(fig)
 
     protocol = 'staircaseramp1'
@@ -695,7 +692,7 @@ def plot_spatial_passed(df):
     ax.set_yticklabels(string.ascii_uppercase[:16])
 
     ax.invert_yaxis()
-    fig.savefig(os.path.join(output_dir, "QC_map.pdf"), format='pdf')
+    fig.savefig(os.path.join(output_dir, "QC_map.png"))
 
     plt.close(fig)
 
