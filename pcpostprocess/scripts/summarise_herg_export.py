@@ -121,8 +121,6 @@ def run(data_path, output_path, experiment_name, logger,
     # Compute new variables
     leak_parameters_df = compute_leak_magnitude(leak_parameters_df)
 
-    wells = leak_parameters_df.well.unique()
-
     try:
         chrono_fname = os.path.join(data_path, 'chrono.txt')
         with open(chrono_fname, 'r') as fin:
@@ -178,6 +176,7 @@ def run(data_path, output_path, experiment_name, logger,
     #                       leak_parameters_df, wells, reversal_potential, figsize)
     # do_combined_plots(data_path, output_path, experiment_name,
     #                  leak_parameters_df, passed_wells, logger, figsize):
+
 
 def compute_leak_magnitude(df, lims=[-120, 60]):
     def compute_magnitude(g, E, lims=lims):
