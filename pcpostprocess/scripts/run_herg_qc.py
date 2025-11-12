@@ -38,7 +38,8 @@ matplotlib.use('Agg')
 
 def run_from_command_line():
     """
-    Reads arguments from the command line and runs herg QC.
+    Reads arguments from the command line and an ``export_config.py`` and then
+    runs herg QC.
     """
 
     parser = argparse.ArgumentParser()
