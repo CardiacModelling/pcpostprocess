@@ -1193,7 +1193,7 @@ def get_time_constant_of_first_decay(
     ]
 
     # TESTING ONLY
-    np.random.seed(1)
+    # np.random.seed(1)
 
     #  Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
