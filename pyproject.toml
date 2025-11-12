@@ -1,8 +1,8 @@
 [build-system]
 requires = [
-         'setuptools>=61',
-         'wheel',
-         'setuptools_scm[toml]>=8.0',
+    'setuptools>=61',
+    'wheel',
+    'setuptools_scm[toml]>=8.0',
 ]
 
 build-backend = 'setuptools.build_meta'
@@ -64,8 +64,6 @@ pcpostprocess = 'pcpostprocess.scripts.__main__:main'
 [tool.setuptools.packages.find]
 include = [
     'pcpostprocess',
-    'pcpostprocess.*',
-    'pcpostprocess.scripts',
 ]
 
 [tool.isort]
@@ -74,7 +72,5 @@ skip = ['_version.py']
 [tool.coverage.run]
 source = [
     'pcpostprocess',
-    'pcpostprocess.scripts',
-    'tests',
 ]
 
