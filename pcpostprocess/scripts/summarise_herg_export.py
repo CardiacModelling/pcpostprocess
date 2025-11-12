@@ -172,11 +172,12 @@ def run(data_path, output_path, experiment_name, logger,
     plot_histograms(leak_parameters_df, output_path, reversal_potential, figsize)
 
     # Don't work
-    #wells = leak_parameters_df.well.unique()
-    #overlay_reversal_plots(data_path, output_path, experiment_name,
+    # wells = leak_parameters_df.well.unique()
+    # overlay_reversal_plots(data_path, output_path, experiment_name,
     #                       leak_parameters_df, wells, reversal_potential, figsize)
     # do_combined_plots(data_path, output_path, experiment_name,
     #                  leak_parameters_df, passed_wells, logger, figsize)
+
 
 def compute_leak_magnitude(df, lims=[-120, 60]):
     def compute_magnitude(g, E, lims=lims):
