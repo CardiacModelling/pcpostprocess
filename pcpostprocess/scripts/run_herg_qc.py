@@ -35,7 +35,7 @@ def starmap(n, func, iterable):
     """
     if n == 1:
         return [func(*args) for args in iterable]
-    else:
+    else:  # pragma: no cover
         with multiprocessing.Pool(n, maxtasksperchild=1) as pool:
             return pool.starmap(func, iterable)
 
@@ -1300,5 +1300,5 @@ def get_time_constant_of_first_decay(
     return (d, b), f, peak_current if res else (np.nan, np.nan), np.nan, peak_current
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     run_from_command_line()
