@@ -27,7 +27,7 @@ class TestDirectoryBuilder(unittest.TestCase):
             if store_output:    # pragma: no cover
                 d = 'test_output'
             path = directory_builder.setup_output_directory(
-                d, 'directory_builder')
+                os.path.join(d, 'directory_builder'))
 
             # Check that git commit is written
             info_dict = read_info_dict(
