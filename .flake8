@@ -16,4 +16,5 @@ ignore =
 exclude=
     .git,
     venv,
-    tests/test_data,
+    test_data,
+    test_output,

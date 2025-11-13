@@ -10,20 +10,15 @@ def get_git_revision_hash():
     Get the hash for the git commit currently being used.
 
     @return The most recent commit hash or a suitable message
-
     """
-
     return __commit_id__
 
 
 def get_build_type():
-    if "dev" in __version__:
-        return "Develop"
-    else:
-        return "Release"
+    return 'Develop' if 'dev' in __version__ else 'Release'
 
 
-def setup_output_directory(dirname: str = None, subdir_name: str = None):
+def setup_output_directory(dirname: str):
     """
     Create an output directory if one doesn't already exist. Place an info
     file in this directory which lists the date/time created, the version of
@@ -31,22 +26,11 @@ def setup_output_directory(dirname: str = None, subdir_name: str = None):
     commit. The two parameters allow for a user specified top-level directory and
     a script-defined name for a subdirectory.
 
-    @param Optional directory name
-    @param Optional subdirectory name
+    @param Directory name
 
     @return The path to the created file directory (String)
     """
-
-    if dirname is None:
-        if subdir_name:
-            dirname = os.path.join("output", f"{subdir_name}")
-        else:
-            dirname = os.path.join("output", "output")
-
-    if subdir_name is not None:
-        dirname = os.path.join(dirname, subdir_name)
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
+    os.makedirs(dirname, exist_ok=True)
 
     with open(os.path.join(dirname, "pcpostprocess_info.txt"), "w") as description_fout:
         git_hash = get_git_revision_hash()

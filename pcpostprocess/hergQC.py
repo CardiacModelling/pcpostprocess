@@ -75,13 +75,8 @@ class hERGQC:
         self.removal_time = removal_time
         self.noise_len = int(noise_len)
 
-        # Passing in a plot dir enables debug mode
         self._plot_dir = plot_dir
         self.logger = logging.getLogger(__name__)
-        if self._plot_dir is not None:
-            self.logger.setLevel(logging.DEBUG)
-            # https://github.com/CardiacModelling/pcpostprocess/issues/42
-        self._plot_dir = plot_dir
 
         # Define all thresholds
 
@@ -499,8 +494,7 @@ class hERGQC:
         i, f = win
         val = np.mean(recording1[i:f])
         valc = self.negative_tolc * np.std(recording1[:self.noise_len])
-        if (val < valc) or not (np.isfinite(val)
-                                and np.isfinite(valc)):
+        if (val < valc) or not (np.isfinite(val) and np.isfinite(valc)):
             self.logger.debug(f'qc6_{label} val:  {val}, valc: {valc}')
             result = False
         else:

@@ -36,21 +36,13 @@ jobs:
     - name: Check code style with flake8
       if: ${{ matrix.python-version == env.python-latest }}
       run: |
-        python -m flake8 pcpostprocess/*.py tests/*.py pcpostprocess/scripts/*.py
-
-    - name: Check import ordering with isort
-      if: ${{ matrix.python-version == env.python-latest }}
-      run: |
-        python -m isort --verbose --check-only --diff pcpostprocess tests setup.py
+        python -m flake8 pcpostprocess
 
     - name: Extract test data
       run: |
-        wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz -P tests/
-        tar xvf tests/test_data.tar.xz -C tests/
-
-    - name: Install TeX dependencies for run_herg_qc test
-      timeout-minutes: 5
-      run: sudo apt-get install dvipng texlive-latex-extra texlive-fonts-recommended cm-super -y
+        wget https://cardiac.nottingham.ac.uk/syncropatch_export/test_data.tar.xz
+        tar xvf test_data.tar.xz
+        rm test_data.tar.xz
 
     - name: Run unit tests (without coverage testing)
       if: ${{ success() && matrix.python-version != env.python-latest }}
