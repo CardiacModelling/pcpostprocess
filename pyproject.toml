@@ -68,6 +68,6 @@ source = [
     'pcpostprocess',
 ]
 omit = [
-    'pcpostprocess/__main__.py',
+    'pcpostprocess/scripts/__main__.py',
 ]
 
