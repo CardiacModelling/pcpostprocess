@@ -597,7 +597,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                 save_fname = os.path.join(traces_dir, f"{save_id}-{savename}-"
                                           f"{well}-before-sweep{sweep}.csv")
 
-                np.savetxt(save_fname, out, delimiter=',',
+                np.savetxt(save_fname, out, delimiter=',', comments='',
                            header=header)
 
         if write_traces:
@@ -628,7 +628,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                                        f"{save_id}-{savename}-voltages.csv"))
 
     np.savetxt(os.path.join(traces_dir, f"{save_id}-{savename}-times.csv"),
-               times_before)
+               times_before, comments='')
 
     # plot subtraction
     fig = plt.figure(figsize=figure_size, layout='constrained')
@@ -762,7 +762,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                 out_fname = os.path.join(traces_dir,
                                          f"{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv")
 
-                np.savetxt(out_fname, subtracted_trace.flatten())
+                np.savetxt(out_fname, subtracted_trace.flatten(), delimiter=',',
+                           comments='')
             rows.append(row_dict)
 
             param, leak = fit_linear_leak(current, voltage, times,
