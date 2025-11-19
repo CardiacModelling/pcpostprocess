@@ -320,62 +320,63 @@ def run(data_path, output_path, qc_map, wells=None,
     # Now go over _all_ protocols, including the QC protocols (AGAIN!), and
     # call extract_protocol() on them
     #
-    if write_traces:
+    pront(savenames, readnames, times_list)
 
-        pront(savenames, readnames, times_list)
+    # Export all protocols
+    savenames, readnames, times_list = [], [], []
+    for protocol in res_dict:
 
-        # Export all protocols
-        savenames, readnames, times_list = [], [], []
-        for protocol in res_dict:
+        # Sort into chronological order
+        times = sorted(res_dict[protocol])
+        savename = combined_dict[protocol]
 
-            # Sort into chronological order
-            times = sorted(res_dict[protocol])
-            savename = combined_dict[protocol]
+        readnames.append(protocol)
 
+        if len(times) == 2:
+            savenames.append(savename)
+            times_list.append(times)
+
+        elif len(times) == 4:
+            savenames.append(savename)
+            times_list.append(times[::2])
+
+            # Make seperate savename for protocol repeat
+            savename = combined_dict[protocol] + '_2'
+            assert savename not in combined_dict.values()
+            savenames.append(savename)
+            times_list.append(times[1::2])
             readnames.append(protocol)
 
-            if len(times) == 2:
-                savenames.append(savename)
-                times_list.append(times)
-
-            elif len(times) == 4:
-                savenames.append(savename)
-                times_list.append(times[::2])
-
-                # Make seperate savename for protocol repeat
-                savename = combined_dict[protocol] + '_2'
-                assert savename not in combined_dict.values()
-                savenames.append(savename)
-                times_list.append(times[1::2])
-                readnames.append(protocol)
-
-            # TODO Else raise error?
+        # TODO Else raise error?
 
 
-        pront(savenames, readnames, times_list)
+    pront(savenames, readnames, times_list)
 
-        wells_to_export = wells if write_failed_traces else selection
-        logging.info(f'exporting wells {wells_to_export}')
-        m = len(readnames)
-        n = min(max_processes, m)
-        args = zip(readnames, savenames, times_list, [wells_to_export] * m,
-                   [output_path] * m, [data_path] * m, [figure_size] * m,
-                   [reversal_potential] * m, [save_id] * m)
-        dfs = starmap(n, extract_protocol, args)
+    wells_to_export = wells if write_failed_traces else selection
+    logging.info(f'exporting wells {wells_to_export}')
+    m = len(readnames)
+    n = min(max_processes, m)
+    args = zip(readnames, savenames, times_list, [wells_to_export] * m,
+               [output_path] * m, [data_path] * m, [figure_size] * m,
+               [reversal_potential] * m, [save_id] * m)
+    dfs = starmap(n, extract_protocol, args)
 
-        pront(len(dfs))
-        for df in dfs:
-            pront(df)
-        sys.exit(1)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
 
-        if dfs:
-            extract_df = pd.concat(dfs, ignore_index=True)
-            extract_df['selected'] = extract_df['well'].isin(selection)
-        else:
-            logging.error("Didn't export any data")
-            return
+    pront(len(dfs))
+    for df in dfs:
+        pront(df)
+    sys.exit(1)
 
-        logging.info(f"extract_df: {extract_df}")
+    if dfs:
+        extract_df = pd.concat(dfs, ignore_index=True)
+        extract_df['selected'] = extract_df['well'].isin(selection)
+    else:
+        logging.error("Didn't export any data")
+        return
+
+    logging.info(f"extract_df: {extract_df}")
 
     #
     # Do QC3 on first staircase, first sweep VS second staircase, second sweep
@@ -638,7 +639,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     before_data = before_trace.get_trace_sweeps()
     after_data = after_trace.get_trace_sweeps()
 
-    for i_well, well in enumerate(selected_wells):  # Go through all wells
+    for i_well, well in enumerate(selected_wells):
         if i_well % 24 == 0:
             logging.info('row ' + well[0])
 
