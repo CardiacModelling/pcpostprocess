@@ -273,8 +273,7 @@ def run(data_path, output_path, qc_map, wells=None,
 
     m = len(readnames)
     n = min(max_processes, m)
-    args = zip(readnames, savenames, times_list, [output_path] * m,
-               [data_path] * m, [wells] * m, [write_traces] * m, [save_id] * m)
+    args = zip(readnames, savenames, times_list, [data_path] * m, [wells] * m)
     well_selections, qc_dfs = zip(*starmap(n, run_qc_for_protocol, args))
 
     pront(well_selections)
@@ -594,7 +593,6 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     print(f'EXTRACT PROTOCOL {savename}')
     #logging.info(f"Exporting {readname} as {savename}")
 
-    savedir = os.path.join(savedir, '2-extract-protocol')
     traces_dir = os.path.join(savedir, 'traces')
     os.makedirs(traces_dir, exist_ok=True)
     subtraction_plots_dir = os.path.join(savedir, 'subtraction_plots')
@@ -847,8 +845,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     return extract_df
 
 
-def run_qc_for_protocol(readname, savename, time_strs, output_path,
-                        data_path, wells, write_traces, save_id):
+def run_qc_for_protocol(readname, savename, time_strs, data_path, wells):
     """
     Runs a QC procedure for a single protocol, on the selected wells.
 
@@ -861,20 +858,12 @@ def run_qc_for_protocol(readname, savename, time_strs, output_path,
     - Traces are drug subtracted
     - No capacitative spike filtering
 
-    Also:
-    - Creates a directory ``output_path/1-qc``
-    - Writes leak subtracted traces at ``1-qc/save_id-...csv``
-    - Makes leak correction plots at ``output_path/1-qc/leak_correction``.
-      These are the plots made by `fit_linear_leak()`.
 
     @param readname The protocol name, without the time part
     @param savename The shorter name for the protocol
     @param time_strs The time part of the protocol names, must have length 2
-    @param output_path The root directory to chuck everything in
     @param data_path The path to read data from
     @param wells The wells to process
-    @param write_traces True if traces should be written too
-    @param save_id
 
     Returns a tuple `(selected_wells, detailed_qc)`` where ``selected_wells``
     is a list containing all selected well names, and ``detailed_qc`` is a
@@ -899,11 +888,6 @@ def run_qc_for_protocol(readname, savename, time_strs, output_path,
     voltage = before_trace.get_voltage()
     assert np.all(voltage == after_trace.get_voltage())
     hergqc = hERGQC(voltage, sampling_rate)
-
-    # Store stuff to "QC/leak_correction"
-    save_dir = os.path.join(output_path, '1-qc')
-    plot_dir = os.path.join(save_dir, 'leak_correction')
-    os.makedirs(plot_dir, exist_ok=True)
 
     # Assume two sweeps!
     sweeps = [0, 1]
@@ -931,16 +915,10 @@ def run_qc_for_protocol(readname, savename, time_strs, output_path,
         corrected_before = np.empty((nsweeps, nsamples))
         corrected_after = np.empty((nsweeps, nsamples))
         for isweep in range(nsweeps):
-            # Get corrected traces, and make plot
             _, before_leak = fit_linear_leak(
-                raw_before[well][isweep], voltage, times, *ramp_bounds,
-                save_fname=os.path.join(
-                    plot_dir, f'{savename}-{well}-{isweep}-before.png'))
+                raw_before[well][isweep], voltage, times, *ramp_bounds)
             _, after_leak = fit_linear_leak(
-                raw_after[well][isweep], voltage, times, *ramp_bounds,
-                save_fname=os.path.join(
-                    plot_dir, f'{savename}-{well}-{isweep}-after.png'))
-
+                raw_after[well][isweep], voltage, times, *ramp_bounds)
             corrected_before[isweep] = raw_before[well][isweep] - before_leak
             corrected_after[isweep] = raw_after[well][isweep] - after_leak
 
@@ -954,15 +932,6 @@ def run_qc_for_protocol(readname, savename, time_strs, output_path,
 
         if QC.all_passed():
             selected_wells.append(well)
-
-        # Save subtracted current in csv file
-        if write_traces:
-            header = '"current"'
-            for i in range(nsweeps):
-                savepath = os.path.join(
-                    save_dir, f'{save_id}-{savename}-{well}-sweep{i}.csv')
-                subtracted = corrected_before[i] - corrected_after[i]
-                np.savetxt(savepath, subtracted, delimiter=',', header=header)
 
     # TODO: Depends on QC used
     column_labels = ['well', 'qc1.rseal', 'qc1.cm', 'qc1.rseries', 'qc2.raw',
@@ -1154,7 +1123,7 @@ def get_time_constant_of_first_decay(
     ]
 
     # TESTING ONLY
-    # np.random.seed(1)
+    np.random.seed(1)
 
     #  Repeat optimisation with different starting guesses
     x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
