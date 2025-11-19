@@ -28,6 +28,23 @@ from pcpostprocess.leak_correct import fit_linear_leak, get_leak_corrected
 from pcpostprocess.subtraction_plots import do_subtraction_plot
 
 
+def write_csv(data, path, *args, header=None):
+    """
+    Writes a numpy array ``data`` to ``path``.
+
+    Optional extra arguments are used for longer names::
+
+        write_csv(x, 'path', 'to', 'file.csv')
+
+    writes ``x`` to ``path/to/file.csv``.
+    """
+    if header is not None:
+        if not header.startswith('"'):
+            header = f'"{header}"'
+    path = os.path.join(path, *args)
+    np.savetxt(path, data, delimiter=',', comments='', header=header or '')
+
+
 def starmap(n, func, iterable):
     """
     Like ``multiprocessing.Pool.starmap``, but does not use subprocesses when
@@ -628,8 +645,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
         columns=['time', 'voltage'])
     voltage_df.to_csv(os.path.join(
         traces_dir, f"{save_id}-{savename}-voltages.csv"))
-    #np.savetxt(os.path.join(traces_dir, f"{save_id}-{savename}-times.csv"),
-    #           times)
+    #write_csv(times, traces_dir, f'{save_id}-{savename}-times.csv')
+
 
     qc_before = before_trace.get_onboard_QC_values()
     qc_after = after_trace.get_onboard_QC_values()
@@ -646,14 +663,14 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
 
         # Save before and after drug traces as .csv
         for sweep in range(nsweeps):
-            save_fname = os.path.join(
-                traces_dir, f'{save_id}-{savename}-{well}-before-sweep{sweep}.csv')
-            np.savetxt(save_fname, before_data[well][sweep], delimiter=',',
-                       header='"current"')
-            save_fname = os.path.join(
-                traces_dir, f'{save_id}-{savename}-{well}-after-sweep{sweep}.csv')
-            np.savetxt(save_fname, after_data[well][sweep], delimiter=',',
-                       header='"current"')
+            write_csv(
+                before_data[well][sweep], traces_dir,
+                f'{save_id}-{savename}-{well}-before-sweep{sweep}.csv',
+                header='current')
+            write_csv(
+                after_data[well][sweep], traces_dir,
+                f'{save_id}-{savename}-{well}-after-sweep{sweep}.csv',
+                header='current')
 
     # plot subtraction
     fig = plt.figure(figsize=figure_size, layout='constrained')
@@ -783,14 +800,12 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
 
             row_dict['QC4'] = all([x for x, _ in qc4])
 
-            out_fname = os.path.join(traces_dir,
-                                     f"{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv")
-            np.savetxt(out_fname, subtracted_trace.flatten())
+            write_csv(
+                subtracted_trace, traces_dir,
+                f'{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv')
 
-            rows.append(row_dict)
-
-            param, leak = fit_linear_leak(current, voltage, times,
-                                          *ramp_bounds)
+            param, leak = fit_linear_leak(
+                current, voltage, times, *ramp_bounds)
 
             subtracted_trace = current - leak
 
@@ -808,6 +823,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
             row_dict['-120mV decay time constant 2'] = res[0][1]
             row_dict['-120mV decay time constant 3'] = res[1]
             row_dict['-120mV peak current'] = res[2]
+            rows.append(row_dict)
 
         before_leak_current_dict[well] = np.vstack(before_leak_currents)
         after_leak_current_dict[well] = np.vstack(after_leak_currents)
