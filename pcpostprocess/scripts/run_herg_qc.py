@@ -210,7 +210,6 @@ def run(data_path, output_path, qc_map, wells=None,
     # TODO: Replace this by looping over qc_map and write_map?
     res_dict = {}
     for dirname in os.listdir(data_path):
-        print(dirname, os.path.basename(dirname))
         dirname = os.path.basename(dirname)
         match = protocols_regex.match(dirname)
 
@@ -235,7 +234,6 @@ def run(data_path, output_path, qc_map, wells=None,
         for arg in args:
             print(arg)
 
-    pront(res_dict)
     # At this point, despite its name, res_dict is not a dictionary of results,
     # but a map of QC protocol names onto lists of times (see comment above)
 
@@ -252,7 +250,6 @@ def run(data_path, output_path, qc_map, wells=None,
             continue
 
         times = sorted(res_dict[protocol])
-        pront(times)
 
         savename = qc_map[protocol]
 
@@ -283,8 +280,6 @@ def run(data_path, output_path, qc_map, wells=None,
     #   savenames: short user name, repeat has _2 added on
     #   times_list: [before1, after1], [before2, after2]
 
-    pront(readnames, savenames, times_list)
-
     if not readnames:
         raise ValueError('No compatible protocols specified.')
 
@@ -292,9 +287,6 @@ def run(data_path, output_path, qc_map, wells=None,
     n = min(max_processes, m)
     args = zip(readnames, savenames, times_list, [data_path] * m, [wells] * m)
     well_selections, qc_dfs = zip(*starmap(n, run_qc_for_protocol, args))
-
-    pront(well_selections)
-    pront(qc_dfs)
 
     #
     # Assuming a single QC protocol. At this point, we have
@@ -311,7 +303,6 @@ def run(data_path, output_path, qc_map, wells=None,
     #
 
     qc_df = pd.concat(qc_dfs, ignore_index=True)
-    pront(qc_df)
 
     #
     # At this point, ``qc_df`` is a single dataframe containing the information
@@ -336,7 +327,6 @@ def run(data_path, output_path, qc_map, wells=None,
     # Now go over _all_ protocols, including the QC protocols (AGAIN!), and
     # call extract_protocol() on them
     #
-    pront(savenames, readnames, times_list)
 
     # Export all protocols
     savenames, readnames, times_list = [], [], []
@@ -365,9 +355,6 @@ def run(data_path, output_path, qc_map, wells=None,
 
         # TODO Else raise error?
 
-
-    pront(savenames, readnames, times_list)
-
     wells_to_export = wells if write_failed_traces else selection
     logging.info(f'exporting wells {wells_to_export}')
     m = len(readnames)
@@ -376,23 +363,16 @@ def run(data_path, output_path, qc_map, wells=None,
                [output_path] * m, [data_path] * m, [figure_size] * m,
                [reversal_potential] * m, [save_id] * m)
     dfs = starmap(n, extract_protocol, args)
+    if not dfs:
+        raise Exception('No data exported')
 
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', None)
 
-    pront(len(dfs))
-    for df in dfs:
-        pront(df)
+    extract_df = pd.concat(dfs, ignore_index=True)
+    extract_df['selected'] = extract_df['well'].isin(selection)
+    pront(extract_df)
     sys.exit(1)
-
-    if dfs:
-        extract_df = pd.concat(dfs, ignore_index=True)
-        extract_df['selected'] = extract_df['well'].isin(selection)
-    else:
-        logging.error("Didn't export any data")
-        return
-
-    logging.info(f"extract_df: {extract_df}")
 
     #
     # Do QC3 on first staircase, first sweep VS second staircase, second sweep
@@ -605,24 +585,72 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                      data_path, figure_size, reversal_potential, save_id):
     # TODO: Tidy up argument order
     """
-    ???
+    Extracts a (non-QC) protocol, performs more QC(!), and
+
+    Loads the data (again!) and
+    - leak-subtracts it using the leak step
+    - stores before, after, and subtracted traces in ``traces`` (for all
+      sweeps), along with time and voltage traces
+
+
+    - creates and returns a data frame, with entries detailed below
+
+    The dataframe has entries
+    - ``well``
+    - ``sweep``
+    - ``protocol`` (savename)
+    - ``Rseal`` The "before" value
+    - ``Cm `` The "before" value
+    - ``Rseries`` The "before" value
+    - ``gleak_before`` Leak current parameters
+    - ``E_leak_before``
+    - ``gleak_after ``
+    - ``E_leak_after``
+    - ``R_leftover ``
+    - ``QC.R_leftover ``
+    - ``E_rev ``
+    - ``E_rev_before ``
+    - ``E_rev_after ``
+    - ``QC.Erev ``
+    - ``QC6 ``
+    - ``QC1 ``
+    - ``QC4 ``
+    - ``total before-drug flux``
+    - ``-120mV decay time constant 1``
+    - ``-120mV decay time constant 2``
+    - ``-120mV decay time constant 3``
+    - ``-120mV peak current``
+
+    Also:
+    - Creates leak subtraction plots, in ``savedir/subtraction_plots``
+    - Creates reversal ramp plots, in ``savedir/reversal_plots/``
+    - Creates leak correction plots, before and after drug, in
+      ``savedir/leak_correction/saveid-savename-leak_fit-before/after``.
+
     """
-    print(f'EXTRACT PROTOCOL {savename}')
-    #logging.info(f"Exporting {readname} as {savename}")
+    logging.info(f"Exporting {readname} as {savename}")
 
-    traces_dir = os.path.join(savedir, 'traces')
-    os.makedirs(traces_dir, exist_ok=True)
-    subtraction_plots_dir = os.path.join(savedir, 'subtraction_plots')
-    os.makedirs(subtraction_plots_dir, exist_ok=True)
+    trace_dir = os.path.join(savedir, 'traces')
+    subtraction_dir = os.path.join(savedir, 'subtraction_plots')
+    reversal_dir = os.path.join(savedir, 'reversal_plots')
+    leak_dir1 = os.path.join(savedir, 'leak_correction',
+                             f'{save_id}-{savename}-leak_fit-before')
+    leak_dir2 = os.path.join(savedir, 'leak_correction',
+                             f'{save_id}-{savename}-leak_fit-after')
+    for d in (subtraction_dir, reversal_dir, trace_dir, leak_dir1, leak_dir2):
+        os.makedirs(d, exist_ok=True)
 
-    row_dict = {}
-
+    # Load data
     before_trace = Trace(
         os.path.join(data_path, f'{readname}_{time_strs[0]}'),
         f'{readname}_{time_strs[0]}.json')
     after_trace = Trace(
         os.path.join(data_path, f'{readname}_{time_strs[1]}'),
         f'{readname}_{time_strs[1]}')
+
+    # Count sweeps
+    nsweeps = before_trace.NofSweeps
+    assert nsweeps == after_trace.NofSweeps
 
     # Get times and voltages
     times = before_trace.get_times()
@@ -635,18 +663,16 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     voltage_protocol = before_trace.get_voltage_protocol()
     desc = voltage_protocol.get_all_sections()
     ramp_bounds = detect_ramp_bounds(times, desc)
-
-    nsweeps = before_trace.NofSweeps
-    assert nsweeps == after_trace.NofSweeps
+    voltage_steps = [tstart for tstart, tend, vstart, vend in
+                     voltage_protocol.get_all_sections() if vend == vstart]
 
     # Store voltages and times, using 2 different libraries...
-    voltage_df = pd.DataFrame(
-        np.vstack((times.flatten(), voltages.flatten())).T,
-        columns=['time', 'voltage'])
+    # TODO: REPLACE WITH SINGLE TIMES, SINGLE VOLTAGE
+    voltage_df = pd.DataFrame(np.vstack((times, voltages)).T,
+                              columns=['time', 'voltage'])
     voltage_df.to_csv(os.path.join(
-        traces_dir, f"{save_id}-{savename}-voltages.csv"))
-    #write_csv(times, traces_dir, f'{save_id}-{savename}-times.csv')
-
+        trace_dir, f'{save_id}-{savename}-voltages.csv'))
+    #write_csv(times, trace_dir, f'{save_id}-{savename}-times.csv')
 
     qc_before = before_trace.get_onboard_QC_values()
     qc_after = after_trace.get_onboard_QC_values()
@@ -654,170 +680,130 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     before_data = before_trace.get_trace_sweeps()
     after_data = after_trace.get_trace_sweeps()
 
-    for i_well, well in enumerate(selected_wells):
-        if i_well % 24 == 0:
-            logging.info('row ' + well[0])
-
-        if None in qc_before[well] or None in qc_after[well]:
-            continue
-
-        # Save before and after drug traces as .csv
+    # Save before and after drug traces as .csv
+    for well in selected_wells:
         for sweep in range(nsweeps):
             write_csv(
-                before_data[well][sweep], traces_dir,
+                before_data[well][sweep], trace_dir,
                 f'{save_id}-{savename}-{well}-before-sweep{sweep}.csv',
                 header='current')
             write_csv(
-                after_data[well][sweep], traces_dir,
+                after_data[well][sweep], trace_dir,
                 f'{save_id}-{savename}-{well}-after-sweep{sweep}.csv',
                 header='current')
 
-    # plot subtraction
+    # Reusable figure to plot subtraction
     fig = plt.figure(figsize=figure_size, layout='constrained')
 
-    plot_dir = os.path.join(savedir, 'reversal_plots')
-    os.makedirs(plot_dir, exist_ok=True)
-
-    rows = []
-
-    before_leak_current_dict = {}
-    after_leak_current_dict = {}
-
-    out1 = os.path.join(savedir, 'leak_correction',
-                        f'{save_id}-{savename}-leak_fit-before')
-    out2 = os.path.join(savedir, 'leak_correction',
-                        f'{save_id}-{savename}-leak_fit-after')
-    os.makedirs(out1, exist_ok=True)
-    os.makedirs(out2, exist_ok=True)
-
-
+    # Reusable hergqc object
     hergqc = hERGQC(voltages, before_trace.sampling_rate)
+
+    # Process wells, create rows for data frame
+    rows = []
     for well in selected_wells:
-
-        before_leak_currents = []
-        after_leak_currents = []
-
         for sweep in range(nsweeps):
-            row_dict = {
-                'well': well,
-                'sweep': sweep,
-                'protocol': savename
-            }
+            row_dict = {'well': well, 'sweep': sweep, 'protocol': savename}
 
             qc_vals = qc_before[well][sweep]
-            if qc_vals is None:
-                continue
-            if len(qc_vals) == 0:
-                continue
-
             row_dict['Rseal'] = qc_vals[0]
             row_dict['Cm'] = qc_vals[1]
             row_dict['Rseries'] = qc_vals[2]
 
+            # Fit leak using step (again!)
             before_params, before_leak = fit_linear_leak(
                 before_data[well][sweep], voltages, times, *ramp_bounds,
-                save_fname=os.path.join(out1, f'{well}_sweep{sweep}.png'))
-            before_leak_currents.append(before_leak)
-
-            # Convert linear regression parameters into conductance and reversal
-            row_dict['gleak_before'] = before_params[1]
-            row_dict['E_leak_before'] = -before_params[0] / before_params[1]
-
+                save_fname=os.path.join(leak_dir1, f'{well}_sweep{sweep}.png'))
             after_params, after_leak = fit_linear_leak(
                 after_data[well][sweep], voltages, times, *ramp_bounds,
-                save_fname=os.path.join(out2, f'{well}_sweep{sweep}.png'))
+                save_fname=os.path.join(leak_dir2, f'{well}_sweep{sweep}.png'))
+            before_corrected = before_data[well][sweep] - before_leak
+            after_corrected = after_data[well][sweep] - after_leak
 
-            after_leak_currents.append(after_leak)
+            # Store drug-subtracted trace
+            subtracted = before_corrected - after_corrected
+            write_csv(
+                subtracted, trace_dir,
+                f'{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv')
 
-            # Convert linear regression parameters into conductance and reversal
+            # Create subtraction plot
+            fig = plt.figure(figsize=figure_size, layout='constrained')
+            do_subtraction_plot(
+                fig, times, range(nsweeps), before_data[well], after_data[well],
+                voltages, ramp_bounds, well=well, protocol=savename)
+            fig.savefig(os.path.join(
+                subtraction_dir,
+                f'{save_id}-{savename}-{well}-sweep{sweep}-subtraction'))
+            plt.close(fig)
+
+            # Store conductance and reversal
+            row_dict['gleak_before'] = before_params[1]
+            row_dict['E_leak_before'] = -before_params[0] / before_params[1]
             row_dict['gleak_after'] = after_params[1]
             row_dict['E_leak_after'] = -after_params[0] / after_params[1]
 
-            subtracted_trace = before_data[well][sweep] - before_leak\
-                - (after_data[well][sweep] - after_leak)
-            after_corrected = after_data[well][sweep] - after_leak
-            before_corrected = before_data[well][sweep] - before_leak
+            # Add "R_leftover" QC
+            QC_R_leftover = np.sqrt(np.sum(after_corrected**2) /
+                                    np.sum(before_corrected**2))
+            row_dict['R_leftover'] = QC_R_leftover
+            row_dict['QC.R_leftover'] = np.all(row_dict['R_leftover'] < 0.5)
 
+            # Infer reversal potential and store, creating plots in the process
             E_rev_before = infer_reversal_potential(
                 before_corrected, times, desc, voltages,
                 output_path=os.path.join(
-                    plot_dir, f'{well}_{savename}_sweep{sweep}_before'),
+                    reversal_dir, f'{well}_{savename}_sweep{sweep}_before.png'),
                 known_Erev=reversal_potential)
-
             E_rev_after = infer_reversal_potential(
                 after_corrected, times, desc, voltages,
                 output_path=os.path.join(
-                    plot_dir, f'{well}_{savename}_sweep{sweep}_after'),
+                    reversal_dir, f'{well}_{savename}_sweep{sweep}_after.png'),
                 known_Erev=reversal_potential)
-
             E_rev = infer_reversal_potential(
-                subtracted_trace, times, desc, voltages,
+                subtracted, times, desc, voltages,
                 output_path=os.path.join(
-                    plot_dir, f'{well}_{savename}_sweep{sweep}_subtracted'),
+                    reversal_dir, f'{well}_{savename}_sweep{sweep}_subtracted.png'),
                 known_Erev=reversal_potential)
 
-            row_dict['R_leftover'] =\
-                np.sqrt(np.sum((after_corrected)**2)/(np.sum(before_corrected**2)))
-
-            QC_R_leftover = np.all(row_dict['R_leftover'] < 0.5)
-            row_dict['QC.R_leftover'] = QC_R_leftover
-
+            # Store Erevs parameters
             row_dict['E_rev'] = E_rev
             row_dict['E_rev_before'] = E_rev_before
             row_dict['E_rev_after'] = E_rev_after
 
+            # Add Erev QC
             row_dict['QC.Erev'] = E_rev < -50 and E_rev > -120
 
             # Check QC6 for each protocol (not just the staircase)
+            # For this, use a capacitance-filtered trace
+            filtered = hergqc.filter_capacitive_spikes(
+                subtracted, times, voltage_steps)
+            row_dict['QC6'] = hergqc.qc6(filtered, win=hergqc.qc6_win)[0]
 
-
-
-            times = before_trace.get_times()
-            voltage = before_trace.get_voltage()
-            voltage_protocol = before_trace.get_voltage_protocol()
-
-            voltage_steps = [tstart
-                             for tstart, tend, vstart, vend in
-                             voltage_protocol.get_all_sections() if vend == vstart]
-
-            current = hergqc.filter_capacitive_spikes(before_corrected - after_corrected,
-                                                      times, voltage_steps)
-
-            row_dict['QC6'] = hergqc.qc6(current, win=hergqc.qc6_win)[0]
-
-            #  Assume there is only one sweep for all non-QC protocols
+            # Check QC1 and QC4, but between before and after traces (assume
+            # there is only one sweep for non-QC protocols)
             rseal_before, cm_before, rseries_before = qc_before[well][0]
             rseal_after, cm_after, rseries_after = qc_after[well][0]
-
             qc1_1 = hergqc.qc1(rseal_before, cm_before, rseries_before)
             qc1_2 = hergqc.qc1(rseal_after, cm_after, rseries_after)
-
             row_dict['QC1'] = all([x for x, _ in qc1_1 + qc1_2])
-
             qc4 = hergqc.qc4([rseal_before, rseal_after],
                              [cm_before, cm_after],
                              [rseries_before, rseries_after])
-
             row_dict['QC4'] = all([x for x, _ in qc4])
 
-            write_csv(
-                subtracted_trace, traces_dir,
-                f'{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv')
+            # Add a "total flux" value to the data frame, based on the drug
+            # subtracted and capacitance filtered current
+            dt = times[1] - times[0]
+            row_dict['total before-drug flux'] = np.sum(filtered) / dt
+            # TODO: This measure can be dropped
 
-            param, leak = fit_linear_leak(
-                current, voltage, times, *ramp_bounds)
-
-            subtracted_trace = current - leak
-
-            t_step = times[1] - times[0]
-            row_dict['total before-drug flux'] = np.sum(current) * (1.0 / t_step)
+            # Estimate time constants, based on a trace with yet another round
+            # of leak-step correction
+            _, leak = fit_linear_leak(filtered, voltages, times, *ramp_bounds)
+            fname = os.path.join(
+                savedir, '-120mV time constant',
+                f'{savename}-{well}-sweep{sweep}-time-constant-fit.png')
             res = get_time_constant_of_first_decay(
-                subtracted_trace, times, desc,
-                os.path.join(
-                    savedir, 'debug', '-120mV time constant',
-                    f'{savename}-{well}-sweep{sweep}-time-constant-fit.png'),
-                figure_size
-            )
+                filtered - leak, times, desc, fname, figure_size)
 
             row_dict['-120mV decay time constant 1'] = res[0][0]
             row_dict['-120mV decay time constant 2'] = res[0][1]
@@ -825,38 +811,8 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
             row_dict['-120mV peak current'] = res[2]
             rows.append(row_dict)
 
-        before_leak_current_dict[well] = np.vstack(before_leak_currents)
-        after_leak_current_dict[well] = np.vstack(after_leak_currents)
-
     extract_df = pd.DataFrame.from_dict(rows)
     logging.debug(extract_df)
-
-    times = before_trace.get_times()
-    voltages = before_trace.get_voltage()
-
-    for well in selected_wells:
-        before_current = before_data[well]
-        after_current = after_data[well]
-
-        before_leak_currents = before_leak_current_dict[well]
-        after_leak_currents = after_leak_current_dict[well]
-
-        sub_df = extract_df[extract_df.well == well]
-
-        if len(sub_df.index) == 0:
-            continue
-
-        sweeps = sorted(list(sub_df.sweep.unique()))
-
-        do_subtraction_plot(fig, times, sweeps, before_current, after_current,
-                            voltages, ramp_bounds, well=well,
-                            protocol=savename)
-
-        fig.savefig(os.path.join(subtraction_plots_dir,
-                                 f'{save_id}-{savename}-{well}-sweep{sweep}-subtraction'))
-        fig.clf()
-
-    plt.close(fig)
 
     return extract_df
 
@@ -886,7 +842,6 @@ def run_qc_for_protocol(readname, savename, time_strs, data_path, wells):
     pandas dataframe containing the pass/fail status of all individual QC
     criteria, for all wells.
     """
-    print(f'RUN HERG QC FOR {readname}, {time_strs}, {savename}')
 
     # TODO Tidy up argument order
     assert len(time_strs) == 2
@@ -998,7 +953,6 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 
     Returns a dictionary mapping well names to booleans.
     """
-    print('RUN QC3 bookend')
     assert len(time_strs) == 4
 
     filepath_first_before = os.path.join(data_path, f'{readname}_{time_strs[0]}')
@@ -1091,6 +1045,8 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 def get_time_constant_of_first_decay(
         trace, times, protocol_desc, output_path, figure_size):
     """
+    Fits a XXX exponential to the -120mV step following the 40mV step at the
+    start of most protocols.
     ???
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -1111,45 +1067,40 @@ def get_time_constant_of_first_decay(
 
     indices = np.argwhere((times >= peak_time) & (times <= tend - 50))
 
-    def fit_func(x, args=None):
-        # Pass 'args=single' when we want to use a single exponential.
-        # Otherwise use 2 exponentials
-        if args:
-            single = args == 'single'
-        else:
-            single = False
-
-        if not single:
-            a, b, c, d = x
-            if d < b:
-                b, d = d, b
-            prediction = c * np.exp((-1.0/d) * (times[indices] - peak_time)) + \
-                a * np.exp((-1.0/b) * (times[indices] - peak_time))
-        else:
-            a, b = x
-            prediction = a * np.exp((-1.0/b) * (times[indices] - peak_time))
-
+    def fit1(x):
+        """ Error function to fit a one exponential. """
+        a, b = x
+        # prediction = a * np.exp((peak_time - times[indices]) / b)
+        # No major difference, but keeps it compatible with original code
+        prediction = a * np.exp((-1.0/b) * (times[indices] - peak_time))
         return np.sum((prediction - trace[indices])**2)
 
-    bounds = [
-        (-np.abs(trace).max()*2, 0),
-        (1e-12, 5e3),
-        (-np.abs(trace).max()*2, 0),
-        (1e-12, 5e3),
-    ]
+    def fit2(x):
+        """ Error function to fit two exponentials. """
+        a, b, c, d = x
+        if d < b:
+            b, d = d, b
+        # prediction = (c * np.exp((peak_time - times[indices]) / d) +
+        #              a * np.exp((peak_time - times[indices]) / b))
+        prediction = (c * np.exp((-1.0/d) * (times[indices] - peak_time)) +
+                      a * np.exp((-1.0/b) * (times[indices] - peak_time)))
+        return np.sum((prediction - trace[indices])**2)
+
+    a_bounds = (-np.abs(trace).max()*2, 0)
+    b_bounds = (1e-12, 5e3)
 
     # TESTING ONLY
     np.random.seed(1)
 
     #  Repeat optimisation with different starting guesses
-    x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
-
+    bounds = (a_bounds, b_bounds, a_bounds, b_bounds)
+    x0s = [[np.random.uniform(*b) for b in bounds] for i in range(100)]
+    # Not required, but keeps it compatible with original code
     x0s = [[a, b, c, d] if d < b else [a, d, c, b] for (a, b, c, d) in x0s]
 
     best_res = None
     for x0 in x0s:
-        res = scipy.optimize.minimize(fit_func, x0=x0,
-                                      bounds=bounds)
+        res = scipy.optimize.minimize(fit2, x0=x0, bounds=bounds)
         if best_res is None:
             best_res = res
         elif res.fun < best_res.fun and res.success and res.fun != 0:
@@ -1157,18 +1108,12 @@ def get_time_constant_of_first_decay(
     res1 = best_res
 
     #  Re-run with single exponential
-    bounds = [
-        (-np.abs(trace).max()*2, 0),
-        (1e-12, 5e3),
-    ]
-
-    #  Repeat optimisation with different starting guesses
-    x0s = [[np.random.uniform(lower_b, upper_b) for lower_b, upper_b in bounds] for i in range(100)]
+    bounds = (a_bounds, b_bounds)
+    x0s = [[np.random.uniform(*b) for b in bounds] for i in range(100)]
 
     best_res = None
     for x0 in x0s:
-        res = scipy.optimize.minimize(fit_func, x0=x0,
-                                      bounds=bounds, args=('single',))
+        res = scipy.optimize.minimize(fit1, x0=x0, bounds=bounds)
         if best_res is None:
             best_res = res
         elif res.fun < best_res.fun and res.success and res.fun != 0:
@@ -1176,75 +1121,75 @@ def get_time_constant_of_first_decay(
     res2 = best_res
 
     if not res2:
-        logging.warning('finding 120mv decay timeconstant failed:' + str(res))
+        logging.warning(f'finding 120mv decay timeconstant failed: {res}')
 
-    if output_path and res:
-        fig = plt.figure(figsize=figure_size, constrained_layout=True)
-        axs = fig.subplots(2)
+    # Create a plot
+    fig = plt.figure(figsize=figure_size, constrained_layout=True)
+    axs = fig.subplots(2)
 
-        for ax in axs:
-            ax.spines[['top', 'right']].set_visible(False)
-            ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
+    for ax in axs:
+        ax.spines[['top', 'right']].set_visible(False)
+        ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
 
-        axs[-1].set_xlabel(r'$t$ (ms)')
+    axs[-1].set_xlabel(r'$t$ (ms)')
 
-        protocol_ax, fit_ax = axs
-        protocol_ax.set_title('a', fontweight='bold', loc='left')
-        fit_ax.set_title('b', fontweight='bold', loc='left')
-        fit_ax.plot(peak_time, peak_current, marker='x', color='red')
+    protocol_ax, fit_ax = axs
+    protocol_ax.set_title('a', fontweight='bold', loc='left')
+    fit_ax.set_title('b', fontweight='bold', loc='left')
+    fit_ax.plot(peak_time, peak_current, marker='x', color='red')
 
-        a, b, c, d = res1.x
+    a, b, c, d = res1.x
 
-        if d < b:
-            b, d = d, b
+    if d < b:
+        b, d = d, b
 
-        e, f = res2.x
+    e, f = res2.x
 
-        fit_ax.plot(times[indices], trace[indices], color='grey',
-                    alpha=.5)
-        fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))
-                    + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
-                    color='red', linestyle='--')
+    fit_ax.plot(times[indices], trace[indices], color='grey',
+                alpha=.5)
+    fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))
+                + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
+                color='red', linestyle='--')
 
-        res_string = r'$\tau_{1} = ' f"{d:.1f}" r'\mathrm{ms}'\
-            r'\; \tau_{2} = ' f"{b:.1f}" r'\mathrm{ms}$'
+    res_string = r'$\tau_{1} = ' f"{d:.1f}" r'\mathrm{ms}'\
+        r'\; \tau_{2} = ' f"{b:.1f}" r'\mathrm{ms}$'
 
-        fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
+    fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
 
-        protocol_ax.plot(times, trace)
-        protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
+    protocol_ax.plot(times, trace)
+    protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
 
-        fig.savefig(output_path)
-        fit_ax.set_yscale('symlog')
+    fig.savefig(output_path)
+    fit_ax.set_yscale('symlog')
 
-        dirname, filename = os.path.split(output_path)
-        filename = 'log10_' + filename
-        fig.savefig(os.path.join(dirname, filename))
+    dirname, filename = os.path.split(output_path)
+    filename = 'log10_' + filename
+    fig.savefig(os.path.join(dirname, filename))
 
-        fit_ax.cla()
+    fit_ax.cla()
 
-        dirname, filename = os.path.split(output_path)
-        filename = 'single_exp_' + filename
-        output_path = os.path.join(dirname, filename)
+    dirname, filename = os.path.split(output_path)
+    filename = 'single_exp_' + filename
+    output_path = os.path.join(dirname, filename)
 
-        fit_ax.plot(times[indices], trace[indices], color='grey',
-                    alpha=.5)
-        fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
-                    color='red', linestyle='--')
+    fit_ax.plot(times[indices], trace[indices], color='grey',
+                alpha=.5)
+    fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
+                color='red', linestyle='--')
 
-        res_string = r'$\tau = ' f"{f:.1f}" r'\mathrm{ms}$'
+    res_string = r'$\tau = ' f"{f:.1f}" r'\mathrm{ms}$'
 
-        fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
-        fig.savefig(output_path)
+    fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
+    fig.savefig(output_path)
 
-        dirname, filename = os.path.split(output_path)
-        filename = 'log10_' + filename
-        fit_ax.set_yscale('symlog')
-        fig.savefig(os.path.join(dirname, filename))
+    dirname, filename = os.path.split(output_path)
+    filename = 'log10_' + filename
+    fit_ax.set_yscale('symlog')
+    fig.savefig(os.path.join(dirname, filename))
 
-        plt.close(fig)
+    plt.close(fig)
 
-    return (d, b), f, peak_current if res else (np.nan, np.nan), np.nan, peak_current
+    return (d, b), f, peak_current if res1 else (np.nan, np.nan), np.nan, peak_current
 
 
 if __name__ == '__main__':  # pragma: no cover
