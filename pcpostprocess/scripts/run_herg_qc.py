@@ -135,9 +135,14 @@ def run(data_path, output_path, qc_map, wells=None,
 
     This proceeds with the following steps:
 
-    1. All wells (or those selected with ``wells``) are run through "plain" QC,
-       for every protocol in ``qc_map``.
-
+    1. All wells (or those selected with ``wells``) are run through staircase
+       QC, for every protocol in ``qc_map``. These protocols are expected to be
+       run either 2 times (before all other protocols, with and without IKr
+       blocker) or 4 times (before _and_ after all other protocols). This test
+       is performed by :meth:`run_staircase_qc`.
+    2. The list of wells that pass staircase QC are then stored in a file
+       ``selected-{save_id}-txt``.
+    3. For all protocols in either ``qc_map`` or
 
 
 
@@ -145,19 +150,22 @@ def run(data_path, output_path, qc_map, wells=None,
 
     @param data_path The path to read data from
     @param output_path The path to write output to
-    @param qc_map A dictionary mapping input protocol names to output names.
-           All protocols in this dictionary will be used for quality control.
+    @param qc_map A dictionary mapping staircase protocol names to output
+           names. All protocols in this dictionary will be used for staircase
+           quality control and export.
     @param wells A list of strings indicating the wells to use, or ``None`` for
            all wells.
     @param write_traces Set to ``True`` to write (raw and processed) traces to
            the output directory in CSV format.
     @param write_failed_traces Set to ``True`` to write traces for wells
            failing quality control.  Ignored if ``write_traces=False`.
-    @param write_map A dictionary like ``qc_map``, but specifying protocols to
-           write traces for without using them in quality control. Ignored if
+    @param write_map A dictionary like ``qc_map``, but specifying non-staircase
+           protocols to run generic QC on and export. Ignored if
            ``write_traces=False`.
     @param reversal_potential The calculated reversal potential, in mV.
-    @param reversal_spread_threshold The maximum reversal
+    @param reversal_spread_threshold The maximum range of reversal potential
+           values in all tested protocols (``qc_map`` and ``write_map`` if
+           ``write_traces=True``).
     @param max_processes The maximum number of processes to run simultaneously
     @param figure_size An optional tuple specifying the size of figures to
            create
@@ -229,29 +237,35 @@ def run(data_path, output_path, qc_map, wells=None,
 
         res_dict[protocol_name].append(time)
 
-    def pront(*args):
-        print('********')
+    #TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+
+    def pront(*args, t=None):
+        if t is None:
+            print('********')
+        else:
+            print(f'******** {t} ********')
         for arg in args:
             print(arg)
+
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+
+    #TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
 
     # At this point, despite its name, res_dict is not a dictionary of results,
     # but a map of QC protocol names onto lists of times (see comment above)
 
     #
-    # Prepare arguments to call `run_qc_for_protocol`
+    # Prepare arguments to call `run_staircase_qc`
     #
-
-    combined_dict = qc_map | write_map
 
     # Select QC protocols and times
     readnames, savenames, times_list = [], [], []
     for protocol in res_dict:
         if protocol not in qc_map:
             continue
-
-        times = sorted(res_dict[protocol])
-
         savename = qc_map[protocol]
+        times = sorted(res_dict[protocol])
 
         if len(times) == 2:
             savenames.append(savename)
@@ -264,14 +278,14 @@ def run(data_path, output_path, qc_map, wells=None,
             times_list.append([times[0], times[2]])
 
             # Make seperate savename for protocol repeat
-            savename = combined_dict[protocol] + '_2'
+            savename = qc_map[protocol] + '_2'
             assert savename not in write_map.values()
             savenames.append(savename)
             times_list.append([times[1], times[3]])
             readnames.append(protocol)
 
         else:
-            raise ValueError('Expecting 2 or 4 repeats of the QC protocol')
+            raise Exception('Expecting QC protocol run 2 or 4 times')
 
     # For two repeats, we now have
     #   savenames: short user name, one per QC protocol
@@ -286,7 +300,7 @@ def run(data_path, output_path, qc_map, wells=None,
     m = len(readnames)
     n = min(max_processes, m)
     args = zip(readnames, savenames, times_list, [data_path] * m, [wells] * m)
-    well_selections, qc_dfs = zip(*starmap(n, run_qc_for_protocol, args))
+    well_selections, qc_dfs = zip(*starmap(n, run_staircase_qc, args))
 
     #
     # Assuming a single QC protocol. At this point, we have
@@ -310,11 +324,11 @@ def run(data_path, output_path, qc_map, wells=None,
     # where for the second run it has _2 appended
     #
 
-    # Combine QC protocls into overall_selection
-    selection = [set(x) for x in well_selections]
-    selection = selection[0].intersection(*selection[1:])
+    # Get set of wells passing both s1 and s2 QC
+    selection = set(well_selections[0]).intersection(set(well_selections[1]))
 
-    # Store "plain QC" selections in "selected" files
+    # Store wells selected by "plain QC" in files starting "selected-"
+    # TODO: name something more specific, e.g. passed-staircase-{save_id}.txt
     fname = os.path.join(output_path, f'selected-{save_id}.txt')
     with open(fname, 'w') as f:
         f.write('\n'.join(selection))
@@ -324,19 +338,19 @@ def run(data_path, output_path, qc_map, wells=None,
             f.write('\n'.join(partial))
 
     #
-    # Now go over _all_ protocols, including the QC protocols (AGAIN!), and
-    # call extract_protocol() on them
+    # Now go over _all_ protocols, including the QC protocols (again!), and
+    # call run_generic_qc() on them
     #
+    combined_dict = qc_map | write_map
 
     # Export all protocols
     savenames, readnames, times_list = [], [], []
     for protocol in res_dict:
 
         # Sort into chronological order
-        times = sorted(res_dict[protocol])
         savename = combined_dict[protocol]
-
         readnames.append(protocol)
+        times = sorted(res_dict[protocol])
 
         if len(times) == 2:
             savenames.append(savename)
@@ -350,10 +364,11 @@ def run(data_path, output_path, qc_map, wells=None,
             savename = combined_dict[protocol] + '_2'
             assert savename not in combined_dict.values()
             savenames.append(savename)
-            times_list.append(times[1::2])
             readnames.append(protocol)
+            times_list.append(times[1::2])
 
-        # TODO Else raise error?
+        else:
+            raise Exception('Expecting QC protocol run 2 or 4 times')
 
     wells_to_export = wells if write_failed_traces else selection
     logging.info(f'exporting wells {wells_to_export}')
@@ -362,64 +377,89 @@ def run(data_path, output_path, qc_map, wells=None,
     args = zip(readnames, savenames, times_list, [wells_to_export] * m,
                [output_path] * m, [data_path] * m, [figure_size] * m,
                [reversal_potential] * m, [save_id] * m)
-    dfs = starmap(n, extract_protocol, args)
+    dfs = starmap(n, run_generic_qc, args)
     if not dfs:
         raise Exception('No data exported')
 
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.max_rows', None)
+    #
+    # At this point, dfs is a list containing one dataframe _per protocol_. If
+    # write_failed_traces is set, each dataframe contains information on all
+    # wells, if not, each contains information only on wells passing
+    # staircase QC.
+    #
 
     extract_df = pd.concat(dfs, ignore_index=True)
     extract_df['selected'] = extract_df['well'].isin(selection)
-    pront(extract_df)
-    sys.exit(1)
 
     #
-    # Do QC3 on first staircase, first sweep VS second staircase, second sweep
-    # qc3.bookend check very first and very last staircases are similar
+    # At this point, extract_df is a big dataframe with information about all
+    # protocols for all wells (write_failed_traces=True) or just the wells
+    # passing staircase QC (write_failed_traces=False).
+    # It inludes new calculated quantities such as ``Erev`` and ``R_leftover``.
     #
 
+    #
+    # QC3-bookend: Run QC3 on first sweep of first staircase VS second sweep of
+    # second staircase: this checks if the very first and very last staircases
+    # are similar (after drug subtraction)
+    #
+    # This is run on all wells, regardless of staircase QC.
+    #
     protocol, savename = list(qc_map.items())[0]
     times = sorted(res_dict[protocol])
     if len(times) == 4:
+        # If we have staircase-other-staircase before & after drug
         qc3_bookend_dict = qc3_bookend(
             protocol, savename, times, wells, output_path, data_path,
             figure_size, save_id)
-    else:
-        #TODO: Better indicate that it wasn't run?
+    elif len(times) == 2:
+        # TODO: Better to indicate that it wasn't run?
         qc3_bookend_dict = {well: True for well in qc_df.well.unique()}
+    else:
+        raise Exception('Expecting QC protocol run 2 or 4 times')
+
+    # Store the results by adding an extra column to qc_df
     qc_df['qc3.bookend'] = [qc3_bookend_dict[well] for well in qc_df.well]
-    pront(qc_df)
+    del(qc3_bookend_dict)
 
     #
     #
     #
 
-    qc_erev_spread = {}
     erev_spreads = {}
+    qc_erev_spread = {}
     passed_qc_dict = {}
     for well in extract_df.well.unique():
-        logging.info(f"Checking QC for well {well}")
-        # Select only this well
+        logging.info(f'Checking final QC for well {well}')
+
+        # Get extract_df and qc_df for only this well
         sub_df = extract_df[extract_df.well == well]
         sub_qc_df = qc_df[qc_df.well == well]
 
-        passed_qc3_bookend = np.all(sub_qc_df['qc3.bookend'].values)
-        logging.info(f"passed_QC3_bookend_all {passed_qc3_bookend}")
+        # Check if generic QC passed for all protocols for this well
         passed_QC_Erev_all = np.all(sub_df['QC.Erev'].values)
         passed_QC1_all = np.all(sub_df.QC1.values)
-        logging.info(f"passed_QC1_all {passed_QC1_all}")
-
         passed_QC4_all = np.all(sub_df.QC4.values)
-        logging.info(f"passed_QC4_all {passed_QC4_all}")
         passed_QC6_all = np.all(sub_df.QC6.values)
-        logging.info(f"passed_QC6_all {passed_QC1_all}")
+        passed_qc3_bookend = np.all(sub_qc_df['qc3.bookend'].values)
+        passed_QC_Erev_all = np.all(sub_df['QC.Erev'].values)
+        logging.info(f'passed_QC1_all {passed_QC1_all}')
+        logging.info(f'passed_QC4_all {passed_QC4_all}')
+        logging.info(f'passed_QC6_all {passed_QC6_all}')
+        logging.info(f'passed_QC3_bookend_all {passed_qc3_bookend}')
+        logging.info(f'passed_QC_Erev_all {passed_QC_Erev_all}')
 
+
+        # Perform "QC_Erev_spread": this passes if the range of E_rev values in
+        # all protocols is below a threshold
+        # QC Erev spread: check spread in reversal potential isn't too large
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
-        # QC Erev spread: check spread in reversal potential isn't too large
         passed_QC_Erev_spread = E_rev_spread <= reversal_spread_threshold
-        logging.info(f"passed_QC_Erev_spread {passed_QC_Erev_spread}")
+        logging.info(f'passed_QC_Erev_spread {passed_QC_Erev_spread}')
+        del(E_revs)
+        erev_spreads[well] = E_rev_spread
+        qc_erev_spread[well] = passed_QC_Erev_spread
 
         # R_leftover only considered for protocols used for QC (i.e. staircase protocols)
         passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(qc_map.values())]
@@ -427,29 +467,31 @@ def run(data_path, output_path, qc_map, wells=None,
 
         logging.info(f"passed_QC_R_leftover {passed_QC_R_leftover}")
 
-        passed_QC_Erev_spread = E_rev_spread <= reversal_spread_threshold
 
-        qc_erev_spread[well] = passed_QC_Erev_spread
-        erev_spreads[well] = E_rev_spread
+        passed_staircase_QC = np.all(sub_df['selected'].values)
 
-        passed_QC_Erev_all = np.all(sub_df['QC.Erev'].values)
-        logging.info(f"passed_QC_Erev_all {passed_QC_Erev_all}")
-
-        was_selected = np.all(sub_df['selected'].values)
-
-        passed_qc = passed_qc3_bookend and was_selected\
-            and passed_QC_Erev_all and passed_QC6_all\
-            and passed_QC_Erev_spread and passed_QC1_all\
+        passed_qc = (
+            passed_staircase_QC
+            and passed_QC1_all
             and passed_QC4_all
+            and passed_QC6_all
+            and passed_qc3_bookend
+            and passed_QC_Erev_all
+            and passed_QC_Erev_spread
+        )
 
         passed_qc_dict[well] = passed_qc
 
+    pront(extract_df, t='extract_df, pre')
     extract_df['passed QC'] = [passed_qc_dict[well] for well in extract_df.well]
     extract_df['QC.Erev.spread'] = [qc_erev_spread[well] for well in extract_df.well]
     extract_df['Erev_spread'] = [erev_spreads[well] for well in extract_df.well]
+    pront(extract_df, t='extract_df, post')
+    sys.exit(1)
 
     chrono_dict = {times[0]: prot for prot, times in zip(savenames, times_list)}
 
+    pront('CHRONO', os.path.join(output_path, 'chrono.txt'))
     with open(os.path.join(output_path, 'chrono.txt'), 'w') as fout:
         for key in sorted(chrono_dict):
             val = chrono_dict[key]
@@ -581,18 +623,18 @@ def create_qc_table(qc_df):
     return ret_df
 
 
-def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
-                     data_path, figure_size, reversal_potential, save_id):
-    # TODO: Tidy up argument order
+def run_generic_qc(readname, savename, time_strs, selected_wells, savedir,
+                   data_path, figure_size, reversal_potential, save_id):
     """
-    Extracts a (non-QC) protocol, performs more QC(!), and
+    Performs QC on a protocol (staircase or other), and extracts and stores the
+    data.
 
     Loads the data (again!) and
     - leak-subtracts it using the leak step
     - stores before, after, and subtracted traces in ``traces`` (for all
       sweeps), along with time and voltage traces
-
-
+    - performs QC (1, 4, 6, Erev, R_leftover) using the meta data, leak step,
+      and up-down step after the leak step
     - creates and returns a data frame, with entries detailed below
 
     The dataframe has entries
@@ -628,7 +670,7 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
       ``savedir/leak_correction/saveid-savename-leak_fit-before/after``.
 
     """
-    logging.info(f"Exporting {readname} as {savename}")
+    logging.info(f'Exporting {readname} as {savename}')
 
     trace_dir = os.path.join(savedir, 'traces')
     subtraction_dir = os.path.join(savedir, 'subtraction_plots')
@@ -702,12 +744,12 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     rows = []
     for well in selected_wells:
         for sweep in range(nsweeps):
-            row_dict = {'well': well, 'sweep': sweep, 'protocol': savename}
+            row = {'well': well, 'sweep': sweep, 'protocol': savename}
 
             qc_vals = qc_before[well][sweep]
-            row_dict['Rseal'] = qc_vals[0]
-            row_dict['Cm'] = qc_vals[1]
-            row_dict['Rseries'] = qc_vals[2]
+            row['Rseal'] = qc_vals[0]
+            row['Cm'] = qc_vals[1]
+            row['Rseries'] = qc_vals[2]
 
             # Fit leak using step (again!)
             before_params, before_leak = fit_linear_leak(
@@ -736,16 +778,16 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
             plt.close(fig)
 
             # Store conductance and reversal
-            row_dict['gleak_before'] = before_params[1]
-            row_dict['E_leak_before'] = -before_params[0] / before_params[1]
-            row_dict['gleak_after'] = after_params[1]
-            row_dict['E_leak_after'] = -after_params[0] / after_params[1]
+            row['gleak_before'] = before_params[1]
+            row['E_leak_before'] = -before_params[0] / before_params[1]
+            row['gleak_after'] = after_params[1]
+            row['E_leak_after'] = -after_params[0] / after_params[1]
 
             # Add "R_leftover" QC
             QC_R_leftover = np.sqrt(np.sum(after_corrected**2) /
                                     np.sum(before_corrected**2))
-            row_dict['R_leftover'] = QC_R_leftover
-            row_dict['QC.R_leftover'] = np.all(row_dict['R_leftover'] < 0.5)
+            row['R_leftover'] = QC_R_leftover
+            row['QC.R_leftover'] = np.all(row['R_leftover'] < 0.5)
 
             # Infer reversal potential and store, creating plots in the process
             E_rev_before = infer_reversal_potential(
@@ -765,18 +807,18 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
                 known_Erev=reversal_potential)
 
             # Store Erevs parameters
-            row_dict['E_rev'] = E_rev
-            row_dict['E_rev_before'] = E_rev_before
-            row_dict['E_rev_after'] = E_rev_after
+            row['E_rev'] = E_rev
+            row['E_rev_before'] = E_rev_before
+            row['E_rev_after'] = E_rev_after
 
             # Add Erev QC
-            row_dict['QC.Erev'] = E_rev < -50 and E_rev > -120
+            row['QC.Erev'] = E_rev < -50 and E_rev > -120
 
             # Check QC6 for each protocol (not just the staircase)
             # For this, use a capacitance-filtered trace
             filtered = hergqc.filter_capacitive_spikes(
                 subtracted, times, voltage_steps)
-            row_dict['QC6'] = hergqc.qc6(filtered, win=hergqc.qc6_win)[0]
+            row['QC6'] = hergqc.qc6(filtered, win=hergqc.qc6_win)[0]
 
             # Check QC1 and QC4, but between before and after traces (assume
             # there is only one sweep for non-QC protocols)
@@ -784,16 +826,16 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
             rseal_after, cm_after, rseries_after = qc_after[well][0]
             qc1_1 = hergqc.qc1(rseal_before, cm_before, rseries_before)
             qc1_2 = hergqc.qc1(rseal_after, cm_after, rseries_after)
-            row_dict['QC1'] = all([x for x, _ in qc1_1 + qc1_2])
+            row['QC1'] = all([x for x, _ in qc1_1 + qc1_2])
             qc4 = hergqc.qc4([rseal_before, rseal_after],
                              [cm_before, cm_after],
                              [rseries_before, rseries_after])
-            row_dict['QC4'] = all([x for x, _ in qc4])
+            row['QC4'] = all([x for x, _ in qc4])
 
             # Add a "total flux" value to the data frame, based on the drug
             # subtracted and capacitance filtered current
             dt = times[1] - times[0]
-            row_dict['total before-drug flux'] = np.sum(filtered) / dt
+            row['total before-drug flux'] = np.sum(filtered) / dt
             # TODO: This measure can be dropped
 
             # Estimate time constants, based on a trace with yet another round
@@ -805,11 +847,11 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
             res = get_time_constant_of_first_decay(
                 filtered - leak, times, desc, fname, figure_size)
 
-            row_dict['-120mV decay time constant 1'] = res[0][0]
-            row_dict['-120mV decay time constant 2'] = res[0][1]
-            row_dict['-120mV decay time constant 3'] = res[1]
-            row_dict['-120mV peak current'] = res[2]
-            rows.append(row_dict)
+            row['-120mV decay time constant 1'] = res[0][0]
+            row['-120mV decay time constant 2'] = res[0][1]
+            row['-120mV decay time constant 3'] = res[1]
+            row['-120mV peak current'] = res[2]
+            rows.append(row)
 
     extract_df = pd.DataFrame.from_dict(rows)
     logging.debug(extract_df)
@@ -817,9 +859,9 @@ def extract_protocol(readname, savename, time_strs, selected_wells, savedir,
     return extract_df
 
 
-def run_qc_for_protocol(readname, savename, time_strs, data_path, wells):
+def run_staircase_qc(readname, savename, time_strs, data_path, wells):
     """
-    Runs a QC procedure for a single protocol, on the selected wells.
+    Runs a QC procedure for a single staircase run, on the selected wells.
 
     Assumes:
     - time_strs has length 2, corresponding to a before- and after-drug trace
@@ -829,7 +871,6 @@ def run_qc_for_protocol(readname, savename, time_strs, data_path, wells):
     - Traces are leak corrected with `fit_linear_leak`
     - Traces are drug subtracted
     - No capacitative spike filtering
-
 
     @param readname The protocol name, without the time part
     @param savename The shorter name for the protocol
@@ -935,7 +976,7 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
     staircase with the second sweep of the second staircase.
 
     Also:
-    - Creates a directory ``output_path/3-qc3-bookend``
+    - Creates a directory ``output_path/qc3-bookend``
     - Creates plots comparing staircase 1, sweep 1, with staircase 2, sweep 2.
 
     TODO: This method repeats lots of steps, unneccesarily:
@@ -957,8 +998,8 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 
     filepath_first_before = os.path.join(data_path, f'{readname}_{time_strs[0]}')
     filepath_last_before = os.path.join(data_path, f'{readname}_{time_strs[1]}')
-    json_file_first_before = f"{readname}_{time_strs[0]}"
-    json_file_last_before = f"{readname}_{time_strs[1]}"
+    json_file_first_before = f'{readname}_{time_strs[0]}'
+    json_file_last_before = f'{readname}_{time_strs[1]}'
 
     #  Each Trace object contains two sweeps
     first_before_trace = Trace(filepath_first_before, json_file_first_before)
@@ -973,8 +1014,8 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 
     filepath_first_after = os.path.join(data_path, f'{readname}_{time_strs[2]}')
     filepath_last_after = os.path.join(data_path, f'{readname}_{time_strs[3]}')
-    json_file_first_after = f"{readname}_{time_strs[2]}"
-    json_file_last_after = f"{readname}_{time_strs[3]}"
+    json_file_first_after = f'{readname}_{time_strs[2]}'
+    json_file_last_after = f'{readname}_{time_strs[3]}'
 
     first_after_trace = Trace(filepath_first_after, json_file_first_after)
     last_after_trace = Trace(filepath_last_after, json_file_last_after)
@@ -1003,7 +1044,7 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
                     voltage=voltage)
 
     # Update output path
-    output_path = os.path.join(output_path, '3-qc3-bookend')
+    output_path = os.path.join(output_path, 'qc3-bookend')
     os.makedirs(output_path, exist_ok=True)
 
     # Create figure - will be reused
@@ -1045,12 +1086,24 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 def get_time_constant_of_first_decay(
         trace, times, protocol_desc, output_path, figure_size):
     """
-    Fits a XXX exponential to the -120mV step following the 40mV step at the
-    start of most protocols.
-    ???
-    """
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    Fits a biexponential and single exponential curve to the -120mV step
+    following the 40mV step at the start of a protocol, returning time
+    constants estimated both ways.
 
+    @param trace The current
+    @param times The associated times
+    @param protocol_desc A list of protocol steps and ramps, as returned by
+        :meth:`voltage_protocol.get_all_sections()`
+    @param output_path A filename for a figure. Will store 3 others with
+        similar names
+    @param figure_size A matplotlib figsize argument
+
+    Returns a tuple ``(bi_taus), tau, peak_current`` where ``bi_taus`` contains
+    two time constants determined from a biexponential fit, where ``tau`` is a
+    single time constant from the single exponential fit, and where
+    ``peak_current`` is the peak (most negative) current. If any time constants
+    could not be determined, ``np.nan`` is returned.
+    """
     first_120mV_step_index = [
         i for i, line in enumerate(protocol_desc) if line[2] == 40][0] + 1
 
@@ -1123,73 +1176,66 @@ def get_time_constant_of_first_decay(
     if not res2:
         logging.warning(f'finding 120mv decay timeconstant failed: {res}')
 
+    #
     # Create a plot
+    #
     fig = plt.figure(figsize=figure_size, constrained_layout=True)
     axs = fig.subplots(2)
-
     for ax in axs:
         ax.spines[['top', 'right']].set_visible(False)
         ax.set_ylabel(r'$I_\mathrm{obs}$ (pA)')
-
-    axs[-1].set_xlabel(r'$t$ (ms)')
-
     protocol_ax, fit_ax = axs
+
     protocol_ax.set_title('a', fontweight='bold', loc='left')
+    protocol_ax.plot(times, trace)
+    protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
+
     fit_ax.set_title('b', fontweight='bold', loc='left')
+    fit_ax.set_xlabel(r'$t$ (ms)')
     fit_ax.plot(peak_time, peak_current, marker='x', color='red')
 
     a, b, c, d = res1.x
-
     if d < b:
         b, d = d, b
-
     e, f = res2.x
-
     fit_ax.plot(times[indices], trace[indices], color='grey',
                 alpha=.5)
     fit_ax.plot(times[indices], c * np.exp((-1.0/d) * (times[indices] - peak_time))
                 + a * np.exp(-(1.0/b) * (times[indices] - peak_time)),
                 color='red', linestyle='--')
 
-    res_string = r'$\tau_{1} = ' f"{d:.1f}" r'\mathrm{ms}'\
-        r'\; \tau_{2} = ' f"{b:.1f}" r'\mathrm{ms}$'
+    fit_ax.annotate(
+        rf'$\tau_1$ = {d:.1f} ms; $\tau_2$ = {b:.1f} ms',
+        xy=(0.5, 0.05), xycoords='axes fraction')
 
-    fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
-
-    protocol_ax.plot(times, trace)
-    protocol_ax.axvspan(peak_time, tend - 50, alpha=.5, color='grey')
-
-    fig.savefig(output_path)
-    fit_ax.set_yscale('symlog')
-
+    # Store
     dirname, filename = os.path.split(output_path)
-    filename = 'log10_' + filename
-    fig.savefig(os.path.join(dirname, filename))
+    os.makedirs(dirname, exist_ok=True)
+    fig.savefig(output_path)
 
+    # Store again, now with symmetric log scaling on the y-axis
+    fit_ax.set_yscale('symlog')
+    fig.savefig(os.path.join(dirname, 'log10_' + filename))
+
+    # Remove biexponential and store again
     fit_ax.cla()
+    fit_ax.plot(times[indices], trace[indices], color='grey', alpha=.5)
+    fit_ax.plot(
+        times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
+        color='red', linestyle='--')
+    fit_ax.annotate(
+        rf'$\tau$ = {f:.1f} ms', xy=(0.5, 0.05), xycoords='axes fraction')
 
-    dirname, filename = os.path.split(output_path)
-    filename = 'single_exp_' + filename
-    output_path = os.path.join(dirname, filename)
+    fig.savefig(os.path.join(dirname, 'single_exp_' + filename))
 
-    fit_ax.plot(times[indices], trace[indices], color='grey',
-                alpha=.5)
-    fit_ax.plot(times[indices], e * np.exp((-1.0/f) * (times[indices] - peak_time)),
-                color='red', linestyle='--')
-
-    res_string = r'$\tau = ' f"{f:.1f}" r'\mathrm{ms}$'
-
-    fit_ax.annotate(res_string, xy=(0.5, 0.05), xycoords='axes fraction')
-    fig.savefig(output_path)
-
-    dirname, filename = os.path.split(output_path)
-    filename = 'log10_' + filename
+    # And once again with symmetric log scaling
     fit_ax.set_yscale('symlog')
-    fig.savefig(os.path.join(dirname, filename))
-
+    fig.savefig(os.path.join(dirname, 'log10_single_exp_' + filename))
     plt.close(fig)
 
-    return (d, b), f, peak_current if res1 else (np.nan, np.nan), np.nan, peak_current
+    params1 = (d, b) if res1 else (np.nan, np.nan)
+    param2 = f if res2 else np.nan
+    return params1, param2, peak_current
 
 
 if __name__ == '__main__':  # pragma: no cover
