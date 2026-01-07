@@ -111,38 +111,52 @@ def run_from_command_line():  # pragma: no cover
     run(
         args.data_directory,
         args.output_dir,
-        export_config.D2S_QC,
+        export_config.saveID,
+        staircase_protocols=export_config.D2S_QC,
+        additional_protocols=export_config.D2S,
         wells=args.wells,
         write_traces=args.output_traces,
-        write_failed_traces=args.export_failed,
-        write_map=export_config.D2S,
+        include_failed_traces=args.export_failed,
         reversal_potential=args.Erev,
         reversal_spread_threshold=args.reversal_spread_threshold,
         max_processes=args.no_cpus,
         figure_size=args.figsize,
-        save_id=export_config.saveID,
     )
 
 
-def run(data_path, output_path, qc_map, wells=None,
-        write_traces=False, write_failed_traces=False, write_map={},
+def run(data_path, output_path, save_id, staircase_protocols,
+        additional_protocols={}, wells=None,
+        write_traces=False, include_failed_traces=False,
         reversal_potential=-90, reversal_spread_threshold=10,
-        max_processes=1, figure_size=None, save_id=None):
+        max_processes=1, figure_size=None):
     """
-    Imports traces and runs QC+.
-
-    Makes the following assumptions:
+    Imports traces and runs several layers of quality control (staircase QC,
+    followed by secondary QC).
 
     This proceeds with the following steps:
 
     1. All wells (or those selected with ``wells``) are run through staircase
-       QC, for every protocol in ``qc_map``. These protocols are expected to be
-       run either 2 times (before all other protocols, with and without IKr
-       blocker) or 4 times (before _and_ after all other protocols). This test
-       is performed by :meth:`run_staircase_qc`.
+       QC, for every protocol in ``staircase_protocols``. These protocols are
+       expected to be run either 2 times (before all other protocols, with and
+       without IKr blocker) or 4 times (before _and_ after all other
+       protocols). Timestamps will be used to determine the order of the
+       sweeps.
     2. The list of wells that pass staircase QC are then stored in a file
        ``selected-{save_id}-txt``.
-    3. For all protocols in either ``qc_map`` or
+    3. For all protocols in ``staircase_protocols`` and
+       ``additional_protocols``, a secondary QC layer is run. This is similar
+       to a stripped-down version of the staircase QC. If ``write_traces=True``
+       this step includes storing before, after, and subtracted traces as CSV.
+       By default, this step is run only for wells that passed staircase QC,
+       but it can be run for all wells by setting
+       ``include_failed_traces=True``.
+    4. Another staircase QC measure, "QC3 bookend" is run (on all wells, not
+       just those that passed previous QC). **This should probably be included
+       in step 1, and affect the selected wells**.
+    5. A file "chrono.txt" is created with the order that protocols were run in
+    6. Multi-protocol QC is performed on all wells that passed staircase QC (or
+       all wells, if ``include_failed_traces=True``.
+    7.
 
 
 
@@ -150,27 +164,27 @@ def run(data_path, output_path, qc_map, wells=None,
 
     @param data_path The path to read data from
     @param output_path The path to write output to
-    @param qc_map A dictionary mapping staircase protocol names to output
-           names. All protocols in this dictionary will be used for staircase
-           quality control and export.
+    @param save_id An "id" string used in e.g. filenames of created CSVs.
+    @param staircase_protocols The protocols to run staircase QC on, specified
+           as a dictionary mapping MapDataControl384 names to shorter names to
+           use in the output. All protocols in this dictionary will be used for
+           staircase QC, secondary QC and export of traces.
+    @param additional_protocols The non-staircase protocols to run secondary QC
+           on and export traces for, specified as a dictionary mapping
+           MapDataControl384 names to shorter names to use in the output.
     @param wells A list of strings indicating the wells to use, or ``None`` for
            all wells.
     @param write_traces Set to ``True`` to write (raw and processed) traces to
            the output directory in CSV format.
-    @param write_failed_traces Set to ``True`` to write traces for wells
-           failing quality control.  Ignored if ``write_traces=False`.
-    @param write_map A dictionary like ``qc_map``, but specifying non-staircase
-           protocols to run generic QC on and export. Ignored if
-           ``write_traces=False`.
+    @param include_failed_traces Set to ``True`` to perform QC and export even
+           on wells failing staircase quality control.
     @param reversal_potential The calculated reversal potential, in mV.
     @param reversal_spread_threshold The maximum range of reversal potential
-           values in all tested protocols (``qc_map`` and ``write_map`` if
-           ``write_traces=True``).
+           values allowed in secondary QC, in mV.
     @param max_processes The maximum number of processes to run simultaneously
     @param figure_size An optional tuple specifying the size of figures to
            create
 
-    @param save_id Used in some outputs, e.g. as part of CSV names
 
     """
     # TODO reversal_spread_threshold should be specified the same way as all
@@ -179,7 +193,7 @@ def run(data_path, output_path, qc_map, wells=None,
     # Create output path if necessary, and write info file
     output_path = setup_output_directory(output_path)
 
-    # TODO Remove protocol selection here: this is done via the export file!
+    # TODO Remove protocol selection here: this is done via the export file
     #      Only protocols listed there are accepted
 
     # Select wells to use
@@ -215,27 +229,21 @@ def run(data_path, output_path, qc_map, wells=None,
     # { protocol_name: [time1, time2, time3, ...] }
     # such that protocol_name_time is a directory
 
-    # TODO: Replace this by looping over qc_map and write_map?
+    # TODO: Replace this by looping over all_protocols?
+    all_protocols = staircase_protocols | additional_protocols
     res_dict = {}
     for dirname in os.listdir(data_path):
         dirname = os.path.basename(dirname)
         match = protocols_regex.match(dirname)
-
         if match is None:
             continue
-
         protocol_name = match.group(1)
-
-        if not (protocol_name in qc_map or protocol_name in write_map):
-            print(f'Skipping {protocol_name}')
+        if protocol_name not in all_protocols:
+            print(f'Skipping unknown protocol {protocol_name}')
             continue
-
-        time = match.group(2)
-
         if protocol_name not in res_dict:
             res_dict[protocol_name] = []
-
-        res_dict[protocol_name].append(time)
+        res_dict[protocol_name].append(match.group(2))
 
     #TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
 
@@ -262,9 +270,9 @@ def run(data_path, output_path, qc_map, wells=None,
     # Select QC protocols and times
     readnames, savenames, times_list = [], [], []
     for protocol in res_dict:
-        if protocol not in qc_map:
+        if protocol not in staircase_protocols:
             continue
-        savename = qc_map[protocol]
+        savename = staircase_protocols[protocol]
         times = sorted(res_dict[protocol])
 
         if len(times) == 2:
@@ -278,8 +286,8 @@ def run(data_path, output_path, qc_map, wells=None,
             times_list.append([times[0], times[2]])
 
             # Make seperate savename for protocol repeat
-            savename = qc_map[protocol] + '_2'
-            assert savename not in write_map.values()
+            savename = staircase_protocols[protocol] + '_2'
+            assert savename not in additional_protocols.values()
             savenames.append(savename)
             times_list.append([times[1], times[3]])
             readnames.append(protocol)
@@ -339,16 +347,15 @@ def run(data_path, output_path, qc_map, wells=None,
 
     #
     # Now go over _all_ protocols, including the QC protocols (again!), and
-    # call run_generic_qc() on them
+    # call run_secondary_qc() on them
     #
-    combined_dict = qc_map | write_map
 
     # Export all protocols
     savenames, readnames, times_list = [], [], []
     for protocol in res_dict:
 
         # Sort into chronological order
-        savename = combined_dict[protocol]
+        savename = all_protocols[protocol]
         readnames.append(protocol)
         times = sorted(res_dict[protocol])
 
@@ -361,8 +368,8 @@ def run(data_path, output_path, qc_map, wells=None,
             times_list.append(times[::2])
 
             # Make seperate savename for protocol repeat
-            savename = combined_dict[protocol] + '_2'
-            assert savename not in combined_dict.values()
+            savename = all_protocols[protocol] + '_2'
+            assert savename not in all_protocols.values()
             savenames.append(savename)
             readnames.append(protocol)
             times_list.append(times[1::2])
@@ -370,20 +377,20 @@ def run(data_path, output_path, qc_map, wells=None,
         else:
             raise Exception('Expecting QC protocol run 2 or 4 times')
 
-    wells_to_export = wells if write_failed_traces else selection
+    wells_to_export = wells if include_failed_traces else selection
     logging.info(f'exporting wells {wells_to_export}')
     m = len(readnames)
     n = min(max_processes, m)
     args = zip(readnames, savenames, times_list, [wells_to_export] * m,
                [output_path] * m, [data_path] * m, [figure_size] * m,
-               [reversal_potential] * m, [save_id] * m)
-    dfs = starmap(n, run_generic_qc, args)
+               [reversal_potential] * m, [save_id] * m, [write_traces] * m)
+    dfs = starmap(n, run_secondary_qc, args)
     if not dfs:
         raise Exception('No data exported')
 
     #
     # At this point, dfs is a list containing one dataframe _per protocol_. If
-    # write_failed_traces is set, each dataframe contains information on all
+    # include_failed_traces is set, each dataframe contains information on all
     # wells, if not, each contains information only on wells passing
     # staircase QC.
     #
@@ -393,8 +400,8 @@ def run(data_path, output_path, qc_map, wells=None,
 
     #
     # At this point, extract_df is a big dataframe with information about all
-    # protocols for all wells (write_failed_traces=True) or just the wells
-    # passing staircase QC (write_failed_traces=False).
+    # protocols for all wells (include_failed_traces=True) or just the wells
+    # passing staircase QC (include_failed_traces=False).
     # It inludes new calculated quantities such as ``Erev`` and ``R_leftover``.
     #
 
@@ -405,7 +412,11 @@ def run(data_path, output_path, qc_map, wells=None,
     #
     # This is run on all wells, regardless of staircase QC.
     #
-    protocol, savename = list(qc_map.items())[0]
+    # TODO: This doesn't require the export and is staircase only, so should
+    # probably happen earlier in the sequence and affect the well selection for
+    # secondary QC.
+    #
+    protocol, savename = list(staircase_protocols.items())[0]
     times = sorted(res_dict[protocol])
     if len(times) == 4:
         # If we have staircase-other-staircase before & after drug
@@ -423,9 +434,21 @@ def run(data_path, output_path, qc_map, wells=None,
     del(qc3_bookend_dict)
 
     #
+    # Write a file chrono.txt containing the order that protocols were run in
     #
-    #
+    chrono = {times[0]: prot for prot, times in zip(savenames, times_list)}
+    with open(os.path.join(output_path, 'chrono.txt'), 'w') as fout:
+        fout.write('\n'.join(chrono[key] for key in sorted(chrono)) + '\n')
 
+    #
+    # Perform multi-protocol QC per well.
+    # - Check that QC1, QC4, QC6 and QC_Erev pass for all protocols.
+    # - Check that QC3 bookend passes for "all" staircase protocols (typically
+    #   this is just a single check).
+    # - Check that the range of Erev values is below a threshold
+    # - Check that all staircase QCs passed
+    # - Check that QC_R_leftover passed for all staircase protocols
+    #
     erev_spreads = {}
     qc_erev_spread = {}
     passed_qc_dict = {}
@@ -437,40 +460,38 @@ def run(data_path, output_path, qc_map, wells=None,
         sub_qc_df = qc_df[qc_df.well == well]
 
         # Check if generic QC passed for all protocols for this well
-        passed_QC_Erev_all = np.all(sub_df['QC.Erev'].values)
         passed_QC1_all = np.all(sub_df.QC1.values)
         passed_QC4_all = np.all(sub_df.QC4.values)
         passed_QC6_all = np.all(sub_df.QC6.values)
-        passed_qc3_bookend = np.all(sub_qc_df['qc3.bookend'].values)
         passed_QC_Erev_all = np.all(sub_df['QC.Erev'].values)
+        passed_qc3_bookend = np.all(sub_qc_df['qc3.bookend'].values)
         logging.info(f'passed_QC1_all {passed_QC1_all}')
         logging.info(f'passed_QC4_all {passed_QC4_all}')
         logging.info(f'passed_QC6_all {passed_QC6_all}')
-        logging.info(f'passed_QC3_bookend_all {passed_qc3_bookend}')
         logging.info(f'passed_QC_Erev_all {passed_QC_Erev_all}')
-
+        logging.info(f'passed_QC3_bookend_all {passed_qc3_bookend}')
 
         # Perform "QC_Erev_spread": this passes if the range of E_rev values in
         # all protocols is below a threshold
         # QC Erev spread: check spread in reversal potential isn't too large
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
+        del(E_revs)
         passed_QC_Erev_spread = E_rev_spread <= reversal_spread_threshold
         logging.info(f'passed_QC_Erev_spread {passed_QC_Erev_spread}')
-        del(E_revs)
         erev_spreads[well] = E_rev_spread
         qc_erev_spread[well] = passed_QC_Erev_spread
 
-        # R_leftover only considered for protocols used for QC (i.e. staircase protocols)
-        passed_QC_R_leftover = np.all(sub_df[sub_df.protocol.isin(qc_map.values())]
-                                      ['QC.R_leftover'].values)
+        # R_leftover only considered for protocols used for QC (staircases)
+        passed_QC_R_leftover = np.all(
+            sub_df[sub_df.protocol.isin(staircase_protocols.values())]['QC.R_leftover'].values)
+        logging.info(f'passed_QC_R_leftover {passed_QC_R_leftover}')
 
-        logging.info(f"passed_QC_R_leftover {passed_QC_R_leftover}")
-
-
+        # All staircase protocol QCs
         passed_staircase_QC = np.all(sub_df['selected'].values)
 
-        passed_qc = (
+        # Combine all into a final verdict
+        passed_qc_dict[well] = (
             passed_staircase_QC
             and passed_QC1_all
             and passed_QC4_all
@@ -480,53 +501,43 @@ def run(data_path, output_path, qc_map, wells=None,
             and passed_QC_Erev_spread
         )
 
-        passed_qc_dict[well] = passed_qc
-
-    pront(extract_df, t='extract_df, pre')
     extract_df['passed QC'] = [passed_qc_dict[well] for well in extract_df.well]
     extract_df['QC.Erev.spread'] = [qc_erev_spread[well] for well in extract_df.well]
     extract_df['Erev_spread'] = [erev_spreads[well] for well in extract_df.well]
-    pront(extract_df, t='extract_df, post')
+
+    #
+    # At this point, extract_df has 3 new columns.
+    # Confusingly, it has the old column "selected" indicating whether or not
+    # staircase QC passed, and a new column "passed QC" indicating final
+    # selection.
+    #
+
+    #
+    # Copy true/false assessments from extract_df into qc_df
+    #
+    new_cols = []
+    for index, vals in qc_df.iterrows():
+        sub_df = extract_df[(extract_df.well == vals['well'])]
+        row = {}
+        row['QC.Erev.all_protocols'] = np.all(sub_df['QC.Erev'])
+        row['QC.Erev.spread'] = np.all(sub_df['QC.Erev.spread'])
+        row['QC1.all_protocols'] = np.all(sub_df['QC1'])
+        row['QC4.all_protocols'] = np.all(sub_df['QC4'])
+        row['QC6.all_protocols'] = np.all(sub_df['QC6'])
+        new_cols.append(row)
+    for key in new_cols[0]:
+        qc_df[key] = [row[key] for row in new_cols]
+
+    #
+    # At this point, extract_df contains mostly numerical values, and a few
+    # True/False results, while qc_df contains pass/fails.
+    #
+
     sys.exit(1)
 
-    chrono_dict = {times[0]: prot for prot, times in zip(savenames, times_list)}
 
-    pront('CHRONO', os.path.join(output_path, 'chrono.txt'))
-    with open(os.path.join(output_path, 'chrono.txt'), 'w') as fout:
-        for key in sorted(chrono_dict):
-            val = chrono_dict[key]
-            #  Output order of protocols
-            fout.write(val)
-            fout.write('\n')
 
-    #  Update qc_df
-    update_cols = []
-    for index, vals in qc_df.iterrows():
-        append_dict = {}
 
-        well = vals['well']
-
-        sub_df = extract_df[(extract_df.well == well)]
-
-        append_dict['QC.Erev.all_protocols'] =\
-            np.all(sub_df['QC.Erev'])
-
-        append_dict['QC.Erev.spread'] =\
-            np.all(sub_df['QC.Erev.spread'])
-
-        append_dict['QC1.all_protocols'] =\
-            np.all(sub_df['QC1'])
-
-        append_dict['QC4.all_protocols'] =\
-            np.all(sub_df['QC4'])
-
-        append_dict['QC6.all_protocols'] =\
-            np.all(sub_df['QC6'])
-
-        update_cols.append(append_dict)
-
-    for key in append_dict:
-        qc_df[key] = [row[key] for row in update_cols]
 
     qc_styled_df = create_qc_table(qc_df)
     logging.info(qc_styled_df)
@@ -623,16 +634,16 @@ def create_qc_table(qc_df):
     return ret_df
 
 
-def run_generic_qc(readname, savename, time_strs, selected_wells, savedir,
-                   data_path, figure_size, reversal_potential, save_id):
+def run_secondary_qc(readname, savename, time_strs, selected_wells, savedir,
+                   data_path, figure_size, reversal_potential, save_id,
+                   write_traces):
     """
-    Performs QC on a protocol (staircase or other), and extracts and stores the
-    data.
+    Performs QC on a protocol (staircase or other), and exports the traces.
 
     Loads the data (again!) and
     - leak-subtracts it using the leak step
-    - stores before, after, and subtracted traces in ``traces`` (for all
-      sweeps), along with time and voltage traces
+    - if ``write_traces`` is True``, stores before, after, and subtracted
+      traces in ``traces`` (for all sweeps), along with time and voltage traces
     - performs QC (1, 4, 6, Erev, R_leftover) using the meta data, leak step,
       and up-down step after the leak step
     - creates and returns a data frame, with entries detailed below
@@ -710,11 +721,12 @@ def run_generic_qc(readname, savename, time_strs, selected_wells, savedir,
 
     # Store voltages and times, using 2 different libraries...
     # TODO: REPLACE WITH SINGLE TIMES, SINGLE VOLTAGE
-    voltage_df = pd.DataFrame(np.vstack((times, voltages)).T,
-                              columns=['time', 'voltage'])
-    voltage_df.to_csv(os.path.join(
-        trace_dir, f'{save_id}-{savename}-voltages.csv'))
-    #write_csv(times, trace_dir, f'{save_id}-{savename}-times.csv')
+    if write_traces:
+        voltage_df = pd.DataFrame(
+            np.vstack((times, voltages)).T, columns=['time', 'voltage'])
+        voltage_df.to_csv(os.path.join(
+            trace_dir, f'{save_id}-{savename}-voltages.csv'))
+        #write_csv(times, trace_dir, f'{save_id}-{savename}-times.csv')
 
     qc_before = before_trace.get_onboard_QC_values()
     qc_after = after_trace.get_onboard_QC_values()
@@ -723,16 +735,17 @@ def run_generic_qc(readname, savename, time_strs, selected_wells, savedir,
     after_data = after_trace.get_trace_sweeps()
 
     # Save before and after drug traces as .csv
-    for well in selected_wells:
-        for sweep in range(nsweeps):
-            write_csv(
-                before_data[well][sweep], trace_dir,
-                f'{save_id}-{savename}-{well}-before-sweep{sweep}.csv',
-                header='current')
-            write_csv(
-                after_data[well][sweep], trace_dir,
-                f'{save_id}-{savename}-{well}-after-sweep{sweep}.csv',
-                header='current')
+    if write_traces:
+        for well in selected_wells:
+            for sweep in range(nsweeps):
+                write_csv(
+                    before_data[well][sweep], trace_dir,
+                    f'{save_id}-{savename}-{well}-before-sweep{sweep}.csv',
+                    header='current')
+                write_csv(
+                    after_data[well][sweep], trace_dir,
+                    f'{save_id}-{savename}-{well}-after-sweep{sweep}.csv',
+                    header='current')
 
     # Reusable figure to plot subtraction
     fig = plt.figure(figsize=figure_size, layout='constrained')
@@ -761,11 +774,12 @@ def run_generic_qc(readname, savename, time_strs, selected_wells, savedir,
             before_corrected = before_data[well][sweep] - before_leak
             after_corrected = after_data[well][sweep] - after_leak
 
-            # Store drug-subtracted trace
+            # Create and store drug-subtracted trace
             subtracted = before_corrected - after_corrected
-            write_csv(
-                subtracted, trace_dir,
-                f'{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv')
+            if write_traces:
+                write_csv(
+                    subtracted, trace_dir,
+                    f'{save_id}-{savename}-{well}-sweep{sweep}-subtracted.csv')
 
             # Create subtraction plot
             fig = plt.figure(figsize=figure_size, layout='constrained')
@@ -1053,7 +1067,7 @@ def qc3_bookend(readname, savename, time_strs, wells, output_path,
 
     #  Iterate over all wells, perform qc3-bookend, plot and store
     res_dict = {}
-    for well in np.array(wells).flatten():
+    for well in wells:
         # First staircase, before drug and after drug, first sweep
         before_trace_first = get_leak_corrected(
             first_before_current_dict[well][0], voltage, times, *ramp_bounds)
