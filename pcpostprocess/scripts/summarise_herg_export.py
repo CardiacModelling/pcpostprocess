@@ -49,9 +49,6 @@ def run(data_path, output_path, experiment_name, reversal_potential=None,
     @param reversal_potential The calculated reversal potential, or ``None``
     @param figsize The matplotlib figure size, or ``None``.
     """
-    # TODO: Find some way around setting this
-    matplotlib.use('Agg')
-
     output_path = setup_output_directory(output_path)
 
     leak_parameters_df = pd.read_csv(os.path.join(data_path, 'subtraction_qc.csv'))
