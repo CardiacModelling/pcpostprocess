@@ -43,9 +43,15 @@ class TestScripts(unittest.TestCase):
         qc_map = {'staircaseramp (2)_2kHz': 'staircaseramp'}
         write_map = {'staircaseramp2': 'staircaseramp2'}
         run_herg_qc(
-            data, d1, qc_map, ('A03', 'A20', 'D16'),
-            write_traces=True, write_map=write_map,
-            save_id='13112023_MW2', reversal_potential=erev)
+            data,
+            d1,
+            '13112023_MW2',
+            qc_map,
+            write_map,
+            ('A03', 'A20', 'D16'),
+            write_traces=True,
+            reversal_potential=erev,
+        )
 
         with open(os.path.join(d1, 'passed_wells.txt'), 'r') as f:
             self.assertEqual(f.read().strip(), 'A03')
