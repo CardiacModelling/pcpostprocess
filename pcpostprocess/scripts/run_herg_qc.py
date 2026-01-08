@@ -4,7 +4,6 @@
 #
 import argparse
 import importlib.util
-import json
 import logging
 import multiprocessing
 import os
@@ -12,7 +11,6 @@ import re
 import string
 import sys
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -414,7 +412,7 @@ def run(data_path, output_path, save_id, staircase_protocols,
 
     # Store the results by adding an extra column to qc_df
     qc_df['qc3.bookend'] = [qc3_bookend_dict[well] for well in qc_df.well]
-    del(qc3_bookend_dict)
+    del qc3_bookend_dict
 
     #
     # Write a file chrono.txt containing the order that protocols were run in
@@ -459,7 +457,7 @@ def run(data_path, output_path, save_id, staircase_protocols,
         # QC Erev spread: check spread in reversal potential isn't too large
         E_revs = sub_df['E_rev'].values.flatten().astype(np.float64)
         E_rev_spread = E_revs.max() - E_revs.min()
-        del(E_revs)
+        del E_revs
         passed_QC_Erev_spread = E_rev_spread <= reversal_spread_threshold
         logging.info(f'passed_QC_Erev_spread {passed_QC_Erev_spread}')
         erev_spreads[well] = E_rev_spread
@@ -614,8 +612,8 @@ def create_qc_table(qc_df):
 
 
 def run_secondary_qc(readname, savename, time_strs, selected_wells, savedir,
-                   data_path, figure_size, reversal_potential, save_id,
-                   write_traces):
+                     data_path, figure_size, reversal_potential, save_id,
+                     write_traces):
     """
     Performs QC on a protocol (staircase or other), and exports the traces.
 
@@ -705,7 +703,7 @@ def run_secondary_qc(readname, savename, time_strs, selected_wells, savedir,
             np.vstack((times, voltages)).T, columns=['time', 'voltage'])
         voltage_df.to_csv(os.path.join(
             trace_dir, f'{save_id}-{savename}-voltages.csv'))
-        #write_csv(times, trace_dir, f'{save_id}-{savename}-times.csv')
+        # write_csv(times, trace_dir, f'{save_id}-{savename}-times.csv')
 
     qc_before = before_trace.get_onboard_QC_values()
     qc_after = after_trace.get_onboard_QC_values()
