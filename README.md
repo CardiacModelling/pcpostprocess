@@ -46,101 +46,105 @@ python3 -m unittest
 
 ## Usage
 
-### Classic case
+We are working to make pcpostprocess a reusable tool for different types of data.
+At the moment, it is geared towards the specific use case detailed below.
 
-- Syncropatch 384 ("DataControl 384" output)
-- A full repeat of all protocols with an IKr blocker, e.g. E-4031
-- A staircase protocol, run 4 times:
+### Experimental data
+
+- Syncropatch 384 ("DataControl 384") data
+- The full set of protocols is repeated after addition of a strong IKr blocker, e.g. E-4031
+- Each set of protocols starts and ends with a "staircase" protocol, leading to a total of 4 staircases:
   - Before and after all other protocols, before drug block
   - Before and after all other protocols, after drug block
-- Additional protocols ran in between the staircases
-- Leak subtraction by...
 
+So a full set of experiments would go "staircase, other1, other2, ... staircase, drug addition & wash in, staircase, other1, other2, ..., staircase".
 
-Quality control (QC) may be run using the criteria outlined in [Rapid Characterization of hERG Channel Kinetics I](https://doi.org/10.1016/j.bpj.2019.07.029) and [Evaluating the predictive accuracy of ion channel models using data from multiple experimental designs](https://doi.org/10.1101/2024.08.16.608289). 
-These criteria assume the use of the `staircase` protocol for quality control, which should be the first and last protocol performed. 
-We also assume the presence of repeats after the addition of an IKr blocker (such as dofetilide).
+Each protocol
+- Starts with a leak estimation ramp
+- Followed by a step to 40mV and then to -120mV
+- Ends with a reversal potential step
+- Provides an estimate of Rseal, Rseries, and Cm
 
-Prior to performing QC and exporting, an `export_config.py` file should be added to the root of the data directory. 
-This file (see `example_config.py`) contains a Python `dict` (`Q2S_DC`) specifying the filenames of the protocols used for QC, and names they should be outputted with, as well as a Python dict (`D2S`) listing the other protocols and names to be used for their output. 
-Additionally, the `saveID` field specifies the name of the expeirment which appears in the output file names.
+### Leak correction
 
-An example input directory might contain the following subdirectories
-- `staircaseramp (2)_2kHz_15.01.07`, staircase 1 before E-4031
+- Leak correction is applied by estimating linear leak from the leak step.
+- Before and after drug traces are both corrected
+- The final signal is leak-corrected-before minus leak-corrected-after
+
+### Quality control
+
+Quality control is based on [Lei et al. (2019) Rapid Characterization of hERG Channel Kinetics I](https://doi.org/10.1016/j.bpj.2019.07.029) and [Shuttleworth et al. (2025) Evaluating the predictive accuracy of ion channel models using data from multiple experimental designs](https://doi.org/10.1098/rsta.2024.0211).
+
+First, all four staircase protocols are checked in all wells using the Lei et al. criteria, along with new measures described in Shuttleworth et al.
+Any wells not rejected are then tested using a smaller set of (less protocol specific) criteria detailed in Shuttleworth et al.
+Only wells passing all tests on all protocols are retained.
+
+### Writing an export_config.py
+
+Prior to performing QC and exporting, an `export_config.py` file should be added to the root of the data directory.
+An example file is available [here](./example_config.py).
+This should contain three entries:
+
+1. A `saveID` variable, providing a name to use in exported data. 
+2. A dictionary variable `Q2S_DC` indicating the name of the staircase protocol, and mapping it onto an more user-friendly name used in export.
+3. A dictionary variable `D2S` indicating names of other protocols to export, again mapping onto names for export.
+
+For example, in the test data (see "Getting Started") above, we have six subdirectories:
+- `staircaseramp (2)_2kHz_15.01.07`, staircase run as first protocol before E-4031
 - `StaircaseInStaircaseramp (2)_2kHz_15.01.51`, non-QC protocol
-- `staircaseramp (2)_2kHz_15.06.53`, staircase 2 before E-4031
-- `staircaseramp (2)_2kHz_15.11.33`, staircase 1 after E-4031
+- `staircaseramp (2)_2kHz_15.06.53`, staircase run as last protocol before E-4031
+- `staircaseramp (2)_2kHz_15.11.33`, staircase run as first protocol after E-4031 addition
 - `StaircaseInStaircaseramp (2)_2kHz_15.12.17`, non-QC protocol
-- `staircaseramp (2)_2kHz_15.17.19`, staircase 2 after E-4031
+- `staircaseramp (2)_2kHz_15.17.19`, staircase run as final protocol
 
-`run_herg_qc` will use the time parts of the staircase names to work out which is which.
-This assumes there are either 2 staircase runs (once before drug, once after), or 4 (as above)
+Here each directory name is a protocol name followed by a timestamp.
+Corresponding dictionaries could be `Q2S_DC = {'staircaseramp (2)_2kHz': 'staircase'}` (indicating the staircase protocol) and `D2S = {'StaircaseInStaircaseramp (2)_2kHz': 'sis'}`.
+The saveID could be any string, but in our example we use `saveID = '13112023_MW2'`
 
-Example:
-```
-# Configuration for run_herg_qc
+### Running
 
-# Save name for this set of data
-saveID = 'EXPERIMENT_NAME'
-
-# Name of protocols to use in QC, mapped onto names used in output
-D2S_QC = {
-    'staircaseramp (2)_2kHz': 'staircaseramp'
-}
-
-# Name of additional protocols to export, but not use in QC (again as a dict)
-D2S = {
-    'StaircaseInStaircaseramp (2)_2kHz': 'sis',
-}
-```
-
-Next, we call `run_herg_qc`:
+To run, we call `run_herg_qc` with:
 ```sh
-pcpostprocess run_herg_qc test_data/13112023_MW2_FF -w A01 A02 A03 -o output --output_traces
-
+pcpostprocess run_herg_qc test_data/13112023_MW2_FF -o output --output_traces -w A01 A02 A03
 ```
+Here:
+- `test_data/13112023_MW2_FF` is the path to the test data,
+- `-o output` tells the script to store all results in the folder `output`
+- `--output_traces` tells the script to export the data (instead of running QC only), and
 
+The last part, `-w A01 A02 A03`, tells the script to only check the first three wells.
+This speeds things up for testing, but would be omitted in normal use.
 
+To see the full set of options, use 
 
 ```sh
 $ pcpostprocess run_herg_qc --help
 ```
 
+### Interpreting the output
 
+After running the command above on the test data provided, the directory `output` will contain the subdirectories:
 
+- `-120mV time constant` Plots illustrating the fits performed when estimating time constants. These are output but not used in QC.
+- `leak_correction` Plots illustrating the _linear_ leak correction process in all wells passing staircase QC.
+- `qc3-bookend` Plots illustrating the "QC3 bookend" criterion used in Shuttleworth et al.
+- `reversal_plots` Plots illustrating the reversal potential estimation
+- `subtraction_plots` Plots illustrating the drug subtracted trace leak removal.
+- `traces` The exported traces (times, voltages, currents)
 
+and the files:
 
-
-### Exporting Summary
-
-The `summarise_herg_export` command produces additionally output after `run_herg_qc` has been run.
-
-```sh
-$ pcpostprocess summarise_herg_export --help
-
-usage: pcpostprocess summarise_herg_export [-h] [--cpus CPUS]
-                      [--wells WELLS [WELLS ...]] [--output OUTPUT]
-                      [--protocols PROTOCOLS [PROTOCOLS ...]] [-r REVERSAL]
-                      [--experiment_name EXPERIMENT_NAME]
-                      [--figsize FIGSIZE FIGSIZE] [--output_all]
-                      [--log_level LOG_LEVEL]
-                      data_dir qc_estimates_file
-
-positional arguments:
-  data_dir           path to the directory containing the run_herg_qc results
-
-options:
-  -h, --help            show this help message and exit
-  --cpus CPUS, -c CPUS
-  --wells WELLS [WELLS ...], -w WELLS [WELLS ...]   wells to include in the output (default: all)
-  --output OUTPUT, -o OUTPUT     path where the output will be saved
-  --protocols PROTOCOLS [PROTOCOLS ...]  protocols to include (default: all)
-  -r REVERSAL, --reversal REVERSAL   the reversal potential during the experiment
-  --experiment_name EXPERIMENT_NAME
-  --figsize FIGSIZE FIGSIZE
-  --output_all        Flag specifying whether to output all plots (default: false)
-  --log_level LOG_LEVEL
-```
+- `chrono.txt` Lists the order in which protocols were run. For the staircase, the repeat at the end of the sequence is indicated by an added `_2`. 
+- `passed_wells.txt` Lists the wells that **passed all QC**.
+- `pcpostprocess_info.txt` Information on the run that generated this output (date, time, command used etc.)
+- `QC-13112023_MW2.csv` A CSV representation of the pass/fail results for each individual criterion
+- `QC-13112023_MW2.json` A JSON representation of the same
+- `qc_table.tex` A table in Tex format with the above.
+- `qc_vals_df.csv` Numerical values used in the final QC.
+- `selected-13112023_MW2.txt` **Preliminary QC selection** based on staircase protocol 1 (before other protocols) and 2 (after other protocols)
+- `selected-13112023_MW2-staircaseramp.txt` Preliminary selection based on staircase 1
+- `selected-13112023_MW2-staircaseramp_2.txt` Preliminary selection based on staircase 2
+- `subtraction_qc.csv` Numerical values used in the final QC and leak subtraction.
 
 ## Contributing
 
