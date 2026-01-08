@@ -156,11 +156,8 @@ def run(data_path, output_path, save_id, staircase_protocols,
     5. A file "chrono.txt" is created with the order that protocols were run in
     6. Multi-protocol QC is performed on all wells that passed staircase QC (or
        all wells, if ``include_failed_traces=True``.
-    7.
-
-
-
-
+    7. QC results are stored in CSV, JSON, and tex, plus a file
+       ``passed_wells.txt`` listing the wells that passed final QC.
 
     @param data_path The path to read data from
     @param output_path The path to write output to
@@ -184,7 +181,6 @@ def run(data_path, output_path, save_id, staircase_protocols,
     @param max_processes The maximum number of processes to run simultaneously
     @param figure_size An optional tuple specifying the size of figures to
            create
-
 
     """
     # TODO reversal_spread_threshold should be specified the same way as all
@@ -245,23 +241,10 @@ def run(data_path, output_path, save_id, staircase_protocols,
             res_dict[protocol_name] = []
         res_dict[protocol_name].append(match.group(2))
 
-    #TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
-
-    def pront(*args, t=None):
-        if t is None:
-            print('********')
-        else:
-            print(f'******** {t} ********')
-        for arg in args:
-            print(arg)
-
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.max_rows', None)
-
-    #TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
-
+    #
     # At this point, despite its name, res_dict is not a dictionary of results,
     # but a map of QC protocol names onto lists of times (see comment above)
+    #
 
     #
     # Prepare arguments to call `run_staircase_qc`
@@ -533,30 +516,22 @@ def run(data_path, output_path, save_id, staircase_protocols,
     # True/False results, while qc_df contains pass/fails.
     #
 
-    sys.exit(1)
-
-
-
-
-
-    qc_styled_df = create_qc_table(qc_df)
-    logging.info(qc_styled_df)
-    qc_styled_df.to_latex(os.path.join(output_path, 'qc_table.tex'))
-
-    # Save in csv format
+    # Store decisions in tex, csv, and JSON
+    create_qc_table(qc_df).to_latex(os.path.join(output_path, 'qc_table.tex'))
     qc_df.to_csv(os.path.join(output_path, f'QC-{save_id}.csv'))
-
-    # Write data to JSON file
     qc_df.to_json(os.path.join(output_path, f'QC-{save_id}.json'),
                   orient='records')
 
-    #  Load only QC vals. TODO use a new variabile name to avoid confusion
-    qc_vals_df = extract_df[['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']].copy()
+    # Store subtraction / extract / secondary QC numbers as CSV
+    extract_df.to_csv(os.path.join(output_path, 'subtraction_qc.csv'))
+
+    #  Store QC numbers as CSV
+    fields = ['well', 'sweep', 'protocol', 'Rseal', 'Cm', 'Rseries']
+    qc_vals_df = extract_df[fields].copy()
     qc_vals_df['drug'] = 'before'
     qc_vals_df.to_csv(os.path.join(output_path, 'qc_vals_df.csv'))
 
-    extract_df.to_csv(os.path.join(output_path, 'subtraction_qc.csv'))
-
+    # Store passed wells
     with open(os.path.join(output_path, 'passed_wells.txt'), 'w') as fout:
         for well, passed in passed_qc_dict.items():
             if passed:
@@ -566,7 +541,11 @@ def run(data_path, output_path, save_id, staircase_protocols,
 
 def create_qc_table(qc_df):
     """
-    ???
+    Create a tex table based on a dataframe containing true/false for various
+    decision criteria.
+
+    The table is returned as another dataframe, which can be made into tex
+    using ``.to_latex(path)``.
     """
 
     if len(qc_df.index) == 0:
