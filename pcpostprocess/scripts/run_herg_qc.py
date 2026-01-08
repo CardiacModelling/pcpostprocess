@@ -837,9 +837,9 @@ def run_secondary_qc(readname, savename, time_strs, selected_wells, savedir,
             fname = os.path.join(
                 savedir, '-120mV time constant',
                 f'{savename}-{well}-sweep{sweep}-time-constant-fit.png')
+
             res = get_time_constant_of_first_decay(
                 filtered - leak, times, desc, fname, figure_size)
-
             row['-120mV decay time constant 1'] = res[0][0]
             row['-120mV decay time constant 2'] = res[0][1]
             row['-120mV decay time constant 3'] = res[1]
