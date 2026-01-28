@@ -233,7 +233,7 @@ def run(data_path, output_path, save_id, staircase_protocols,
             continue
         protocol_name = match.group(1)
         if protocol_name not in all_protocols:
-            print(f'Skipping unknown protocol {protocol_name}')
+            logging.info(f'Skipping unknown protocol {protocol_name}')
             continue
         if protocol_name not in res_dict:
             res_dict[protocol_name] = []

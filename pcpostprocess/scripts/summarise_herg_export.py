@@ -252,10 +252,8 @@ def do_chronological_plots(df, output_path, reversal_potential=None,
     # df = df[leak_parameters_df['selected']]
     df = df[df['passed QC']].copy()
 
-    relabel_dict = {protocol: r'$d_{' f"{i}" r'}$' for i, protocol in
-                    enumerate(df.protocol.unique())}
-
-    df = df.replace({'protocol': relabel_dict})
+    df = df.protocol.cat.rename_categories(
+        {p: rf'$d_{{{i}}}$' for i, p in enumerate(df.protocol.unique())})
 
     units = {
         # 'gleak_after': r'',
