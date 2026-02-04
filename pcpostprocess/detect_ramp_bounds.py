@@ -9,7 +9,7 @@ def detect_ramp_bounds(times, voltage_sections, ramp_index=0):
     @param voltage_sections 2d np.array where each row describes a segment of the protocol: (tstart, tend, vstart, end)
     @param ramp_index: the index of the ramp to select. Defaults to 0 - the first ramp
 
-    @returns istart, iend: the start and end timepoint indices for the specified ramp
+    @returns istart, iend: the first timepoint of the ramp segment, and the first time point of the following ramp segment
     """
 
     ramps = [(tstart, tend, vstart, vend) for tstart, tend, vstart, vend
