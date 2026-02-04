@@ -22,6 +22,6 @@ def detect_ramp_bounds(times, voltage_sections, ramp_index=0):
 
     tstart, tend = ramp[:2]
 
-    ramp_bounds = [np.argmax(times > tstart), np.argmax(times > tend)]
+    ramp_bounds = [np.argmax(times >= tstart), np.argmax(times >= tend)]
     return ramp_bounds
 
