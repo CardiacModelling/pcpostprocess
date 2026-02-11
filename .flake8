@@ -1,20 +1,17 @@
 [flake8]
-max_line_length = 120
 ignore =
-    # allow empty line at end of file
+    # Allow block comments to start without a space after #
+    E265,
+    # Allow empty line at end of file
     W391,
-    # break before binary operator - allow either style
-    W503,
-    # break after binary operator - allow either style
-    W504,
-    # missing whitespace around arithmetic operator
-    E226,
+    # Allow breaks before and after binary operators
+    W503, W504,
+    # Allow assigning a lambda expression instead of using a def
+    E731,
     # Allow I, l and O as variable names
     E741,
-
-
 exclude=
     .git,
     venv,
     test_data,
-    test_output,
+    pcp1,
