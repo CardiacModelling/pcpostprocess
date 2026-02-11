@@ -42,7 +42,7 @@ When making changes, we try to follow the procedure below.
 **TODO: Once there is a "user" way to install, move the git clone etc. information here [#105](https://github.com/CardiacModelling/pcpostprocess/issues/105).**
 
 ```
-pip install -e .[test]
+pip install -e .[dev]
 ```
 
 ## Style guidelines
@@ -62,6 +62,17 @@ In addition to the rules checked by flake8, we try to use single quotes (`'`) fo
 
 Class, method, and argument names are in UK english.
 
+### Type hints
+
+We'll try to use [type hints](https://docs.python.org/3/library/typing.html), checked with [mypy](https://www.mypy-lang.org/).
+
+To run locally, use
+```
+$ mypy
+```
+
+Mypy is configured in `pyproject.toml`.
+
 ## Documentation
 
 Every method and every class should have a [docstring](https://www.python.org/dev/peps/pep-0257/) that describes in plain terms what it does, and what the expected input and output is.
@@ -69,6 +80,48 @@ The only exception are unit test methods starting with `test_` - unit test class
 
 Each docstring should start with a one-line explanation.
 If more explanation is needed, this one-liner is followed by a blank line and more information in the following paragraphs.
+
+Pcpostprocess uses the [Numpy docstring syntax](https://numpydoc.readthedocs.io/en/latest/format.html) for parameters and return values.
+For example:
+
+```
+Single line explanation.
+
+Detailed, multi-line explanation.
+Possibly with ``code`` examples or even latex :math:`\sqrt{x}`.
+
+Parameters
+----------
+x : int
+    Description of parameter ``x``.
+y : float, default=1
+    Description of the optional parameter ``y``. If not set, the default value
+    1 will be used
+z : str, optional
+    Description of the optional parameter ``z``. If not given, ``z`` won't be
+    used.
+ 
+Returns
+-------
+float
+    Description of the returnved value
+```
+
+Return values can also be named, which is especially useful when there are multiple
+
+```
+Returns
+-------
+g: float
+    The estimated conductance, in nS.
+E : float
+    The estimated reversal potential, in mV.
+```
+
+(Note that the numpy documentation currently suggests using single backticks ``` `x` ``` when describing parameters, but Sphinx doesn't fully support this yet.
+ Until this is fully supported, we will use double backticks as in the example above).
+
+
 
 **TODO: READTHEDOCS [#60](https://github.com/CardiacModelling/pcpostprocess/issues/60)**
 
