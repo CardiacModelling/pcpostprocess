@@ -360,6 +360,14 @@ def run(data_path, output_path, save_id, staircase_protocols,
 
     wells_to_export = wells if include_failed_traces else selection
     logging.info(f'exporting wells {wells_to_export}')
+
+    if not wells_to_export:
+        logging.warning(
+            'No wells passed QC. No data will be exported. '
+            'Consider re-running with --export_failed to include'
+            ' failed wells.')
+        return
+
     m = len(readnames)
     n = min(max_processes, m)
     args = zip(readnames, savenames, times_list, [wells_to_export] * m,
